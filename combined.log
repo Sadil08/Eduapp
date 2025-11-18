@@ -1,0 +1,4 @@
+{"level":"info","message":"Starting Kilo n8n Validator Server (v3) on stdio...","timestamp":"2025-11-12T13:27:05.837Z"}
+{"level":"info","message":"Connected and listening.","timestamp":"2025-11-12T13:27:05.840Z"}
+{"level":"info","message":"Starting Kilo n8n Prompt Receiver Server on stdio...","timestamp":"2025-11-12T13:27:08.849Z"}
+{"level":"info","message":"Connected and listening.","timestamp":"2025-11-12T13:27:08.852Z"}

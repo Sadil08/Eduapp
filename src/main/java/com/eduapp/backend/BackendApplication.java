@@ -20,7 +20,7 @@ public class BackendApplication {
         return args -> {
             if (userRepository.findByEmail("admin@eduapp.com").isEmpty()) {
                 User admin = new User();
-                admin.setName("admin");
+                admin.setUsername("admin");
                 admin.setEmail("admin@eduapp.com");
                 admin.setPassword(passwordEncoder.encode("12345678"));
                 admin.setRole(Role.ADMIN);

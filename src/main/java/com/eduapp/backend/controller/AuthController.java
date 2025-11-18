@@ -23,7 +23,7 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@RequestBody RegisterRequest req) {
         User saved = userService.register(req);
-        return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getName(), saved.getEmail(), saved.getRole()));
+        return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getUsername(), saved.getEmail(), saved.getRole()));
     }
 
     @PostMapping("/login")
@@ -31,4 +31,6 @@ public class AuthController {
         String token = userService.login(req.getEmail(), req.getPassword());
         return ResponseEntity.ok(new JwtResponse(token));
     }
+
+    
 }

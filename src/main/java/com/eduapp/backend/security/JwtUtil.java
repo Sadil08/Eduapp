@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
+import com.eduapp.backend.model.Role;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -20,8 +21,10 @@ public class JwtUtil {
 
     private static final long EXPIRATION_MS = 1000L * 60 * 60 * 10; // 10 hours
 
-    public String generateToken(String email) {
+    public String generateToken(String email, Role role, Long userId ) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role);
+        claims.put("id", userId);
         return createToken(claims, email);
     }
 
@@ -37,6 +40,15 @@ public class JwtUtil {
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public Long extractUserId(String token){
+        return extractClaim(token, claims -> claims.get("id", Long.class));
+    }
+
+    public Role extractRole(String token){
+        String roleString = extractClaim(token, claims -> claims.get("role", String.class));
+        return Role.valueOf(roleString);
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

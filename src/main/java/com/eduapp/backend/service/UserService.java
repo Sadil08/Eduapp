@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@SuppressWarnings("null")
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
@@ -26,13 +27,16 @@ public class UserService implements UserDetailsService {
 
     // --- Register normal student ---
     public User register(RegisterRequest req) {
+        if (req == null) {
+            throw new IllegalArgumentException("RegisterRequest cannot be null");
+        }
         userRepository.findByEmail(req.getEmail())
                 .ifPresent(u -> { throw new RuntimeException("Email already exists"); });
 
         User user = new User();
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
-        user.setName(req.getName());
+        user.setUsername(req.getName());
 
         // Force all public registrations to student
         if (req.getRole() != null && req.getRole() == Role.ADMIN) {
@@ -51,7 +55,7 @@ public class UserService implements UserDetailsService {
         User user = new User();
         user.setEmail(req.getEmail());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
-        user.setName(req.getName());
+        user.setUsername(req.getName());
         user.setRole(Role.ADMIN);
 
         return userRepository.save(user);
@@ -65,7 +69,7 @@ public class UserService implements UserDetailsService {
         if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
             throw new RuntimeException("Invalid password");
         }
-        return jwtUtil.generateToken(email);
+        return jwtUtil.generateToken(email,user.getRole(), user.getId());
     }
 
     // --- Spring Security support ---

@@ -20,6 +20,7 @@ Driven by BDD/TDD principles: Each story defines acceptance criteria for impleme
 - As an admin, I want to create bundles with pricing/metadata, so they are marketable.
 - As an admin, I want to add papers/questions, so content is rich.
 - As an admin, I want analytics dashboards, so I can monitor engagement.
+- As an admin, I want to view all users and detailed profiles (accessed bundles, attempted papers, progress, scores, AI feedback), so I can monitor student activity and performance.
 
 ### Student Stories
 - As a student, I want public bundle browsing/filtering, so I can discover content.

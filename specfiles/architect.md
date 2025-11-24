@@ -16,6 +16,8 @@ Key stakeholders:
 - As an admin, I want to add papers to bundles with descriptions and attempt limits.
 - As an admin, I want to create questions (MCQ/Essay) with correct answers and options.
 - As an admin, I want to view student analytics and progress reports.
+- As an admin, I want to view all users and their basic details (email, username, role, created date).
+- As an admin, I want to view detailed information for a specific user, including accessed paper bundles, attempted papers, progress, scores, and AI feedback summaries.
 
 ### Student Stories
 - As a student, I want to browse public paper bundles and filter by exam, subject, lesson, or type.
@@ -33,6 +35,7 @@ Key stakeholders:
 - Versioning: Track changes to papers/bundles.
 - Cart/Checkout: Basic e-commerce flow with placeholder payment endpoints for easy integration (e.g., Stripe later).
 - Timer: Starts on paper view, stops on submit, displays time taken.
+- User Management for Admins: View all users, detailed user profiles with accessed bundles, attempted papers, progress, scores, and AI feedback summaries.
 
 ## App Functions and Flows
 
@@ -57,6 +60,7 @@ Key stakeholders:
 1. Login: Admin role.
 2. Manage Content: CRUD for subjects, lessons, bundles, papers, questions.
 3. Analytics: View student usage, scores.
+4. User Management: View all users (/api/admin/users), view detailed user profile (/api/admin/users/{id}) including accessed bundles, attempted papers, progress, scores, and AI feedback summaries.
 
 ### Special Features
 - AI Integration: External service analyzes student answers vs. correct answers + question. Returns feedback (what's wrong, lessons to review), marks (constant for MCQ, variable for essay). For overall: Synthesize per-question feedbacks into paper-level analysis (total marks, lacking knowledge areas).

@@ -5,6 +5,7 @@
 2. **Phase 2: Content Management** - Bundles, papers, questions.
 3. **Phase 3: Assessment & AI** - Attempts, answers, AI integration.
 4. **Phase 4: Enhancements** - Progress, leaderboards, payments, notifications.
+5. **Phase 5: Admin User Management** - UserController for viewing all users and detailed user profiles with accessed bundles, attempted papers, progress, scores, and AI feedback summaries.
 
 ## Industry Standard Styles
 - **Coding**: Consistent naming (camelCase), JavaDoc, SLF4J logging, dependency injection.

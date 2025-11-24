@@ -81,3 +81,4 @@ This report documents the analysis and enhancements made to the EduApp Spring Bo
 - Added @SuppressWarnings("null") to all service classes to handle IDE null type safety warnings safely.
 - Added detailed comments to all mapper interfaces: QuestionMapper, StudentAnswerMapper, SubjectMapper, LessonMapper, PaperMapper, QuestionOptionMapper, StudentPaperAttemptMapper.
 - Fixed DTO fields: SubjectDto (description instead of language), StudentAnswerDto (answerText, selectedOptionId instead of studentAnswer, isCorrect, score).
+- Implemented admin user management feature: Created UserDetailDto, updated UserService with getAllUsers() and getUserDetails(Long), created UserController with admin endpoints (/api/admin/users, /api/admin/users/{id}), added custom queries to repositories (findByStudentId, findByUserId, findByAnswerAttemptStudentId), created missing DTOs (ProgressDto, LeaderboardEntryDto, AIAnalysisDto).

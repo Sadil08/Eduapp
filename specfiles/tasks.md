@@ -25,6 +25,13 @@
 16. **Add Payment Placeholders**: Endpoints for checkout. Log: INFO on placeholders. Comment: Integration points.
 17. **Implement Notifications**: Email service. Log: ERROR on send fail. Comment: Templates.
 
+## Phase 5: Admin User Management
+18. **Create UserDetailDto**: Include user info, accessed bundles, attempted papers, progress, scores, AI feedback summaries. Log: None. Comment: Admin monitoring.
+19. **Update UserService**: Add methods to get all users and detailed user data. Log: INFO on fetches. Comment: Aggregation logic.
+20. **Create UserController**: Admin endpoints for /api/admin/users and /api/admin/users/{id}. Log: INFO on requests. Comment: Role-based access.
+21. **Add UserMapper**: If needed for UserDetailDto. Log: None. Comment: Mapping rules.
+22. **Update UserRepository**: Custom queries for detailed fetches. Log: None. Comment: Query optimizations.
+
 ## General Tasks
 - **Logging**: Use SLF4J: INFO for ops, ERROR for exceptions, DEBUG for dev. Format: "Action: {}", param.
 - **Commenting**: JavaDoc on public methods/classes: @param, @return, @throws. Inline for complex logic.

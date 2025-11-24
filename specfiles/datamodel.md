@@ -148,6 +148,22 @@
 - StudentPaperAttempt: One-to-many with StudentAnswer, one-to-one with OverallPaperAnalysis.
 - StudentAnswer: One-to-one with AIAnalysis.
 
+## DTOs
+
+### UserResponse (existing)
+- id, username, email, role, createdAt
+
+### UserDetailDto (new for admin)
+- id, username, email, role, createdAt, updatedAt
+- accessedBundles: List<PaperBundleDto>
+- attemptedPapers: List<StudentPaperAttemptDto>
+- progress: List<ProgressDto>
+- scores: List<LeaderboardEntryDto>
+- aiFeedbackSummaries: List<AIAnalysisDto> // aggregated
+
+### Other DTOs (existing)
+- SubjectDto, LessonDto, PaperBundleDto, PaperDto, QuestionDto, QuestionOptionDto, StudentAnswerDto, StudentPaperAttemptDto, AIAnalysisDto, OverallPaperAnalysisDto, CartDto, NotificationDto, ProgressDto, LeaderboardEntryDto
+
 ## Database Notes
 - Use PostgreSQL in prod, H2 in dev.
 - Indexes on FKs, unique constraints on usernames/emails.

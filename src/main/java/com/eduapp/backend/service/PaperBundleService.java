@@ -1,18 +1,26 @@
 package com.eduapp.backend.service;
 
 import com.eduapp.backend.dto.PaperBundleDto;
+import com.eduapp.backend.dto.PaperBundleSummaryDto;
+import com.eduapp.backend.dto.PaperBundleDetailDto;
 import com.eduapp.backend.mapper.PaperBundleMapper;
 import com.eduapp.backend.model.Lesson;
 import com.eduapp.backend.model.PaperBundle;
 import com.eduapp.backend.model.Subject;
+import com.eduapp.backend.model.User;
+import com.eduapp.backend.model.StudentBundleAccess;
 import com.eduapp.backend.repository.LessonRepository;
 import com.eduapp.backend.repository.PaperBundleRepository;
 import com.eduapp.backend.repository.SubjectRepository;
+import com.eduapp.backend.repository.StudentBundleAccessRepository;
+import com.eduapp.backend.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Service class for managing PaperBundle entities.
@@ -28,6 +36,8 @@ public class PaperBundleService {
     private final PaperBundleRepository paperBundleRepository;
     private final SubjectRepository subjectRepository;
     private final LessonRepository lessonRepository;
+    private final StudentBundleAccessRepository studentBundleAccessRepository;
+    private final UserRepository userRepository;
     private final PaperBundleMapper paperBundleMapper;
 
     /**
@@ -35,15 +45,21 @@ public class PaperBundleService {
      * @param paperBundleRepository the repository for PaperBundle entities
      * @param subjectRepository the repository for Subject entities
      * @param lessonRepository the repository for Lesson entities
+     * @param studentBundleAccessRepository the repository for StudentBundleAccess entities
+     * @param userRepository the repository for User entities
      * @param paperBundleMapper the mapper for PaperBundle DTOs
      */
     public PaperBundleService(PaperBundleRepository paperBundleRepository,
                               SubjectRepository subjectRepository,
                               LessonRepository lessonRepository,
+                              StudentBundleAccessRepository studentBundleAccessRepository,
+                              UserRepository userRepository,
                               PaperBundleMapper paperBundleMapper) {
         this.paperBundleRepository = paperBundleRepository;
         this.subjectRepository = subjectRepository;
         this.lessonRepository = lessonRepository;
+        this.studentBundleAccessRepository = studentBundleAccessRepository;
+        this.userRepository = userRepository;
         this.paperBundleMapper = paperBundleMapper;
     }
 
@@ -89,5 +105,75 @@ public class PaperBundleService {
         List<PaperBundleDto> dtos = paperBundleMapper.toDtoList(bundles);
         logger.info("Found {} paper bundles", dtos.size());
         return dtos;
+    }
+
+    /**
+     * Retrieves all paper bundle summaries (public view).
+     * @return a list of PaperBundleSummaryDto
+     */
+    public List<PaperBundleSummaryDto> getAllSummaries() {
+        logger.info("Fetching all paper bundle summaries");
+        List<PaperBundle> bundles = paperBundleRepository.findAll();
+        return paperBundleMapper.toSummaryDtoList(bundles);
+    }
+
+    /**
+     * Retrieves paper bundle details for a user.
+     * Checks if the user has purchased the bundle.
+     * @param bundleId the ID of the bundle
+     * @param userId the ID of the user requesting details
+     * @return PaperBundleDetailDto if access is granted
+     * @throws SecurityException if access is denied
+     * @throws IllegalArgumentException if bundle not found
+     */
+    public PaperBundleDetailDto getBundleDetails(Long bundleId, Long userId) {
+        logger.info("Fetching bundle details for bundle ID: {} and user ID: {}", bundleId, userId);
+        PaperBundle bundle = paperBundleRepository.findById(bundleId)
+                .orElseThrow(() -> new IllegalArgumentException("Paper bundle not found"));
+
+        // Check access
+        boolean hasAccess = studentBundleAccessRepository.existsByStudentIdAndBundleId(userId, bundleId);
+        // Also allow if it's a free bundle or admin (logic can be expanded)
+        // For now, strict check on purchase
+        
+        if (!hasAccess) {
+             logger.warn("User {} denied access to bundle {}", userId, bundleId);
+             throw new SecurityException("Access denied: Bundle not purchased");
+        }
+
+        return paperBundleMapper.toDetailDto(bundle);
+    }
+
+    /**
+     * Purchases a bundle for a user.
+     * Creates a StudentBundleAccess record.
+     * @param bundleId the ID of the bundle
+     * @param userId the ID of the user purchasing
+     */
+    public void purchaseBundle(Long bundleId, Long userId) {
+        logger.info("Purchasing bundle {} for user {}", bundleId, userId);
+        
+        // Check if bundle exists
+        PaperBundle bundle = paperBundleRepository.findById(bundleId)
+                .orElseThrow(() -> new IllegalArgumentException("Paper bundle not found"));
+
+        // Check if already purchased
+        if (studentBundleAccessRepository.existsByStudentIdAndBundleId(userId, bundleId)) {
+            logger.info("User {} already has access to bundle {}", userId, bundleId);
+            return;
+        }
+
+        // Fetch User
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Create access record
+        StudentBundleAccess access = new StudentBundleAccess();
+        access.setStudent(user);
+        access.setBundle(bundle);
+        access.setPurchasedAt(LocalDateTime.now());
+        
+        studentBundleAccessRepository.save(access);
+        logger.info("Bundle {} purchased successfully for user {}", bundleId, userId);
     }
 }

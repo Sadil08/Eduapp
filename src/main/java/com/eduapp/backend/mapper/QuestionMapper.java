@@ -3,6 +3,7 @@ package com.eduapp.backend.mapper;
 import org.mapstruct.*;
 import com.eduapp.backend.model.Question;
 import com.eduapp.backend.dto.QuestionDto;
+import com.eduapp.backend.dto.QuestionAttemptDto;
 import java.util.List;
 
 @Mapper(componentModel = "spring", uses = { QuestionOptionMapper.class })
@@ -20,4 +21,7 @@ public interface QuestionMapper {
 
     // Maps list of entities to list of DTOs
     List<QuestionDto> toDtoList(List<Question> questions);
+
+    @Mapping(source = "paper.id", target = "paperId")
+    QuestionAttemptDto toAttemptDto(Question entity);
 }

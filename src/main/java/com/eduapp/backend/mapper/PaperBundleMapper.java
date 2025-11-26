@@ -3,6 +3,8 @@ package com.eduapp.backend.mapper;
 import org.mapstruct.*;
 import com.eduapp.backend.model.PaperBundle;
 import com.eduapp.backend.dto.PaperBundleDto;
+import com.eduapp.backend.dto.PaperBundleSummaryDto;
+import com.eduapp.backend.dto.PaperBundleDetailDto;
 import java.util.List;
 
 @Mapper(componentModel = "spring", uses = { PaperMapper.class })
@@ -23,4 +25,17 @@ public interface PaperBundleMapper {
 
     // Maps list of entities to list of DTOs
     List<PaperBundleDto> toDtoList(List<PaperBundle> bundles);
+
+    // New methods for Summary and Detail DTOs
+    @Named("toSummaryDto")
+    @Mapping(source = "subject.id", target = "subjectId")
+    @Mapping(source = "lesson.id", target = "lessonId")
+    PaperBundleSummaryDto toSummaryDto(PaperBundle entity);
+
+    @Mapping(source = "subject.id", target = "subjectId")
+    @Mapping(source = "lesson.id", target = "lessonId")
+    PaperBundleDetailDto toDetailDto(PaperBundle entity);
+
+    @IterableMapping(qualifiedByName = "toSummaryDto")
+    List<PaperBundleSummaryDto> toSummaryDtoList(List<PaperBundle> bundles);
 }

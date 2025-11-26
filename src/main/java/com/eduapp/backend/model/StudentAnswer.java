@@ -30,9 +30,17 @@ public class StudentAnswer {
     @Column
     private LocalDateTime submittedAt;
 
-    public StudentAnswer() {}
+    @Column
+    private Integer marksAwarded;
 
-    public StudentAnswer(StudentPaperAttempt attempt, Question question, String answerText, QuestionOption selectedOption) {
+    @Column(length = 4000)
+    private String aiFeedback;
+
+    public StudentAnswer() {
+    }
+
+    public StudentAnswer(StudentPaperAttempt attempt, Question question, String answerText,
+            QuestionOption selectedOption) {
         this.attempt = attempt;
         this.question = question;
         this.answerText = answerText;
@@ -41,21 +49,67 @@ public class StudentAnswer {
     }
 
     // getters/setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public StudentPaperAttempt getAttempt() { return attempt; }
-    public void setAttempt(StudentPaperAttempt attempt) { this.attempt = attempt; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Question getQuestion() { return question; }
-    public void setQuestion(Question question) { this.question = question; }
+    public StudentPaperAttempt getAttempt() {
+        return attempt;
+    }
 
-    public String getAnswerText() { return answerText; }
-    public void setAnswerText(String answerText) { this.answerText = answerText; }
+    public void setAttempt(StudentPaperAttempt attempt) {
+        this.attempt = attempt;
+    }
 
-    public QuestionOption getSelectedOption() { return selectedOption; }
-    public void setSelectedOption(QuestionOption selectedOption) { this.selectedOption = selectedOption; }
+    public Question getQuestion() {
+        return question;
+    }
 
-    public LocalDateTime getSubmittedAt() { return submittedAt; }
-    public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
+    public void setQuestion(Question question) {
+        this.question = question;
+    }
+
+    public String getAnswerText() {
+        return answerText;
+    }
+
+    public void setAnswerText(String answerText) {
+        this.answerText = answerText;
+    }
+
+    public QuestionOption getSelectedOption() {
+        return selectedOption;
+    }
+
+    public void setSelectedOption(QuestionOption selectedOption) {
+        this.selectedOption = selectedOption;
+    }
+
+    public LocalDateTime getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public void setSubmittedAt(LocalDateTime submittedAt) {
+        this.submittedAt = submittedAt;
+    }
+
+    public Integer getMarksAwarded() {
+        return marksAwarded;
+    }
+
+    public void setMarksAwarded(Integer marksAwarded) {
+        this.marksAwarded = marksAwarded;
+    }
+
+    public String getAiFeedback() {
+        return aiFeedback;
+    }
+
+    public void setAiFeedback(String aiFeedback) {
+        this.aiFeedback = aiFeedback;
+    }
 }

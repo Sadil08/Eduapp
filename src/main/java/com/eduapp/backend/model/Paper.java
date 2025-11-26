@@ -13,7 +13,7 @@ public class Paper {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable=false)
+    @Column(nullable = false)
     private String name;
 
     @Column(length = 1000)
@@ -24,7 +24,7 @@ public class Paper {
     private PaperBundle bundle;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable=false)
+    @Column(nullable = false)
     private PaperType type;
 
     @Column
@@ -34,14 +34,19 @@ public class Paper {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "paper", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Question> questions = new ArrayList<>();
 
-     // ---------- constructors ----------
+    // ---------- constructors ----------
 
-    public Paper() {}
+    public Paper() {
+    }
 
     public Paper(String name, String description, PaperType type, PaperBundle bundle, Integer maxFreeAttempts) {
         this.name = name;
@@ -52,30 +57,88 @@ public class Paper {
     }
 
     // getters/setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getName() {
+        return name;
+    }
 
-    public PaperBundle getBundle() { return bundle; }
-    public void setBundle(PaperBundle bundle) { this.bundle = bundle; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public PaperType getType() { return type; }
-    public void setType(PaperType type) { this.type = type; }
+    public String getDescription() {
+        return description;
+    }
 
-    public Integer getMaxFreeAttempts() { return maxFreeAttempts; }
-    public void setMaxFreeAttempts(Integer maxFreeAttempts) { this.maxFreeAttempts = maxFreeAttempts; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public User getCreatedBy() { return createdBy; }
-    public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
+    public PaperBundle getBundle() {
+        return bundle;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setBundle(PaperBundle bundle) {
+        this.bundle = bundle;
+    }
 
-    public List<Question> getQuestions() { return questions; }
-    public void setQuestions(List<Question> questions) { this.questions = questions; }
+    public PaperType getType() {
+        return type;
+    }
+
+    public void setType(PaperType type) {
+        this.type = type;
+    }
+
+    public Integer getMaxFreeAttempts() {
+        return maxFreeAttempts;
+    }
+
+    public void setMaxFreeAttempts(Integer maxFreeAttempts) {
+        this.maxFreeAttempts = maxFreeAttempts;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public List<Question> getQuestions() {
+        return questions;
+    }
+
+    public void setQuestions(List<Question> questions) {
+        this.questions = questions;
+    }
 }

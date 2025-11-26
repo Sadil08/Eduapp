@@ -1,5 +1,7 @@
 package com.eduapp.backend.service;
 
+import com.eduapp.backend.dto.MyBundleDto;
+import com.eduapp.backend.model.PaperBundle;
 import com.eduapp.backend.model.StudentBundleAccess;
 import com.eduapp.backend.repository.StudentBundleAccessRepository;
 import org.slf4j.Logger;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @SuppressWarnings("null")
@@ -43,5 +46,38 @@ public class StudentBundleAccessService {
 
     public boolean existsById(Long id) {
         return studentBundleAccessRepository.existsById(id);
+    }
+
+    public List<StudentBundleAccess> findByStudentId(Long studentId) {
+        logger.info("Fetching bundle accesses for student ID: {}", studentId);
+        return studentBundleAccessRepository.findByStudentId(studentId);
+    }
+
+    /**
+     * Converts StudentBundleAccess entities to MyBundleDto for dashboard display
+     * This avoids circular references and sensitive data exposure
+     */
+    public List<MyBundleDto> getMyBundlesDto(Long studentId) {
+        logger.info("Fetching bundles as DTOs for student ID: {}", studentId);
+        List<StudentBundleAccess> accesses = studentBundleAccessRepository.findByStudentId(studentId);
+
+        return accesses.stream()
+                .map(access -> {
+                    PaperBundle bundle = access.getBundle();
+                    return new MyBundleDto(
+                            access.getId(),
+                            bundle.getId(),
+                            bundle.getName(),
+                            bundle.getDescription(),
+                            bundle.getPrice(),
+                            bundle.getType(),
+                            bundle.getExamType(),
+                            bundle.getIsPastPaper(),
+                            bundle.getSubject() != null ? bundle.getSubject().getName() : null,
+                            bundle.getLesson() != null ? bundle.getLesson().getName() : null,
+                            access.getPurchasedAt(),
+                            bundle.getPapers() != null ? bundle.getPapers().size() : 0);
+                })
+                .collect(Collectors.toList());
     }
 }

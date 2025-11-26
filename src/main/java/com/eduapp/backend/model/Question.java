@@ -23,11 +23,14 @@ public class Question {
     private String text;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable=false)
+    @Column(nullable = false)
     private QuestionType type;
 
     @Column(length = 4000)
     private String correctAnswerText;
+
+    @Column
+    private Integer marks;
 
     @ManyToOne
     @JoinColumn(name = "created_by")
@@ -38,7 +41,8 @@ public class Question {
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuestionOption> options = new ArrayList<>();
 
-    public Question() {}
+    public Question() {
+    }
 
     public Question(Paper paper, String text, QuestionType type, String correctAnswerText) {
         this.paper = paper;
@@ -48,27 +52,75 @@ public class Question {
     }
 
     // getters/setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public Paper getPaper() { return paper; }
-    public void setPaper(Paper paper) { this.paper = paper; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getText() { return text; }
-    public void setText(String text) { this.text = text; }
+    public Paper getPaper() {
+        return paper;
+    }
 
-    public QuestionType getType() { return type; }
-    public void setType(QuestionType type) { this.type = type; }
+    public void setPaper(Paper paper) {
+        this.paper = paper;
+    }
 
-    public String getCorrectAnswerText() { return correctAnswerText; }
-    public void setCorrectAnswerText(String correctAnswerText) { this.correctAnswerText = correctAnswerText; }
+    public String getText() {
+        return text;
+    }
 
-    public User getCreatedBy() { return createdBy; }
-    public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
+    public void setText(String text) {
+        this.text = text;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public QuestionType getType() {
+        return type;
+    }
 
-    public List<QuestionOption> getOptions() { return options; }
-    public void setOptions(List<QuestionOption> options) { this.options = options; }
+    public void setType(QuestionType type) {
+        this.type = type;
+    }
+
+    public String getCorrectAnswerText() {
+        return correctAnswerText;
+    }
+
+    public void setCorrectAnswerText(String correctAnswerText) {
+        this.correctAnswerText = correctAnswerText;
+    }
+
+    public Integer getMarks() {
+        return marks;
+    }
+
+    public void setMarks(Integer marks) {
+        this.marks = marks;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public List<QuestionOption> getOptions() {
+        return options;
+    }
+
+    public void setOptions(List<QuestionOption> options) {
+        this.options = options;
+    }
 }

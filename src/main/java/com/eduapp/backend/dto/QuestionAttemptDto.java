@@ -3,25 +3,22 @@ package com.eduapp.backend.dto;
 import com.eduapp.backend.model.QuestionType;
 import java.util.List;
 
-public class QuestionDto {
+public class QuestionAttemptDto {
     private Long id;
     private Long paperId;
     private String text;
     private QuestionType type;
-    private String correctAnswerText;
     private Integer marks;
     private List<QuestionOptionDto> options;
 
-    public QuestionDto() {
+    public QuestionAttemptDto() {
     }
 
-    public QuestionDto(Long id, Long paperId, String text, QuestionType type, String correctAnswerText,
-            List<QuestionOptionDto> options) {
+    public QuestionAttemptDto(Long id, Long paperId, String text, QuestionType type, List<QuestionOptionDto> options) {
         this.id = id;
         this.paperId = paperId;
         this.text = text;
         this.type = type;
-        this.correctAnswerText = correctAnswerText;
         this.options = options;
     }
 
@@ -55,14 +52,6 @@ public class QuestionDto {
 
     public void setType(QuestionType type) {
         this.type = type;
-    }
-
-    public String getCorrectAnswerText() {
-        return correctAnswerText;
-    }
-
-    public void setCorrectAnswerText(String correctAnswerText) {
-        this.correctAnswerText = correctAnswerText;
     }
 
     public Integer getMarks() {

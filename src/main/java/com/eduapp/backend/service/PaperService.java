@@ -258,8 +258,14 @@ public class PaperService {
                 }
 
                 studentAnswerRepository.save(answer);
+
+                // Add to the attempt's list so it's available for AI analysis immediately
+                // This avoids Hibernate cache issues where the list might appear empty
+                savedAttempt.getAnswers().add(answer);
             }
         }
+
+        logger.info("Loaded attempt with {} answers for AI analysis", savedAttempt.getAnswers().size());
 
         return savedAttempt;
     }

@@ -1,6 +1,9 @@
 package com.eduapp.backend.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import com.eduapp.backend.model.StudentPaperAttempt;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +37,15 @@ public interface StudentPaperAttemptRepository extends JpaRepository<StudentPape
      * Used for security - ensures students can only access their own attempts.
      */
     Optional<StudentPaperAttempt> findByIdAndStudentId(Long id, Long studentId);
+
+    /**
+     * Finds an attempt by ID with all answers, questions, and options eagerly
+     * loaded.
+     * Used for AI analysis to ensure all required data is available.
+     */
+    @EntityGraph(attributePaths = { "answers", "answers.question", "answers.selectedOption", "paper" })
+    @Query("SELECT a FROM StudentPaperAttempt a WHERE a.id = :id")
+    Optional<StudentPaperAttempt> findByIdWithAnswers(@Param("id") Long id);
 
     /**
      * Count all attempts for a specific paper (for admin statistics).

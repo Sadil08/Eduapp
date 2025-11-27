@@ -18,3 +18,8 @@ spring:
 jwt:
   secret: ***REMOVED-SECRET***
   expiration: 86400000
+
+gemini:
+  api-key: ***REMOVED-GOOGLE-KEY***
+  model: gemini-2.5-flash
+  api-url: https://generativelanguage.googleapis.com/v1

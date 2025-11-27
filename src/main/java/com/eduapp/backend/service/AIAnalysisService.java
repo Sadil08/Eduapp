@@ -32,10 +32,14 @@ public class AIAnalysisService {
 
     private static final Logger logger = LoggerFactory.getLogger(AIAnalysisService.class);
 
-    @Value("${gemini.api.key:YOUR_GEMINI_API_KEY}")
+    @Value("${gemini.api-key:YOUR_GEMINI_API_KEY}")
     private String apiKey;
 
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=";
+    @Value("${gemini.model:gemini-2.5-flash}")
+    private String model;
+
+    @Value("${gemini.api-url:https://generativelanguage.googleapis.com/v1}")
+    private String apiUrl;
 
     private final OverallPaperAnalysisRepository analysisRepository;
     private final AIAnalysisRepository aiAnalysisRepository;
@@ -134,10 +138,11 @@ public class AIAnalysisService {
     private String callGeminiApi(String prompt) throws Exception {
         if (apiKey == null || apiKey.equals("YOUR_GEMINI_API_KEY")) {
             logger.warn("Gemini API key is not configured. Skipping actual API call.");
-            return "AI Analysis skipped: API Key not configured.";
+            throw new IllegalStateException("AI Analysis failed: API Key not configured.");
         }
 
-        String url = GEMINI_API_URL + apiKey;
+        String url = String.format("%s/models/%s:generateContent?key=%s", apiUrl, model, apiKey);
+        logger.info("Calling Gemini API with model: {}", model);
 
         // Construct Request Body
         Map<String, Object> content = new HashMap<>();
@@ -156,9 +161,29 @@ public class AIAnalysisService {
         ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
         if (response.getStatusCode().is2xxSuccessful()) {
+            logger.info("Gemini API call successful");
             JsonNode root = objectMapper.readTree(response.getBody());
-            return root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText();
+            String aiResponse = root.path("candidates").get(0).path("content").path("parts").get(0).path("text")
+                    .asText();
+            logger.debug("Raw AI Response: {}", aiResponse);
+
+            // Clean the response if it contains markdown code blocks
+            if (aiResponse != null) {
+                aiResponse = aiResponse.trim();
+                if (aiResponse.startsWith("```json")) {
+                    aiResponse = aiResponse.substring(7);
+                } else if (aiResponse.startsWith("```")) {
+                    aiResponse = aiResponse.substring(3);
+                }
+                if (aiResponse.endsWith("```")) {
+                    aiResponse = aiResponse.substring(0, aiResponse.length() - 3);
+                }
+                aiResponse = aiResponse.trim();
+            }
+            logger.debug("Cleaned AI Response: {}", aiResponse);
+            return aiResponse;
         } else {
+            logger.error("Gemini API call failed with status: {}", response.getStatusCode());
             throw new RuntimeException("Gemini API call failed with status: " + response.getStatusCode());
         }
     }

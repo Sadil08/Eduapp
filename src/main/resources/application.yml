@@ -18,3 +18,8 @@ spring:
 jwt:
   secret: mySecretKey
   expiration: 86400000
+
+gemini:
+  api-key: AIzaSyAmNwbKWuh1I46wU0OAVzyItf70aV0gerI
+  model: gemini-2.5-flash
+  api-url: https://generativelanguage.googleapis.com/v1

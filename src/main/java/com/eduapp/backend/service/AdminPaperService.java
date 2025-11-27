@@ -5,6 +5,7 @@ import com.eduapp.backend.model.Paper;
 import com.eduapp.backend.model.Question;
 import com.eduapp.backend.model.QuestionOption;
 import com.eduapp.backend.repository.*;
+import com.eduapp.backend.model.PaperBundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -27,17 +28,20 @@ public class AdminPaperService {
     private final QuestionOptionRepository optionRepository;
     private final StudentPaperAttemptRepository attemptRepository;
     private final UserRepository userRepository;
+    private final PaperBundleRepository paperBundleRepository;
 
     public AdminPaperService(PaperRepository paperRepository,
             QuestionRepository questionRepository,
             QuestionOptionRepository optionRepository,
             StudentPaperAttemptRepository attemptRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            PaperBundleRepository paperBundleRepository) {
         this.paperRepository = paperRepository;
         this.questionRepository = questionRepository;
         this.optionRepository = optionRepository;
         this.attemptRepository = attemptRepository;
         this.userRepository = userRepository;
+        this.paperBundleRepository = paperBundleRepository;
     }
 
     /**
@@ -70,11 +74,21 @@ public class AdminPaperService {
     public Paper createPaper(PaperDto dto, Long adminId) {
         logger.info("Creating new paper: {} by admin ID: {}", dto.getName(), adminId);
 
+        // Fetch the PaperBundle entity if bundleId is provided
+        PaperBundle bundle = null;
+        if (dto.getBundleId() != null) {
+            bundle = paperBundleRepository.findById(dto.getBundleId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Paper bundle not found with ID: " + dto.getBundleId()));
+        }
+
         Paper paper = new Paper();
         paper.setName(dto.getName());
         paper.setDescription(dto.getDescription());
         paper.setType(dto.getType());
         paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
+        paper.setBundle(bundle);
+
         // Set createdBy only if adminId is provided
         if (adminId != null) {
             userRepository.findById(adminId).ifPresent(paper::setCreatedBy);

@@ -58,6 +58,13 @@ public interface StudentPaperAttemptRepository extends JpaRepository<StudentPape
     long countByStudentId(Long studentId);
 
     /**
+     * Finds all attempts by a specific student for a specific paper, ordered by
+     * start time (newest first).
+     * Used for viewing attempt history.
+     */
+    List<StudentPaperAttempt> findByStudentIdAndPaperIdOrderByStartedAtDesc(Long studentId, Long paperId);
+
+    /**
      * Calculate average score for a paper (for admin statistics).
      * Note: This would typically be a custom @Query method.
      * Returning null for now - implement with custom query if needed.

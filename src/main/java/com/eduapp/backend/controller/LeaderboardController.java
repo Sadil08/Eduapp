@@ -61,29 +61,54 @@ public class LeaderboardController {
     public ResponseEntity<List<Map<String, Object>>> getLeaderboard(@PathVariable Long paperId) {
         logger.info("Fetching leaderboard for paper ID: {}", paperId);
 
+        // Fetch all opted-in attempts for the paper
         List<StudentPaperAttempt> attempts = attemptRepository
                 .findByPaperIdAndOptedInTrueOrderByTimeTakenMinutesAsc(paperId);
 
-        // We also need to sort by marks. Since we don't have total marks in Attempt
-        // entity directly (it's in OverallAnalysis),
-        // we might need to fetch it or calculate it.
-        // Or better, add totalMarks to StudentPaperAttempt for easier querying.
-        // For now, let's calculate from answers or fetch from analysis.
-        // Calculating from answers is easier if marksAwarded is populated.
-
-        List<Map<String, Object>> leaderboard = attempts.stream()
+        // Map attempts to a simpler structure with calculated marks
+        List<Map<String, Object>> allEntries = attempts.stream()
                 .map(attempt -> {
                     int totalMarks = attempt.getAnswers().stream()
                             .mapToInt(a -> a.getMarksAwarded() != null ? a.getMarksAwarded() : 0)
                             .sum();
 
                     Map<String, Object> entry = new java.util.HashMap<>();
+                    entry.put("studentId", attempt.getStudent().getId());
                     entry.put("studentName", attempt.getStudent().getUsername());
                     entry.put("marks", totalMarks);
                     entry.put("timeTaken", attempt.getTimeTakenMinutes() != null ? attempt.getTimeTakenMinutes() : 0);
                     return entry;
                 })
-                .sorted((a, b) -> Integer.compare((int) b.get("marks"), (int) a.get("marks"))) // Sort by marks desc
+                .collect(Collectors.toList());
+
+        // Group by student ID and find the best attempt for each student
+        // Best attempt = Highest Marks. If marks are equal, Lowest Time Taken.
+        Map<Long, Map<String, Object>> bestAttempts = allEntries.stream()
+                .collect(Collectors.toMap(
+                        entry -> (Long) entry.get("studentId"),
+                        entry -> entry,
+                        (existing, replacement) -> {
+                            int existingMarks = (int) existing.get("marks");
+                            int replacementMarks = (int) replacement.get("marks");
+                            if (replacementMarks > existingMarks) {
+                                return replacement;
+                            } else if (replacementMarks == existingMarks) {
+                                int existingTime = (int) existing.get("timeTaken");
+                                int replacementTime = (int) replacement.get("timeTaken");
+                                return replacementTime < existingTime ? replacement : existing;
+                            }
+                            return existing;
+                        }));
+
+        // Convert back to list and sort by Marks (desc) then Time (asc)
+        List<Map<String, Object>> leaderboard = bestAttempts.values().stream()
+                .sorted((a, b) -> {
+                    int marksCompare = Integer.compare((int) b.get("marks"), (int) a.get("marks"));
+                    if (marksCompare != 0) {
+                        return marksCompare;
+                    }
+                    return Integer.compare((int) a.get("timeTaken"), (int) b.get("timeTaken"));
+                })
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(leaderboard);

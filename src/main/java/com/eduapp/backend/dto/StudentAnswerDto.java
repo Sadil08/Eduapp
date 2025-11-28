@@ -18,6 +18,11 @@ public class StudentAnswerDto {
     private Integer marksAvailable; // Total marks for the question
     private String aiFeedback; // AI-generated feedback
 
+    // Correct answer fields (only shown after submission)
+    private String correctAnswerText; // Correct answer for essay/text questions
+    private Long correctOptionId; // ID of correct option for MCQ questions
+    private String correctOptionText; // Text of correct option for MCQ questions
+
     public StudentAnswerDto() {
     }
 
@@ -111,5 +116,29 @@ public class StudentAnswerDto {
 
     public void setAiFeedback(String aiFeedback) {
         this.aiFeedback = aiFeedback;
+    }
+
+    public String getCorrectAnswerText() {
+        return correctAnswerText;
+    }
+
+    public void setCorrectAnswerText(String correctAnswerText) {
+        this.correctAnswerText = correctAnswerText;
+    }
+
+    public Long getCorrectOptionId() {
+        return correctOptionId;
+    }
+
+    public void setCorrectOptionId(Long correctOptionId) {
+        this.correctOptionId = correctOptionId;
+    }
+
+    public String getCorrectOptionText() {
+        return correctOptionText;
+    }
+
+    public void setCorrectOptionText(String correctOptionText) {
+        this.correctOptionText = correctOptionText;
     }
 }

@@ -74,8 +74,17 @@ public class StudentPaperAttemptController {
         }
     }
 
+    /**
+     * Retrieves attempt history summaries for a specific paper.
+     * Returns lightweight summaries suitable for list views.
+     * Security: Only returns attempts belonging to the authenticated user.
+     * 
+     * @param paperId    the ID of the paper
+     * @param authHeader JWT token in Authorization header
+     * @return list of attempt summaries ordered by start time (newest first)
+     */
     @GetMapping("/paper/{paperId}/history")
-    public ResponseEntity<List<StudentPaperAttemptDto>> getAttemptHistory(
+    public ResponseEntity<List<com.eduapp.backend.dto.StudentPaperAttemptSummaryDto>> getAttemptHistory(
             @PathVariable Long paperId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
@@ -92,10 +101,10 @@ public class StudentPaperAttemptController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        logger.info("Fetching attempt history for user ID: {} and paper ID: {}", userId, paperId);
-        List<StudentPaperAttempt> attempts = attemptService.getAttemptsByStudentAndPaper(userId, paperId);
-        List<StudentPaperAttemptDto> dtos = attemptMapper.toDtoList(attempts);
+        logger.info("Fetching attempt history summaries for user ID: {} and paper ID: {}", userId, paperId);
+        List<com.eduapp.backend.dto.StudentPaperAttemptSummaryDto> summaries = attemptService
+                .getAttemptSummaries(userId, paperId);
 
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(summaries);
     }
 }

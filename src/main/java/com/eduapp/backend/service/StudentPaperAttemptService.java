@@ -29,6 +29,8 @@ public class StudentPaperAttemptService {
     private final StudentPaperAttemptRepository attemptRepository;
     private final UserRepository userRepository;
     private final PaperRepository paperRepository;
+    private final com.eduapp.backend.mapper.StudentPaperAttemptSummaryMapper summaryMapper;
+    private final com.eduapp.backend.repository.OverallPaperAnalysisRepository analysisRepository;
 
     /**
      * Constructor for dependency injection of repositories.
@@ -39,10 +41,14 @@ public class StudentPaperAttemptService {
      */
     public StudentPaperAttemptService(StudentPaperAttemptRepository attemptRepository,
             UserRepository userRepository,
-            PaperRepository paperRepository) {
+            PaperRepository paperRepository,
+            com.eduapp.backend.mapper.StudentPaperAttemptSummaryMapper summaryMapper,
+            com.eduapp.backend.repository.OverallPaperAnalysisRepository analysisRepository) {
         this.attemptRepository = attemptRepository;
         this.userRepository = userRepository;
         this.paperRepository = paperRepository;
+        this.summaryMapper = summaryMapper;
+        this.analysisRepository = analysisRepository;
     }
 
     /**
@@ -143,5 +149,46 @@ public class StudentPaperAttemptService {
     public List<StudentPaperAttempt> getAttemptsByStudentAndPaper(Long studentId, Long paperId) {
         logger.info("Fetching attempts for student ID: {} and paper ID: {}", studentId, paperId);
         return attemptRepository.findByStudentIdAndPaperIdOrderByStartedAtDesc(studentId, paperId);
+    }
+
+    /**
+     * Retrieves attempt summaries for a specific student and paper.
+     * Returns lightweight DTOs suitable for list views.
+     * Includes total marks and truncated overall feedback from AI analysis.
+     * 
+     * @param studentId the ID of the student
+     * @param paperId   the ID of the paper
+     * @return list of attempt summaries ordered by start time (newest first)
+     */
+    public List<com.eduapp.backend.dto.StudentPaperAttemptSummaryDto> getAttemptSummaries(Long studentId,
+            Long paperId) {
+        logger.info("Fetching attempt summaries for student ID: {} and paper ID: {}", studentId, paperId);
+
+        // Fetch attempts
+        List<StudentPaperAttempt> attempts = attemptRepository.findByStudentIdAndPaperIdOrderByStartedAtDesc(studentId,
+                paperId);
+
+        // Map to summary DTOs
+        List<com.eduapp.backend.dto.StudentPaperAttemptSummaryDto> summaries = summaryMapper.toSummaryDtoList(attempts);
+
+        // Populate overall feedback from analysis for each attempt
+        for (int i = 0; i < attempts.size(); i++) {
+            StudentPaperAttempt attempt = attempts.get(i);
+            com.eduapp.backend.dto.StudentPaperAttemptSummaryDto summary = summaries.get(i);
+
+            // Fetch overall analysis if available
+            analysisRepository.findByAttemptId(attempt.getId()).ifPresent(analysis -> {
+                String feedback = analysis.getOverallFeedback();
+                // Truncate to 200 characters for summary view
+                if (feedback != null && feedback.length() > 200) {
+                    summary.setOverallFeedbackSummary(feedback.substring(0, 197) + "...");
+                } else {
+                    summary.setOverallFeedbackSummary(feedback);
+                }
+            });
+        }
+
+        logger.info("Returning {} attempt summaries", summaries.size());
+        return summaries;
     }
 }

@@ -24,10 +24,14 @@ public class StudentPaperAttemptController {
 
     private final StudentPaperAttemptService attemptService;
     private final StudentPaperAttemptMapper attemptMapper;
+    private final com.eduapp.backend.security.JwtUtil jwtUtil;
 
-    public StudentPaperAttemptController(StudentPaperAttemptService attemptService, StudentPaperAttemptMapper attemptMapper) {
+    public StudentPaperAttemptController(StudentPaperAttemptService attemptService,
+            StudentPaperAttemptMapper attemptMapper,
+            com.eduapp.backend.security.JwtUtil jwtUtil) {
         this.attemptService = attemptService;
         this.attemptMapper = attemptMapper;
+        this.jwtUtil = jwtUtil;
     }
 
     @GetMapping
@@ -68,5 +72,30 @@ public class StudentPaperAttemptController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @GetMapping("/paper/{paperId}/history")
+    public ResponseEntity<List<StudentPaperAttemptDto>> getAttemptHistory(
+            @PathVariable Long paperId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            logger.warn("Missing or malformed Authorization header for history request");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String token = authHeader.substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+
+        if (userId == null) {
+            logger.warn("Invalid token for history request");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        logger.info("Fetching attempt history for user ID: {} and paper ID: {}", userId, paperId);
+        List<StudentPaperAttempt> attempts = attemptService.getAttemptsByStudentAndPaper(userId, paperId);
+        List<StudentPaperAttemptDto> dtos = attemptMapper.toDtoList(attempts);
+
+        return ResponseEntity.ok(dtos);
     }
 }

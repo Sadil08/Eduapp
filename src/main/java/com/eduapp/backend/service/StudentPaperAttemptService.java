@@ -15,8 +15,10 @@ import java.util.Optional;
 
 /**
  * Service class for managing StudentPaperAttempt entities.
- * Provides business logic for CRUD operations on student paper attempts, including validation of associated users and papers.
- * Follows Single Responsibility Principle by handling only student paper attempt-related operations.
+ * Provides business logic for CRUD operations on student paper attempts,
+ * including validation of associated users and papers.
+ * Follows Single Responsibility Principle by handling only student paper
+ * attempt-related operations.
  */
 @Service
 @SuppressWarnings("null")
@@ -30,13 +32,14 @@ public class StudentPaperAttemptService {
 
     /**
      * Constructor for dependency injection of repositories.
+     * 
      * @param attemptRepository the repository for StudentPaperAttempt entities
-     * @param userRepository the repository for User entities
-     * @param paperRepository the repository for Paper entities
+     * @param userRepository    the repository for User entities
+     * @param paperRepository   the repository for Paper entities
      */
     public StudentPaperAttemptService(StudentPaperAttemptRepository attemptRepository,
-                                      UserRepository userRepository,
-                                      PaperRepository paperRepository) {
+            UserRepository userRepository,
+            PaperRepository paperRepository) {
         this.attemptRepository = attemptRepository;
         this.userRepository = userRepository;
         this.paperRepository = paperRepository;
@@ -44,6 +47,7 @@ public class StudentPaperAttemptService {
 
     /**
      * Retrieves all student paper attempts from the database.
+     * 
      * @return a list of all StudentPaperAttempt entities
      */
     public List<StudentPaperAttempt> findAll() {
@@ -55,8 +59,10 @@ public class StudentPaperAttemptService {
 
     /**
      * Retrieves a student paper attempt by its ID.
+     * 
      * @param id the ID of the student paper attempt to retrieve
-     * @return an Optional containing the StudentPaperAttempt if found, or empty if not
+     * @return an Optional containing the StudentPaperAttempt if found, or empty if
+     *         not
      */
     public Optional<StudentPaperAttempt> findById(Long id) {
         logger.info("Fetching student paper attempt with ID: {}", id);
@@ -72,14 +78,15 @@ public class StudentPaperAttemptService {
     /**
      * Saves a new or updated student paper attempt to the database.
      * Validates that the associated user and paper exist.
+     * 
      * @param attempt the StudentPaperAttempt entity to save
      * @return the saved StudentPaperAttempt entity
      * @throws IllegalArgumentException if the user or paper does not exist
      */
     public StudentPaperAttempt save(StudentPaperAttempt attempt) {
         logger.info("Saving student paper attempt for user ID: {} and paper ID: {}",
-                    attempt.getStudent() != null ? attempt.getStudent().getId() : null,
-                    attempt.getPaper() != null ? attempt.getPaper().getId() : null);
+                attempt.getStudent() != null ? attempt.getStudent().getId() : null,
+                attempt.getPaper() != null ? attempt.getPaper().getId() : null);
         if (attempt.getStudent() != null && attempt.getStudent().getId() != null) {
             Optional<User> user = userRepository.findById(attempt.getStudent().getId());
             if (user.isEmpty()) {
@@ -101,6 +108,7 @@ public class StudentPaperAttemptService {
 
     /**
      * Deletes a student paper attempt by its ID.
+     * 
      * @param id the ID of the student paper attempt to delete
      */
     public void deleteById(Long id) {
@@ -115,6 +123,7 @@ public class StudentPaperAttemptService {
 
     /**
      * Checks if a student paper attempt exists by its ID.
+     * 
      * @param id the ID to check
      * @return true if the student paper attempt exists, false otherwise
      */
@@ -122,5 +131,17 @@ public class StudentPaperAttemptService {
         boolean exists = attemptRepository.existsById(id);
         logger.debug("Student paper attempt existence check for ID {}: {}", id, exists);
         return exists;
+    }
+
+    /**
+     * Retrieves all attempts by a specific student for a specific paper.
+     * 
+     * @param studentId the ID of the student
+     * @param paperId   the ID of the paper
+     * @return list of attempts ordered by start time (newest first)
+     */
+    public List<StudentPaperAttempt> getAttemptsByStudentAndPaper(Long studentId, Long paperId) {
+        logger.info("Fetching attempts for student ID: {} and paper ID: {}", studentId, paperId);
+        return attemptRepository.findByStudentIdAndPaperIdOrderByStartedAtDesc(studentId, paperId);
     }
 }

@@ -15,19 +15,5 @@ public class BackendApplication {
         SpringApplication.run(BackendApplication.class, args);
     }
 
-    @Bean
-    public CommandLineRunner initAdmin(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        return args -> {
-            if (userRepository.findByEmail("admin@eduapp.com").isEmpty()) {
-                User admin = new User();
-                admin.setName("admin");
-                admin.setEmail("admin@eduapp.com");
-                admin.setPassword(passwordEncoder.encode("12345678"));
-                admin.setRole(Role.ADMIN);
 
-                userRepository.save(admin);
-                System.out.println("✅ Default admin created: admin@eduapp.com / 12345678");
-            }
-        };
-    }
 }

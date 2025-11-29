@@ -3,9 +3,9 @@ package com.eduapp.backend.model;
 import java.time.LocalDateTime;
 import com.eduapp.backend.model.Role;
 
-
-
 import jakarta.persistence.*;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "users")
@@ -21,25 +21,24 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false)
-    private String name;
-
+    @Column(nullable = false, unique = true)
+    private String username;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private Role role;
 
-
-
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // Reserved for future auditing feature
+    private LocalDateTime updatedAt = LocalDateTime.now();
     // ---------- constructors ----------
     public User() {}
 
-    public User(String email, String password, String name) {
+    public User(String email, String password, String username) {
         this.email = email;
         this.password = password;
-        this.name = name;
+        this.username = username;
     }
 
     // ---------- getters / setters ----------
@@ -52,8 +51,8 @@ public class User {
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
 
     public Role getRole() { return role; }
 
@@ -61,9 +60,12 @@ public class User {
 
     public LocalDateTime getCreatedAt() { return createdAt;}
 
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
     @Override
     public String toString() {
-        return "User{id=" + id + ", email='" + email + "', name='" + name + "', role='" + role +"' }";
+        return "User{id=" + id + ", email='" + email + "', username='" + username + "', role='" + role +"' }";
     }
 
     @Override

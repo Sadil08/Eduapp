@@ -142,9 +142,16 @@ public class AIAnalysisService {
             sb.append("Question: ").append(answer.getQuestion().getText()).append("\n");
             sb.append("Marks Available: ").append(answer.getQuestion().getMarks()).append("\n");
             sb.append("Correct Answer: ").append(answer.getQuestion().getCorrectAnswerText()).append("\n");
-            sb.append("Student Answer: ").append(answer.getAnswerText());
+
+            // Format student answer properly for MCQs vs text questions
+            sb.append("Student Answer: ");
             if (answer.getSelectedOption() != null) {
-                sb.append(" (Option: ").append(answer.getSelectedOption().getText()).append(")");
+                // For MCQ: show option text as the answer, with option ID for clarity
+                sb.append(answer.getSelectedOption().getText());
+                sb.append(" (Selected Option ID: ").append(answer.getSelectedOption().getId()).append(")");
+            } else {
+                // For text/essay questions: show the answer text
+                sb.append(answer.getAnswerText() != null ? answer.getAnswerText() : "No answer provided");
             }
             sb.append("\n\n");
         }

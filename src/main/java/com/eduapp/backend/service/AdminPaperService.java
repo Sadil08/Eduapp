@@ -190,21 +190,43 @@ public class AdminPaperService {
         question.setCorrectAnswerText(dto.getCorrectAnswerText());
         question.setMarks(dto.getMarks());
 
-        // Update options
-        if (dto.getOptions() != null) {
-            // Delete existing options
-            if (question.getOptions() != null) {
-                optionRepository.deleteAll(question.getOptions());
+        // Update options logic
+        if (dto.getOptions() != null && dto.getType() == com.eduapp.backend.model.QuestionType.MCQ) {
+            List<QuestionOption> currentOptions = question.getOptions();
+            List<QuestionOptionDto> newOptionsDtos = dto.getOptions();
+
+            // 1. Update existing options and identify new ones
+            // We need to keep track of which existing options were updated so we can delete
+            // the rest
+            java.util.List<Long> updatedOptionIds = new java.util.ArrayList<>();
+
+            for (QuestionOptionDto optionDto : newOptionsDtos) {
+                if (optionDto.getId() != null) {
+                    // Update existing
+                    currentOptions.stream()
+                            .filter(opt -> opt.getId().equals(optionDto.getId()))
+                            .findFirst()
+                            .ifPresent(opt -> {
+                                opt.setText(optionDto.getText());
+                                opt.setIsCorrect(optionDto.getIsCorrect());
+                                updatedOptionIds.add(opt.getId());
+                            });
+                } else {
+                    // Add new option
+                    QuestionOption newOption = new QuestionOption();
+                    newOption.setQuestion(question);
+                    newOption.setText(optionDto.getText());
+                    newOption.setIsCorrect(optionDto.getIsCorrect());
+                    currentOptions.add(newOption);
+                }
             }
 
-            // Add new options
-            for (QuestionOptionDto optionDto : dto.getOptions()) {
-                QuestionOption option = new QuestionOption();
-                option.setQuestion(question);
-                option.setText(optionDto.getText());
-                option.setIsCorrect(optionDto.getIsCorrect());
-                optionRepository.save(option);
-            }
+            // 2. Remove options that are no longer in the list
+            // Note: This might still fail if you try to delete an option that has student
+            // answers.
+            // But at least you can now UPDATE the correct answer for existing options
+            // without error.
+            currentOptions.removeIf(opt -> opt.getId() != null && !updatedOptionIds.contains(opt.getId()));
         }
 
         Question updated = questionRepository.save(question);

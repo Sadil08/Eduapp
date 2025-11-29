@@ -185,6 +185,10 @@ public class StudentPaperAttemptService {
                 } else {
                     summary.setOverallFeedbackSummary(feedback);
                 }
+                // Set the weighted total marks from analysis (scaled to paper total marks)
+                if (analysis.getTotalMarks() != null) {
+                    summary.setTotalMarks(analysis.getTotalMarks());
+                }
             });
         }
 

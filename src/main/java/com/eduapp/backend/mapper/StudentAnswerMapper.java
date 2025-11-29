@@ -25,9 +25,19 @@ public interface StudentAnswerMapper {
     /**
      * Post-mapping to populate correct option details for MCQ questions.
      * Finds the correct option from the question's options list.
+     * Also populates answerText from selectedOption if null (backward
+     * compatibility).
      */
     @AfterMapping
     default void populateCorrectOption(@MappingTarget StudentAnswerDto dto, StudentAnswer entity) {
+        // Populate answerText from selected option if it's null (for backward
+        // compatibility)
+        if ((dto.getAnswerText() == null || dto.getAnswerText().isEmpty())
+                && entity.getSelectedOption() != null) {
+            dto.setAnswerText(entity.getSelectedOption().getText());
+        }
+
+        // Populate correct option details for MCQs
         if (entity.getQuestion() != null && entity.getQuestion().getOptions() != null) {
             entity.getQuestion().getOptions().stream()
                     .filter(option -> option.getIsCorrect() != null && option.getIsCorrect())

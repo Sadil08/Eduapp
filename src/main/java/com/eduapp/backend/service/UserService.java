@@ -14,6 +14,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.eduapp.backend.mapper.*;
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @SuppressWarnings("null")
 public class UserService implements UserDetailsService {
@@ -29,6 +32,12 @@ public class UserService implements UserDetailsService {
         private final PasswordEncoder passwordEncoder;
         private final JwtUtil jwtUtil;
 
+        private final PaperBundleMapper paperBundleMapper;
+        private final StudentPaperAttemptMapper studentPaperAttemptMapper;
+        private final ProgressMapper progressMapper;
+        private final LeaderboardEntryMapper leaderboardEntryMapper;
+        private final AIAnalysisMapper aiAnalysisMapper;
+
         public UserService(UserRepository userRepository,
                         StudentBundleAccessRepository studentBundleAccessRepository,
                         StudentPaperAttemptRepository studentPaperAttemptRepository,
@@ -36,7 +45,12 @@ public class UserService implements UserDetailsService {
                         LeaderboardEntryRepository leaderboardEntryRepository,
                         AIAnalysisRepository aiAnalysisRepository,
                         PasswordEncoder passwordEncoder,
-                        JwtUtil jwtUtil) {
+                        JwtUtil jwtUtil,
+                        PaperBundleMapper paperBundleMapper,
+                        StudentPaperAttemptMapper studentPaperAttemptMapper,
+                        ProgressMapper progressMapper,
+                        LeaderboardEntryMapper leaderboardEntryMapper,
+                        AIAnalysisMapper aiAnalysisMapper) {
                 this.userRepository = userRepository;
                 this.studentBundleAccessRepository = studentBundleAccessRepository;
                 this.studentPaperAttemptRepository = studentPaperAttemptRepository;
@@ -45,9 +59,15 @@ public class UserService implements UserDetailsService {
                 this.aiAnalysisRepository = aiAnalysisRepository;
                 this.passwordEncoder = passwordEncoder;
                 this.jwtUtil = jwtUtil;
+                this.paperBundleMapper = paperBundleMapper;
+                this.studentPaperAttemptMapper = studentPaperAttemptMapper;
+                this.progressMapper = progressMapper;
+                this.leaderboardEntryMapper = leaderboardEntryMapper;
+                this.aiAnalysisMapper = aiAnalysisMapper;
         }
 
         // --- Register normal student ---
+        @Transactional
         public User register(RegisterRequest req) {
                 if (req == null) {
                         throw new IllegalArgumentException("RegisterRequest cannot be null");
@@ -62,11 +82,6 @@ public class UserService implements UserDetailsService {
                 user.setPassword(passwordEncoder.encode(req.getPassword()));
                 user.setUsername(req.getName());
 
-                // Force all public registrations to student
-                // if (req.getRole() != null && req.getRole() == Role.ADMIN) {
-                // throw new RuntimeException("You cannot register as ADMIN");
-                // }
-                // user.setRole(Role.STUDENT);
                 if (req.getRole() != null) {
                         user.setRole(req.getRole());
                 } else {
@@ -77,6 +92,7 @@ public class UserService implements UserDetailsService {
         }
 
         // --- Create admin manually (restricted) ---
+        @Transactional
         public User createAdmin(RegisterRequest req) {
                 userRepository.findByEmail(req.getEmail())
                                 .ifPresent(u -> {
@@ -104,6 +120,7 @@ public class UserService implements UserDetailsService {
         }
 
         // --- Get all users (admin) ---
+        @Transactional(readOnly = true)
         public List<UserResponse> getAllUsers() {
                 logger.info("Fetching all users for admin");
                 List<User> users = userRepository.findAll();
@@ -116,6 +133,7 @@ public class UserService implements UserDetailsService {
         }
 
         // --- Get detailed user data (admin) ---
+        @Transactional(readOnly = true)
         public UserDetailDto getUserDetails(Long userId) {
                 logger.info("Fetching detailed data for user ID: {}", userId);
                 User user = userRepository.findById(userId)
@@ -124,61 +142,31 @@ public class UserService implements UserDetailsService {
                 // Fetch accessed bundles
                 List<PaperBundleDto> accessedBundles = studentBundleAccessRepository.findByStudentId(userId)
                                 .stream()
-                                .map(access -> {
-                                        // Assuming PaperBundleDto has a constructor or mapper, but for simplicity,
-                                        // create basic
-                                        // In real, use mapper
-                                        return new PaperBundleDto(access.getBundle().getId(),
-                                                        access.getBundle().getName(),
-                                                        access.getBundle().getDescription(),
-                                                        access.getBundle().getPrice(),
-                                                        access.getBundle().getType(), access.getBundle().getExamType(),
-                                                        access.getBundle().getSubject() != null
-                                                                        ? access.getBundle().getSubject().getId()
-                                                                        : null,
-                                                        access.getBundle().getLesson() != null
-                                                                        ? access.getBundle().getLesson().getId()
-                                                                        : null,
-                                                        access.getBundle().getIsPastPaper(), null); // papers null for
-                                                                                                    // summary
-                                })
+                                .map(access -> paperBundleMapper.toDto(access.getBundle()))
                                 .collect(Collectors.toList());
 
                 // Attempted papers
                 List<StudentPaperAttemptDto> attemptedPapers = studentPaperAttemptRepository.findByStudentId(userId)
                                 .stream()
-                                .map(attempt -> new StudentPaperAttemptDto(attempt.getId(),
-                                                attempt.getStudent().getId(),
-                                                attempt.getPaper().getId(), attempt.getAttemptNumber(),
-                                                attempt.getStatus().name(),
-                                                attempt.getStartedAt(), attempt.getCompletedAt(),
-                                                attempt.getTimeTakenMinutes(), null))
+                                .map(studentPaperAttemptMapper::toDto)
                                 .collect(Collectors.toList());
 
                 // Progress
                 List<ProgressDto> progress = progressRepository.findByUserId(userId)
                                 .stream()
-                                .map(p -> new ProgressDto(p.getId(), p.getUser().getId(), p.getBundle().getId(),
-                                                p.getPaper().getId(),
-                                                p.getStatus(), p.getCompletionPercentage(), p.getTimeSpentMinutes(),
-                                                p.getUpdatedAt()))
+                                .map(progressMapper::toDto)
                                 .collect(Collectors.toList());
 
                 // Scores
                 List<LeaderboardEntryDto> scores = leaderboardEntryRepository.findByUserId(userId)
                                 .stream()
-                                .map(entry -> new LeaderboardEntryDto(entry.getId(), entry.getUser().getId(),
-                                                entry.getPaper().getId(),
-                                                entry.getScore(), entry.getSubject().getId(), entry.getIsAnonymous(),
-                                                entry.getCreatedAt()))
+                                .map(leaderboardEntryMapper::toDto)
                                 .collect(Collectors.toList());
 
                 // AI Feedback summaries
                 List<AIAnalysisDto> aiFeedbackSummaries = aiAnalysisRepository.findByAnswerAttemptStudentId(userId)
                                 .stream()
-                                .map(analysis -> new AIAnalysisDto(analysis.getId(), analysis.getAnswer().getId(),
-                                                analysis.getFeedback(), analysis.getMarks(),
-                                                analysis.getLessonsToReview(), analysis.getCreatedAt()))
+                                .map(aiAnalysisMapper::toDto)
                                 .collect(Collectors.toList());
 
                 UserDetailDto detail = new UserDetailDto(user.getId(), user.getUsername(), user.getEmail(),
@@ -191,6 +179,7 @@ public class UserService implements UserDetailsService {
 
         // --- Spring Security support ---
         @Override
+        @Transactional(readOnly = true)
         public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));

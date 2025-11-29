@@ -160,6 +160,7 @@ public class PaperController {
     /**
      * Handles POST request to create a new paper (Admin only).
      */
+    @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaperDto> createPaper(@RequestBody PaperDto dto) {
         logger.info("Received request to create paper: {}", dto.getName());

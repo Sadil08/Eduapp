@@ -20,6 +20,11 @@ import com.eduapp.backend.model.PaperType;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.service.PaperService;
 import com.eduapp.backend.service.UserService;
+import com.eduapp.backend.service.AIAnalysisService;
+import com.eduapp.backend.mapper.PaperMapper;
+import com.eduapp.backend.mapper.StudentPaperAttemptMapper;
+import com.eduapp.backend.security.JwtUtil;
+import com.eduapp.backend.dto.PaperDto;
 
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -39,25 +44,42 @@ public class PaperControllerTest {
     @MockBean
     private UserService userService;
 
+    @MockBean
+    private PaperMapper paperMapper;
+
+    @MockBean
+    private AIAnalysisService aiAnalysisService;
+
+    @MockBean
+    private JwtUtil jwtUtil;
+
+    @MockBean
+    private StudentPaperAttemptMapper studentPaperAttemptMapper;
+
     @Test
-    @WithMockUser(username = "testuser", roles = {"STUDENT"})
+    @WithMockUser(username = "admin", roles = { "ADMIN" })
     void getAllPapers_ReturnsOk() throws Exception {
         // Arrange
         PaperBundle bundle = new PaperBundle("Bundle", "Desc", null, PaperType.MCQ, "Exam", null, null, false);
         bundle.setId(1L);
         User user = new User("user@example.com", "pass", "user");
         user.setId(1L);
-        Paper paper = new Paper("Paper1", "Desc", PaperType.MCQ, bundle, 2);
+        Paper paper = new Paper("Paper1", "Desc", PaperType.MCQ, bundle, 2, 100);
         paper.setId(1L);
         paper.setCreatedBy(user);
 
+        PaperDto paperDto = new PaperDto();
+        paperDto.setId(1L);
+        paperDto.setName("Paper1");
+
         when(paperService.findAll()).thenReturn(List.of(paper));
+        when(paperMapper.toDtoList(List.of(paper))).thenReturn(List.of(paperDto));
 
         // Act & Assert
         mockMvc.perform(get("/api/papers"))
-            .andExpect(status().isOk())
-            .andExpect(content().contentType("application/json"))
-            .andExpect(jsonPath("$[0].id").value(1))
-            .andExpect(jsonPath("$[0].name").value("Paper1"));
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json"))
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].name").value("Paper1"));
     }
 }

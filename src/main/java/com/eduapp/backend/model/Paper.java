@@ -30,6 +30,9 @@ public class Paper {
     @Column
     private Integer maxFreeAttempts = 2;
 
+    @Column
+    private Integer totalMarks;
+
     @ManyToOne
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -48,12 +51,14 @@ public class Paper {
     public Paper() {
     }
 
-    public Paper(String name, String description, PaperType type, PaperBundle bundle, Integer maxFreeAttempts) {
+    public Paper(String name, String description, PaperType type, PaperBundle bundle, Integer maxFreeAttempts,
+            Integer totalMarks) {
         this.name = name;
         this.description = description;
         this.type = type;
         this.bundle = bundle;
         this.maxFreeAttempts = maxFreeAttempts != null ? maxFreeAttempts : 2;
+        this.totalMarks = totalMarks;
     }
 
     // getters/setters
@@ -103,6 +108,14 @@ public class Paper {
 
     public void setMaxFreeAttempts(Integer maxFreeAttempts) {
         this.maxFreeAttempts = maxFreeAttempts;
+    }
+
+    public Integer getTotalMarks() {
+        return totalMarks;
+    }
+
+    public void setTotalMarks(Integer totalMarks) {
+        this.totalMarks = totalMarks;
     }
 
     public User getCreatedBy() {

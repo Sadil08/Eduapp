@@ -22,6 +22,7 @@ public interface StudentPaperAttemptMapper {
     @Mapping(source = "paper.id", target = "paperId")
     @Mapping(source = "student.id", target = "studentId")
     @Mapping(source = "status", target = "status")
+    @Mapping(source = "paper.totalMarks", target = "paperTotalMarks")
     @Mapping(target = "overallFeedback", ignore = true)
     @Mapping(target = "totalMarks", ignore = true)
     StudentPaperAttemptDto toDto(StudentPaperAttempt entity);

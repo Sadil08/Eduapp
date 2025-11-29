@@ -44,6 +44,7 @@ public class StudentPaperAttemptServiceTest {
         student.setId(1L);
         Paper paper = new Paper();
         paper.setId(1L);
+        paper.setTotalMarks(100);
         StudentPaperAttempt attempt = new StudentPaperAttempt(student, paper, 1, LocalDateTime.now());
         attempt.setStatus(AttemptStatus.IN_PROGRESS);
 
@@ -75,8 +76,8 @@ public class StudentPaperAttemptServiceTest {
 
         // Act & Assert
         assertThatThrownBy(() -> studentPaperAttemptService.save(attempt))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("User does not exist");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("User does not exist");
     }
 
     @Test
@@ -93,7 +94,7 @@ public class StudentPaperAttemptServiceTest {
 
         // Act & Assert
         assertThatThrownBy(() -> studentPaperAttemptService.save(attempt))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Paper does not exist");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Paper does not exist");
     }
 }

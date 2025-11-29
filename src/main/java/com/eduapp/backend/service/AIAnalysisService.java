@@ -77,12 +77,10 @@ public class AIAnalysisService {
             if (rootNode.has("overallFeedback")) {
                 analysis.setOverallFeedback(rootNode.get("overallFeedback").asText());
             }
-            if (rootNode.has("totalMarks")) {
-                analysis.setTotalMarks(rootNode.get("totalMarks").asInt());
-            }
-            analysisRepository.save(analysis);
-
             // Update Student Answers with marks and feedback
+            int totalObtainedMarks = 0;
+            int totalAllocatedMarks = 0;
+
             if (rootNode.has("questions")) {
                 for (JsonNode qNode : rootNode.get("questions")) {
                     Long qId = qNode.get("questionId").asLong();
@@ -90,17 +88,36 @@ public class AIAnalysisService {
                     String feedback = qNode.get("feedback").asText();
 
                     // Find and update the answer
-                    attempt.getAnswers().stream()
+                    Optional<StudentAnswer> answerOpt = attempt.getAnswers().stream()
                             .filter(a -> a.getQuestion().getId().equals(qId))
-                            .findFirst()
-                            .ifPresent(answer -> {
-                                answer.setMarksAwarded(marks);
-                                answer.setAiFeedback(feedback);
-                                // Save the updated answer explicitly
-                                studentAnswerRepository.save(answer);
-                            });
+                            .findFirst();
+
+                    if (answerOpt.isPresent()) {
+                        StudentAnswer answer = answerOpt.get();
+                        answer.setMarksAwarded(marks);
+                        answer.setAiFeedback(feedback);
+                        // Save the updated answer explicitly
+                        studentAnswerRepository.save(answer);
+
+                        totalObtainedMarks += marks;
+                        totalAllocatedMarks += answer.getQuestion().getMarks();
+                    }
                 }
             }
+
+            // Calculate Final Weighted Score
+            Integer paperTotalMarks = attempt.getPaper().getTotalMarks();
+            if (paperTotalMarks != null && totalAllocatedMarks > 0) {
+                // Formula: (Obtained / Allocated) * PaperTotal
+                double fraction = (double) totalObtainedMarks / totalAllocatedMarks;
+                int weightedScore = (int) Math.round(fraction * paperTotalMarks);
+                analysis.setTotalMarks(weightedScore);
+            } else if (rootNode.has("totalMarks")) {
+                // Fallback to AI provided marks if paper total marks not set
+                analysis.setTotalMarks(rootNode.get("totalMarks").asInt());
+            }
+
+            analysisRepository.save(analysis);
 
             logger.info("AI analysis completed and saved for attempt ID: {}", attempt.getId());
 

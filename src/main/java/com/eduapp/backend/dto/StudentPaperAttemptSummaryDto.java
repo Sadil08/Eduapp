@@ -14,6 +14,7 @@ public class StudentPaperAttemptSummaryDto {
     private LocalDateTime completedAt;
     private Integer timeTakenMinutes;
     private Integer totalMarks;
+    private Integer paperTotalMarks; // Total marks allocated for the paper
     private String overallFeedbackSummary; // Truncated version for list view
 
     public StudentPaperAttemptSummaryDto() {
@@ -21,13 +22,14 @@ public class StudentPaperAttemptSummaryDto {
 
     public StudentPaperAttemptSummaryDto(Long id, Integer attemptNumber, String status,
             LocalDateTime completedAt, Integer timeTakenMinutes,
-            Integer totalMarks, String overallFeedbackSummary) {
+            Integer totalMarks, Integer paperTotalMarks, String overallFeedbackSummary) {
         this.id = id;
         this.attemptNumber = attemptNumber;
         this.status = status;
         this.completedAt = completedAt;
         this.timeTakenMinutes = timeTakenMinutes;
         this.totalMarks = totalMarks;
+        this.paperTotalMarks = paperTotalMarks;
         this.overallFeedbackSummary = overallFeedbackSummary;
     }
 
@@ -78,6 +80,14 @@ public class StudentPaperAttemptSummaryDto {
 
     public void setTotalMarks(Integer totalMarks) {
         this.totalMarks = totalMarks;
+    }
+
+    public Integer getPaperTotalMarks() {
+        return paperTotalMarks;
+    }
+
+    public void setPaperTotalMarks(Integer paperTotalMarks) {
+        this.paperTotalMarks = paperTotalMarks;
     }
 
     public String getOverallFeedbackSummary() {

@@ -72,10 +72,21 @@ public class LeaderboardController {
                             .mapToInt(a -> a.getMarksAwarded() != null ? a.getMarksAwarded() : 0)
                             .sum();
 
+                    // Get paper total marks
+                    Integer paperTotalMarks = attempt.getPaper() != null ? attempt.getPaper().getTotalMarks() : null;
+
+                    // Calculate percentage
+                    Double percentage = null;
+                    if (paperTotalMarks != null && paperTotalMarks > 0) {
+                        percentage = (double) totalMarks / paperTotalMarks * 100;
+                    }
+
                     Map<String, Object> entry = new java.util.HashMap<>();
                     entry.put("studentId", attempt.getStudent().getId());
                     entry.put("studentName", attempt.getStudent().getUsername());
                     entry.put("marks", totalMarks);
+                    entry.put("paperTotalMarks", paperTotalMarks);
+                    entry.put("percentage", percentage);
                     entry.put("timeTaken", attempt.getTimeTakenMinutes() != null ? attempt.getTimeTakenMinutes() : 0);
                     return entry;
                 })

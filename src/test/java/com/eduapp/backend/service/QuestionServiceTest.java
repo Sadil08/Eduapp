@@ -41,6 +41,7 @@ public class QuestionServiceTest {
         question.setText("Test Question");
         question.setType(QuestionType.MCQ);
         question.setPaper(paper);
+        paper.setTotalMarks(100);
 
         Question savedQuestion = new Question();
         savedQuestion.setId(10L);
@@ -70,7 +71,7 @@ public class QuestionServiceTest {
 
         // Act & Assert
         assertThatThrownBy(() -> questionService.save(question))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Paper does not exist");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Paper does not exist");
     }
 }

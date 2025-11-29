@@ -19,6 +19,7 @@ public class StudentPaperAttemptDto {
     private List<StudentAnswerDto> answers;
     private String overallFeedback; // AI-generated overall feedback
     private Integer totalMarks; // Total marks awarded by AI
+    private Integer paperTotalMarks; // Total marks allocated for the paper
 
     public StudentPaperAttemptDto() {
     }
@@ -123,5 +124,13 @@ public class StudentPaperAttemptDto {
 
     public void setTotalMarks(Integer totalMarks) {
         this.totalMarks = totalMarks;
+    }
+
+    public Integer getPaperTotalMarks() {
+        return paperTotalMarks;
+    }
+
+    public void setPaperTotalMarks(Integer paperTotalMarks) {
+        this.paperTotalMarks = paperTotalMarks;
     }
 }

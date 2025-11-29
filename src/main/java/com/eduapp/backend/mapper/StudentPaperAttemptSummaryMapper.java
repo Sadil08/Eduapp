@@ -27,6 +27,11 @@ public interface StudentPaperAttemptSummaryMapper {
      */
     @AfterMapping
     default void populateSummaryFields(@MappingTarget StudentPaperAttemptSummaryDto dto, StudentPaperAttempt entity) {
+        // Set paper total marks
+        if (entity.getPaper() != null) {
+            dto.setPaperTotalMarks(entity.getPaper().getTotalMarks());
+        }
+
         // Calculate total marks from answers if available
         if (entity.getAnswers() != null && !entity.getAnswers().isEmpty()) {
             int totalMarks = entity.getAnswers().stream()

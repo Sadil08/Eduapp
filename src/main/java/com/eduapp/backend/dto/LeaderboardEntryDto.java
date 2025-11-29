@@ -10,42 +10,98 @@ public class LeaderboardEntryDto {
     private Long userId;
     private Long paperId;
     private Integer score;
+    private Integer paperTotalMarks;
+    private Double percentage;
     private Long subjectId;
     private Boolean isAnonymous;
     private LocalDateTime createdAt;
 
-    public LeaderboardEntryDto() {}
+    public LeaderboardEntryDto() {
+    }
 
-    public LeaderboardEntryDto(Long id, Long userId, Long paperId, Integer score, Long subjectId,
-                               Boolean isAnonymous, LocalDateTime createdAt) {
+    public LeaderboardEntryDto(Long id, Long userId, Long paperId, Integer score, Integer paperTotalMarks,
+            Double percentage, Long subjectId, Boolean isAnonymous, LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.paperId = paperId;
         this.score = score;
+        this.paperTotalMarks = paperTotalMarks;
+        this.percentage = percentage;
         this.subjectId = subjectId;
         this.isAnonymous = isAnonymous;
         this.createdAt = createdAt;
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Long getPaperId() { return paperId; }
-    public void setPaperId(Long paperId) { this.paperId = paperId; }
+    public Long getUserId() {
+        return userId;
+    }
 
-    public Integer getScore() { return score; }
-    public void setScore(Integer score) { this.score = score; }
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
 
-    public Long getSubjectId() { return subjectId; }
-    public void setSubjectId(Long subjectId) { this.subjectId = subjectId; }
+    public Long getPaperId() {
+        return paperId;
+    }
 
-    public Boolean getIsAnonymous() { return isAnonymous; }
-    public void setIsAnonymous(Boolean isAnonymous) { this.isAnonymous = isAnonymous; }
+    public void setPaperId(Long paperId) {
+        this.paperId = paperId;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Integer getScore() {
+        return score;
+    }
+
+    public void setScore(Integer score) {
+        this.score = score;
+    }
+
+    public Integer getPaperTotalMarks() {
+        return paperTotalMarks;
+    }
+
+    public void setPaperTotalMarks(Integer paperTotalMarks) {
+        this.paperTotalMarks = paperTotalMarks;
+    }
+
+    public Double getPercentage() {
+        return percentage;
+    }
+
+    public void setPercentage(Double percentage) {
+        this.percentage = percentage;
+    }
+
+    public Long getSubjectId() {
+        return subjectId;
+    }
+
+    public void setSubjectId(Long subjectId) {
+        this.subjectId = subjectId;
+    }
+
+    public Boolean getIsAnonymous() {
+        return isAnonymous;
+    }
+
+    public void setIsAnonymous(Boolean isAnonymous) {
+        this.isAnonymous = isAnonymous;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 }

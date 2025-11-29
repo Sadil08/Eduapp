@@ -87,8 +87,8 @@ public class AdminPaperService {
         paper.setDescription(dto.getDescription());
         paper.setType(dto.getType());
         paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
+        paper.setTotalMarks(dto.getTotalMarks());
         paper.setBundle(bundle);
-
         // Set createdBy only if adminId is provided
         if (adminId != null) {
             userRepository.findById(adminId).ifPresent(paper::setCreatedBy);
@@ -114,6 +114,7 @@ public class AdminPaperService {
         paper.setDescription(dto.getDescription());
         paper.setType(dto.getType());
         paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
+        paper.setTotalMarks(dto.getTotalMarks());
 
         Paper updated = paperRepository.save(paper);
         logger.info("Paper updated: {}", updated.getName());
@@ -243,6 +244,7 @@ public class AdminPaperService {
         dto.setType(paper.getType());
         dto.setBundleId(paper.getBundle() != null ? paper.getBundle().getId() : null);
         dto.setMaxFreeAttempts(paper.getMaxFreeAttempts());
+        dto.setTotalMarks(paper.getTotalMarks());
 
         // Admin fields
         dto.setCreatedAt(paper.getCreatedAt());

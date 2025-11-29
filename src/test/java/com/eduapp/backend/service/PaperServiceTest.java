@@ -39,6 +39,7 @@ public class PaperServiceTest {
         Paper paper = new Paper();
         paper.setName("Test Paper");
         paper.setBundle(bundle);
+        paper.setTotalMarks(100);
 
         Paper savedPaper = new Paper();
         savedPaper.setId(10L);
@@ -67,7 +68,7 @@ public class PaperServiceTest {
 
         // Act & Assert
         assertThatThrownBy(() -> paperService.save(paper))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("PaperBundle does not exist");
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("PaperBundle does not exist");
     }
 }

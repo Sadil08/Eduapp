@@ -20,6 +20,6 @@ jwt:
   expiration: 86400000
 
 gemini:
-  api-key: AIzaSyDHIbZa2wKV2TFWkuRRjNt6ytctAdB9kDg
+  api-key: ###############################
   model: gemini-2.5-flash
   api-url: https://generativelanguage.googleapis.com/v1

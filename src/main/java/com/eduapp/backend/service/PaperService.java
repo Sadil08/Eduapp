@@ -248,13 +248,18 @@ public class PaperService {
                 StudentAnswer answer = new StudentAnswer();
                 answer.setAttempt(savedAttempt);
                 answer.setQuestion(question);
-                answer.setAnswerText(ansDto.getAnswerText());
 
                 if (ansDto.getSelectedOptionId() != null) {
+                    // MCQ: set selected option and populate answerText with option text
                     QuestionOption option = questionOptionRepository.findById(ansDto.getSelectedOptionId())
                             .orElseThrow(() -> new IllegalArgumentException(
                                     "Option not found: " + ansDto.getSelectedOptionId()));
                     answer.setSelectedOption(option);
+                    // Store the option text as answerText for display purposes
+                    answer.setAnswerText(option.getText());
+                } else {
+                    // Text/Essay question: use the provided answer text
+                    answer.setAnswerText(ansDto.getAnswerText());
                 }
 
                 studentAnswerRepository.save(answer);

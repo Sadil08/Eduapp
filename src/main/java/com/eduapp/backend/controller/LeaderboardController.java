@@ -13,6 +13,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.eduapp.backend.model.OverallPaperAnalysis;
+import com.eduapp.backend.repository.OverallPaperAnalysisRepository;
+
 @RestController
 @RequestMapping("/api/leaderboard")
 public class LeaderboardController {
@@ -20,10 +23,13 @@ public class LeaderboardController {
     private static final Logger logger = LoggerFactory.getLogger(LeaderboardController.class);
 
     private final StudentPaperAttemptRepository attemptRepository;
+    private final OverallPaperAnalysisRepository analysisRepository;
     private final JwtUtil jwtUtil;
 
-    public LeaderboardController(StudentPaperAttemptRepository attemptRepository, JwtUtil jwtUtil) {
+    public LeaderboardController(StudentPaperAttemptRepository attemptRepository,
+            OverallPaperAnalysisRepository analysisRepository, JwtUtil jwtUtil) {
         this.attemptRepository = attemptRepository;
+        this.analysisRepository = analysisRepository;
         this.jwtUtil = jwtUtil;
     }
 
@@ -68,9 +74,18 @@ public class LeaderboardController {
         // Map attempts to a simpler structure with calculated marks
         List<Map<String, Object>> allEntries = attempts.stream()
                 .map(attempt -> {
-                    int totalMarks = attempt.getAnswers().stream()
-                            .mapToInt(a -> a.getMarksAwarded() != null ? a.getMarksAwarded() : 0)
-                            .sum();
+                    // Fetch weighted marks from analysis
+                    Integer totalMarks = 0;
+                    Optional<OverallPaperAnalysis> analysisOpt = analysisRepository.findByAttemptId(attempt.getId());
+                    if (analysisOpt.isPresent()) {
+                        totalMarks = analysisOpt.get().getTotalMarks();
+                    } else {
+                        // Fallback to raw sum if analysis is missing (should not happen for graded
+                        // papers)
+                        totalMarks = attempt.getAnswers().stream()
+                                .mapToInt(a -> a.getMarksAwarded() != null ? a.getMarksAwarded() : 0)
+                                .sum();
+                    }
 
                     // Get paper total marks
                     Integer paperTotalMarks = attempt.getPaper() != null ? attempt.getPaper().getTotalMarks() : null;

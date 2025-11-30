@@ -83,6 +83,38 @@ public class PaperBundleController {
         }
     }
 
+    // Handles GET request to filter bundles by multiple criteria
+    @GetMapping("/filter")
+    public ResponseEntity<List<com.eduapp.backend.dto.PaperBundleSummaryDto>> filterBundles(
+            @RequestParam(required = false) com.eduapp.backend.model.PaperType type,
+            @RequestParam(required = false) String examType,
+            @RequestParam(required = false) Long subjectId,
+            @RequestParam(required = false) Long lessonId,
+            @RequestParam(required = false) Boolean isPastPaper,
+            @RequestParam(required = false) java.math.BigDecimal minPrice,
+            @RequestParam(required = false) java.math.BigDecimal maxPrice,
+            @RequestParam(required = false) String name) {
+        logger.info(
+                "Filtering bundles - type: {}, examType: {}, subjectId: {}, lessonId: {}, isPastPaper: {}, minPrice: {}, maxPrice: {}, name: {}",
+                type, examType, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
+
+        List<com.eduapp.backend.dto.PaperBundleSummaryDto> bundles = paperBundleService.filterBundles(
+                type, examType, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
+
+        return ResponseEntity.ok(bundles);
+    }
+
+    // Handles GET request to search bundles by name
+    @GetMapping("/search")
+    public ResponseEntity<List<com.eduapp.backend.dto.PaperBundleSummaryDto>> searchByName(
+            @RequestParam String name) {
+        logger.info("Searching bundles by name: {}", name);
+
+        List<com.eduapp.backend.dto.PaperBundleSummaryDto> bundles = paperBundleService.searchByName(name);
+
+        return ResponseEntity.ok(bundles);
+    }
+
     // Handles POST request to create a new paper bundle, requires admin
     // authentication
 

@@ -26,6 +26,11 @@ public interface PaperBundleRepository extends JpaRepository<PaperBundle, Long> 
 
         List<PaperBundle> findByNameContainingIgnoreCase(String name);
 
+        // Count methods for integrity checks
+        long countBySubjectId(Long subjectId);
+
+        long countByLessonId(Long lessonId);
+
         // Combined filter method with all criteria
         @Query("SELECT pb FROM PaperBundle pb WHERE " +
                         "(:type IS NULL OR pb.type = :type) AND " +

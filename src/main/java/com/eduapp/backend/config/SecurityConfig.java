@@ -52,6 +52,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll() // open endpoints
                         .requestMatchers(HttpMethod.GET, "/api/paper-bundles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/paper-bundles/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/subjects/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/lessons/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

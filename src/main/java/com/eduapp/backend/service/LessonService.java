@@ -13,8 +13,10 @@ import java.util.Optional;
 
 /**
  * Service class for managing Lesson entities.
- * Provides business logic for CRUD operations on lessons, including validation of associated subjects.
- * Follows Single Responsibility Principle by handling only lesson-related operations.
+ * Provides business logic for CRUD operations on lessons, including validation
+ * of associated subjects.
+ * Follows Single Responsibility Principle by handling only lesson-related
+ * operations.
  */
 @Service
 @SuppressWarnings("null")
@@ -24,19 +26,26 @@ public class LessonService {
 
     private final LessonRepository lessonRepository;
     private final SubjectRepository subjectRepository;
+    private final com.eduapp.backend.repository.PaperBundleRepository paperBundleRepository;
 
     /**
      * Constructor for dependency injection of repositories.
-     * @param lessonRepository the repository for Lesson entities
-     * @param subjectRepository the repository for Subject entities
+     * 
+     * @param lessonRepository      the repository for Lesson entities
+     * @param subjectRepository     the repository for Subject entities
+     * @param paperBundleRepository the repository for PaperBundle entities
      */
-    public LessonService(LessonRepository lessonRepository, SubjectRepository subjectRepository) {
+    public LessonService(LessonRepository lessonRepository,
+            SubjectRepository subjectRepository,
+            com.eduapp.backend.repository.PaperBundleRepository paperBundleRepository) {
         this.lessonRepository = lessonRepository;
         this.subjectRepository = subjectRepository;
+        this.paperBundleRepository = paperBundleRepository;
     }
 
     /**
      * Retrieves all lessons from the database.
+     * 
      * @return a list of all Lesson entities
      */
     public List<Lesson> findAll() {
@@ -48,6 +57,7 @@ public class LessonService {
 
     /**
      * Retrieves a lesson by its ID.
+     * 
      * @param id the ID of the lesson to retrieve
      * @return an Optional containing the Lesson if found, or empty if not
      */
@@ -68,6 +78,7 @@ public class LessonService {
     /**
      * Saves a new or updated lesson to the database.
      * Validates that the associated subject exists.
+     * 
      * @param lesson the Lesson entity to save
      * @return the saved Lesson entity
      * @throws IllegalArgumentException if the subject does not exist
@@ -91,13 +102,23 @@ public class LessonService {
 
     /**
      * Deletes a lesson by its ID.
+     * 
      * @param id the ID of the lesson to delete
+     * @throws IllegalStateException if the lesson is used by any bundles
      */
     public void deleteById(Long id) {
         if (id == null) {
             throw new IllegalArgumentException("ID cannot be null");
         }
         logger.info("Deleting lesson with ID: {}", id);
+
+        // Integrity check
+        long bundleCount = paperBundleRepository.countByLessonId(id);
+        if (bundleCount > 0) {
+            logger.error("Cannot delete lesson {}: It is used by {} bundles", id, bundleCount);
+            throw new IllegalStateException("Cannot delete lesson: It is used by " + bundleCount + " bundles.");
+        }
+
         if (lessonRepository.existsById(id)) {
             lessonRepository.deleteById(id);
             logger.info("Lesson deleted successfully");
@@ -108,6 +129,7 @@ public class LessonService {
 
     /**
      * Checks if a lesson exists by its ID.
+     * 
      * @param id the ID to check
      * @return true if the lesson exists, false otherwise
      */

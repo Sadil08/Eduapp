@@ -116,4 +116,15 @@ public class StudentBundleAccess {
     public void setGrantReason(String grantReason) {
         this.grantReason = grantReason;
     }
+
+    @Column(name = "price_paid")
+    private java.math.BigDecimal pricePaid;
+
+    public java.math.BigDecimal getPricePaid() {
+        return pricePaid;
+    }
+
+    public void setPricePaid(java.math.BigDecimal pricePaid) {
+        this.pricePaid = pricePaid;
+    }
 }

@@ -119,6 +119,10 @@ public class UserService implements UserDetailsService {
                 return jwtUtil.generateToken(email, user.getRole(), user.getId());
         }
 
+        public java.util.Optional<User> findById(Long id) {
+                return userRepository.findById(id);
+        }
+
         // --- Get all users (admin) ---
         @Transactional(readOnly = true)
         public List<UserResponse> getAllUsers() {

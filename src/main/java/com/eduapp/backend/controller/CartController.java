@@ -18,8 +18,14 @@ public class CartController {
 
     private final CartService cartService;
 
-    public CartController(CartService cartService) {
+    private final com.eduapp.backend.security.JwtUtil jwtUtil;
+    private final com.eduapp.backend.repository.PaperBundleRepository bundleRepo;
+
+    public CartController(CartService cartService, com.eduapp.backend.security.JwtUtil jwtUtil,
+            com.eduapp.backend.repository.PaperBundleRepository bundleRepo) {
         this.cartService = cartService;
+        this.jwtUtil = jwtUtil;
+        this.bundleRepo = bundleRepo;
     }
 
     @GetMapping
@@ -62,5 +68,28 @@ public class CartController {
         }
         cartService.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/my-cart")
+    public ResponseEntity<Cart> getMyCart(@RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+        return ResponseEntity.ok(cartService.getMyCart(userId));
+    }
+
+    @PostMapping("/my-cart/items/{bundleId}")
+    public ResponseEntity<Cart> addToCart(@RequestHeader("Authorization") String authHeader,
+            @PathVariable Long bundleId) {
+        String token = authHeader.substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+        return ResponseEntity.ok(cartService.addToCart(userId, bundleId, bundleRepo));
+    }
+
+    @DeleteMapping("/my-cart/items/{bundleId}")
+    public ResponseEntity<Cart> removeFromCart(@RequestHeader("Authorization") String authHeader,
+            @PathVariable Long bundleId) {
+        String token = authHeader.substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+        return ResponseEntity.ok(cartService.removeFromCart(userId, bundleId));
     }
 }

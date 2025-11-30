@@ -56,10 +56,11 @@ public class AdminBundleService {
         int totalAttempts = (int) attemptRepository.count();
 
         // Calculate total revenue from all bundle purchases
-        BigDecimal totalRevenue = accessRepository.findAll().stream()
-                .filter(access -> !Boolean.TRUE.equals(access.getGrantedByAdmin()))
-                .map(access -> access.getBundle().getPrice())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Calculate total revenue from all bundle purchases
+        BigDecimal totalRevenue = accessRepository.sumPricePaid();
+        if (totalRevenue == null) {
+            totalRevenue = BigDecimal.ZERO;
+        }
 
         SystemStatsDto stats = new SystemStatsDto(
                 totalBundles, totalPapers, totalQuestions,

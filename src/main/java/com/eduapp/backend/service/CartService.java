@@ -56,4 +56,34 @@ public class CartService {
         }
         return cartRepository.existsById(id);
     }
+
+    public Cart getMyCart(Long userId) {
+        return cartRepository.findByUserId(userId)
+                .orElseGet(() -> {
+                    com.eduapp.backend.model.User user = new com.eduapp.backend.model.User();
+                    user.setId(userId);
+                    return cartRepository.save(new Cart(user));
+                });
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public Cart addToCart(Long userId, Long bundleId, com.eduapp.backend.repository.PaperBundleRepository bundleRepo) {
+        Cart cart = getMyCart(userId);
+        com.eduapp.backend.model.PaperBundle bundle = bundleRepo.findById(bundleId)
+                .orElseThrow(() -> new RuntimeException("Bundle not found"));
+
+        // Avoid duplicates
+        if (cart.getBundles().stream().noneMatch(b -> b.getId().equals(bundleId))) {
+            cart.getBundles().add(bundle);
+            return cartRepository.save(cart);
+        }
+        return cart;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public Cart removeFromCart(Long userId, Long bundleId) {
+        Cart cart = getMyCart(userId);
+        cart.getBundles().removeIf(b -> b.getId().equals(bundleId));
+        return cartRepository.save(cart);
+    }
 }

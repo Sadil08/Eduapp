@@ -80,4 +80,9 @@ public class StudentBundleAccessService {
                 })
                 .collect(Collectors.toList());
     }
+
+    public java.math.BigDecimal calculateTotalRevenue() {
+        java.math.BigDecimal total = studentBundleAccessRepository.sumPricePaid();
+        return total != null ? total : java.math.BigDecimal.ZERO;
+    }
 }

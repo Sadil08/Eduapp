@@ -24,4 +24,7 @@ public interface StudentBundleAccessRepository extends JpaRepository<StudentBund
      * Find access record by student and bundle for admin grant/revoke
      */
     StudentBundleAccess findByStudentIdAndBundleId(Long studentId, Long bundleId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT SUM(s.pricePaid) FROM StudentBundleAccess s")
+    java.math.BigDecimal sumPricePaid();
 }

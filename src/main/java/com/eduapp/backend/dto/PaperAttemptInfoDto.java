@@ -1,24 +1,34 @@
 package com.eduapp.backend.dto;
 
-import java.util.List;
-
-public class PaperAttemptDto extends PaperSummaryDto {
-    private List<QuestionAttemptDto> questions;
+/**
+ * DTO for paper attempt information
+ * Contains attempt counts and limits for a specific paper and user
+ */
+public class PaperAttemptInfoDto {
+    private Long paperId;
     private Integer attemptsMade;
     private Integer maxAttempts;
     private Integer remainingAttempts;
     private Boolean canAttempt;
 
-    public PaperAttemptDto() {
-        super();
+    public PaperAttemptInfoDto() {
     }
 
-    public List<QuestionAttemptDto> getQuestions() {
-        return questions;
+    public PaperAttemptInfoDto(Long paperId, Integer attemptsMade, Integer maxAttempts,
+            Integer remainingAttempts, Boolean canAttempt) {
+        this.paperId = paperId;
+        this.attemptsMade = attemptsMade;
+        this.maxAttempts = maxAttempts;
+        this.remainingAttempts = remainingAttempts;
+        this.canAttempt = canAttempt;
     }
 
-    public void setQuestions(List<QuestionAttemptDto> questions) {
-        this.questions = questions;
+    public Long getPaperId() {
+        return paperId;
+    }
+
+    public void setPaperId(Long paperId) {
+        this.paperId = paperId;
     }
 
     public Integer getAttemptsMade() {

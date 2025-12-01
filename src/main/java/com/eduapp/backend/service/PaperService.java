@@ -16,6 +16,7 @@ import com.eduapp.backend.repository.UserRepository;
 import com.eduapp.backend.repository.QuestionRepository;
 import com.eduapp.backend.repository.QuestionOptionRepository;
 import com.eduapp.backend.repository.OverallPaperAnalysisRepository;
+import com.eduapp.backend.repository.ExtraAttemptPurchaseRepository;
 import com.eduapp.backend.model.StudentPaperAttempt;
 import com.eduapp.backend.model.StudentAnswer;
 import com.eduapp.backend.model.User;
@@ -54,6 +55,7 @@ public class PaperService {
     private final PaperMapper paperMapper;
     private final StudentPaperAttemptMapper studentPaperAttemptMapper;
     private final OverallPaperAnalysisRepository overallPaperAnalysisRepository;
+    private final ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository;
 
     /**
      * Constructor for dependency injection of repositories.
@@ -74,7 +76,8 @@ public class PaperService {
             QuestionOptionRepository questionOptionRepository,
             PaperMapper paperMapper,
             StudentPaperAttemptMapper studentPaperAttemptMapper,
-            OverallPaperAnalysisRepository overallPaperAnalysisRepository) {
+            OverallPaperAnalysisRepository overallPaperAnalysisRepository,
+            ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository) {
         this.paperRepository = paperRepository;
         this.paperBundleRepository = paperBundleRepository;
         this.studentBundleAccessRepository = studentBundleAccessRepository;
@@ -86,6 +89,7 @@ public class PaperService {
         this.paperMapper = paperMapper;
         this.studentPaperAttemptMapper = studentPaperAttemptMapper;
         this.overallPaperAnalysisRepository = overallPaperAnalysisRepository;
+        this.extraAttemptPurchaseRepository = extraAttemptPurchaseRepository;
     }
 
     /**
@@ -167,6 +171,50 @@ public class PaperService {
     }
 
     /**
+     * Checks if a user can attempt a paper based on attempt limits.
+     * Calculates total allowed attempts (free + purchased) and compares with
+     * attempts made.
+     * 
+     * @param paperId the ID of the paper
+     * @param userId  the ID of the user
+     * @return AttemptLimitInfo containing attempt counts and whether user can
+     *         attempt
+     */
+    private AttemptLimitInfo checkAttemptLimit(Long paperId, Long userId) {
+        Paper paper = paperRepository.findById(paperId)
+                .orElseThrow(() -> new IllegalArgumentException("Paper not found"));
+
+        int attemptsMade = studentPaperAttemptRepository.countByStudentIdAndPaperId(userId, paperId);
+        int freeAttempts = paper.getMaxFreeAttempts() != null ? paper.getMaxFreeAttempts() : 2;
+        int extraAttempts = extraAttemptPurchaseRepository.sumExtraAttemptsByUserAndPaper(userId, paperId);
+        int maxAttempts = freeAttempts + extraAttempts;
+        int remainingAttempts = Math.max(0, maxAttempts - attemptsMade);
+        boolean canAttempt = attemptsMade < maxAttempts;
+
+        logger.info("Attempt limit check for user {} on paper {}: made={}, max={}, remaining={}, canAttempt={}",
+                userId, paperId, attemptsMade, maxAttempts, remainingAttempts, canAttempt);
+
+        return new AttemptLimitInfo(attemptsMade, maxAttempts, remainingAttempts, canAttempt);
+    }
+
+    /**
+     * Inner class to hold attempt limit information
+     */
+    private static class AttemptLimitInfo {
+        final int attemptsMade;
+        final int maxAttempts;
+        final int remainingAttempts;
+        final boolean canAttempt;
+
+        AttemptLimitInfo(int attemptsMade, int maxAttempts, int remainingAttempts, boolean canAttempt) {
+            this.attemptsMade = attemptsMade;
+            this.maxAttempts = maxAttempts;
+            this.remainingAttempts = remainingAttempts;
+            this.canAttempt = canAttempt;
+        }
+    }
+
+    /**
      * Retrieves paper details for an attempt.
      * Checks if the user has purchased the parent bundle.
      * 
@@ -204,7 +252,16 @@ public class PaperService {
             throw new SecurityException("Access denied: Bundle not purchased");
         }
 
-        return paperMapper.toAttemptDto(paper);
+        // Check attempt limits
+        AttemptLimitInfo limitInfo = checkAttemptLimit(paperId, userId);
+
+        PaperAttemptDto dto = paperMapper.toAttemptDto(paper);
+        dto.setAttemptsMade(limitInfo.attemptsMade);
+        dto.setMaxAttempts(limitInfo.maxAttempts);
+        dto.setRemainingAttempts(limitInfo.remainingAttempts);
+        dto.setCanAttempt(limitInfo.canAttempt);
+
+        return dto;
     }
 
     public StudentPaperAttempt submitPaperAttempt(Long paperId, Long userId, PaperSubmissionDto submission) {
@@ -220,6 +277,15 @@ public class PaperService {
         PaperBundle bundle = paper.getBundle();
         if (!studentBundleAccessRepository.existsByStudentIdAndBundleId(userId, bundle.getId())) {
             throw new SecurityException("Access denied: Bundle not purchased");
+        }
+
+        // Check attempt limits BEFORE creating the attempt
+        AttemptLimitInfo limitInfo = checkAttemptLimit(paperId, userId);
+        if (!limitInfo.canAttempt) {
+            logger.warn("User {} exceeded attempt limit for paper {}. Attempts made: {}, Max allowed: {}",
+                    userId, paperId, limitInfo.attemptsMade, limitInfo.maxAttempts);
+            throw new SecurityException("Attempt limit exceeded. You have used all " + limitInfo.maxAttempts
+                    + " attempts. Purchase extra attempts to continue.");
         }
 
         // Create Attempt
@@ -306,5 +372,45 @@ public class PaperService {
 
         logger.info("Successfully retrieved attempt results for attempt ID: {}", attemptId);
         return dto;
+    }
+
+    /**
+     * Get attempt information for multiple papers for a specific user.
+     * Returns a map of paper ID to attempt info.
+     * 
+     * @param paperIds List of paper IDs to get info for
+     * @param userId   ID of the user
+     * @return Map of paper ID to PaperAttemptInfoDto
+     */
+    public java.util.Map<Long, com.eduapp.backend.dto.PaperAttemptInfoDto> getAttemptInfoForPapers(
+            List<Long> paperIds, Long userId) {
+        logger.info("Getting attempt info for {} papers for user {}", paperIds.size(), userId);
+
+        java.util.Map<Long, com.eduapp.backend.dto.PaperAttemptInfoDto> result = new java.util.HashMap<>();
+
+        for (Long paperId : paperIds) {
+            try {
+                Paper paper = paperRepository.findById(paperId).orElse(null);
+                if (paper == null) {
+                    continue;
+                }
+
+                int attemptsMade = studentPaperAttemptRepository.countByStudentIdAndPaperId(userId, paperId);
+                int freeAttempts = paper.getMaxFreeAttempts() != null ? paper.getMaxFreeAttempts() : 2;
+                int extraAttempts = extraAttemptPurchaseRepository.sumExtraAttemptsByUserAndPaper(userId, paperId);
+                int maxAttempts = freeAttempts + extraAttempts;
+                int remainingAttempts = Math.max(0, maxAttempts - attemptsMade);
+                boolean canAttempt = attemptsMade < maxAttempts;
+
+                com.eduapp.backend.dto.PaperAttemptInfoDto info = new com.eduapp.backend.dto.PaperAttemptInfoDto(
+                        paperId, attemptsMade, maxAttempts, remainingAttempts, canAttempt);
+
+                result.put(paperId, info);
+            } catch (Exception e) {
+                logger.error("Error getting attempt info for paper {}: {}", paperId, e.getMessage());
+            }
+        }
+
+        return result;
     }
 }

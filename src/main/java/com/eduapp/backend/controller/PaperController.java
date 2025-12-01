@@ -206,4 +206,28 @@ public class PaperController {
             return ResponseEntity.notFound().build();
         }
     }
+
+    /**
+     * Handles GET request to retrieve attempt information for multiple papers.
+     * Returns attempt counts and limits for each paper for the current user.
+     * GET /api/papers/attempt-info?paperIds=1,2,3
+     */
+    @GetMapping("/attempt-info")
+    public ResponseEntity<java.util.Map<Long, com.eduapp.backend.dto.PaperAttemptInfoDto>> getAttemptInfo(
+            @RequestParam List<Long> paperIds,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            logger.warn("Missing or malformed Authorization header");
+            return ResponseEntity.badRequest().build();
+        }
+        String token = authHeader.substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+
+        logger.info("Received request to get attempt info for {} papers for user {}", paperIds.size(), userId);
+
+        java.util.Map<Long, com.eduapp.backend.dto.PaperAttemptInfoDto> attemptInfo = paperService
+                .getAttemptInfoForPapers(paperIds, userId);
+
+        return ResponseEntity.ok(attemptInfo);
+    }
 }

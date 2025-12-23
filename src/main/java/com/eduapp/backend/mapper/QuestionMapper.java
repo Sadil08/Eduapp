@@ -23,5 +23,10 @@ public interface QuestionMapper {
     List<QuestionDto> toDtoList(List<Question> questions);
 
     @Mapping(source = "paper.id", target = "paperId")
+    @Mapping(source = "imageUrl", target = "imageUrl")
+    @Mapping(source = "requiresImageDisplay", target = "requiresImageDisplay")
+    @Mapping(source = "hideQuestionText", target = "hideQuestionText")
+    @Mapping(source = "allowImageAnswer", target = "allowImageAnswer")
+    @Mapping(source = "answerTypeHint", target = "answerTypeHint")
     QuestionAttemptDto toAttemptDto(Question entity);
 }

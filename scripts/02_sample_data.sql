@@ -102,9 +102,9 @@ INSERT INTO student_answers (attempt_id, question_id, answer_text, selected_opti
 (2, 9, NULL, 2, NOW() - INTERVAL '10 minutes'); -- Correct answer
 
 -- Insert Progress
-INSERT INTO progresses (student_id, subject_id, lesson_id, completion_percentage, last_accessed) VALUES
+INSERT INTO progresses (user_id, bundle_id, paper_id, completion_percentage, last_accessed) VALUES
 (2, 1, 1, 75.0, NOW() - INTERVAL '1 day'),
-(2, 4, 6, 50.0, NOW() - INTERVAL '2 hours');
+(2, 6, 8, 50.0, NOW() - INTERVAL '2 hours');
 
 -- Insert Leaderboard Entries
 INSERT INTO leaderboard_entries (user_id, subject_id, score, paper_id, is_anonymous, created_at) VALUES
@@ -122,8 +122,8 @@ INSERT INTO cart_bundles (cart_id, bundle_id) VALUES
 -- Insert Notifications
 INSERT INTO notifications (user_id, message, type, is_read, sent_at) VALUES
 (2, 'Welcome! You have successfully registered.', 'INFO', true, NOW()),
-(2, 'You have purchased Algebra Practice Set.', 'SUCCESS', true, NOW() - INTERVAL '1 day'),
-(2, 'You have an incomplete quiz in Cell Biology.', 'REMINDER', false, NOW() - INTERVAL '2 hours');
+(2, 'You have purchased Algebra Practice Set.', 'INFO', true, NOW() - INTERVAL '1 day'),
+(2, 'You have an incomplete quiz in Cell Biology.', 'ALERT', false, NOW() - INTERVAL '2 hours');
 
 -- Insert AI Analysis (sample analysis for completed attempt)
 INSERT INTO ai_analyses (answer_id, feedback, lessons_to_review, marks, created_at) VALUES

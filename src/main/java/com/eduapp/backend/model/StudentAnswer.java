@@ -23,6 +23,15 @@ public class StudentAnswer {
     @Column(length = 4000)
     private String answerText;
 
+    @Column(length = 4000)
+    private String imageUrl;
+
+    @Column(length = 4000)
+    private String extractedText;
+
+    @Column(name = "extraction_confidence")
+    private Float extractionConfidence;
+
     @ManyToOne
     @JoinColumn(name = "selected_option_id")
     private QuestionOption selectedOption;
@@ -81,6 +90,22 @@ public class StudentAnswer {
         this.answerText = answerText;
     }
 
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getExtractedText() {
+        return extractedText;
+    }
+
+    public void setExtractedText(String extractedText) {
+        this.extractedText = extractedText;
+    }
+
     public QuestionOption getSelectedOption() {
         return selectedOption;
     }
@@ -111,5 +136,13 @@ public class StudentAnswer {
 
     public void setAiFeedback(String aiFeedback) {
         this.aiFeedback = aiFeedback;
+    }
+
+    public Float getExtractionConfidence() {
+        return extractionConfidence;
+    }
+
+    public void setExtractionConfidence(Float extractionConfidence) {
+        this.extractionConfidence = extractionConfidence;
     }
 }

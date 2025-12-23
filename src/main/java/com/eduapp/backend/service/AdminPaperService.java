@@ -153,6 +153,13 @@ public class AdminPaperService {
         question.setType(dto.getType());
         question.setCorrectAnswerText(dto.getCorrectAnswerText());
         question.setMarks(dto.getMarks());
+        question.setImageUrl(dto.getImageUrl());
+        question.setModelAnswerImageUrl(dto.getModelAnswerImageUrl());
+        question.setExtractedText(dto.getExtractedText());
+        question.setRequiresImageDisplay(dto.getRequiresImageDisplay());
+        question.setHideQuestionText(dto.getHideQuestionText());
+        question.setAllowImageAnswer(dto.getAllowImageAnswer());
+        question.setAnswerTypeHint(dto.getAnswerTypeHint());
 
         Question savedQuestion = questionRepository.save(question);
 
@@ -189,6 +196,13 @@ public class AdminPaperService {
         question.setType(dto.getType());
         question.setCorrectAnswerText(dto.getCorrectAnswerText());
         question.setMarks(dto.getMarks());
+        question.setImageUrl(dto.getImageUrl());
+        question.setModelAnswerImageUrl(dto.getModelAnswerImageUrl());
+        question.setExtractedText(dto.getExtractedText());
+        question.setRequiresImageDisplay(dto.getRequiresImageDisplay());
+        question.setHideQuestionText(dto.getHideQuestionText());
+        question.setAllowImageAnswer(dto.getAllowImageAnswer());
+        question.setAnswerTypeHint(dto.getAnswerTypeHint());
 
         // Update options logic
         if (dto.getOptions() != null && dto.getType() == com.eduapp.backend.model.QuestionType.MCQ) {
@@ -303,6 +317,13 @@ public class AdminPaperService {
         dto.setType(question.getType());
         dto.setCorrectAnswerText(question.getCorrectAnswerText());
         dto.setMarks(question.getMarks());
+        dto.setImageUrl(question.getImageUrl());
+        dto.setModelAnswerImageUrl(question.getModelAnswerImageUrl());
+        dto.setExtractedText(question.getExtractedText());
+        dto.setRequiresImageDisplay(question.getRequiresImageDisplay());
+        dto.setHideQuestionText(question.getHideQuestionText());
+        dto.setAllowImageAnswer(question.getAllowImageAnswer());
+        dto.setAnswerTypeHint(question.getAnswerTypeHint());
 
         if (question.getOptions() != null) {
             List<QuestionOptionDto> options = question.getOptions().stream()

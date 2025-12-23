@@ -11,12 +11,18 @@ public class StudentAnswerDto {
     private Long attemptId;
     private Long questionId;
     private String questionText; // For display purposes
+    private String questionImageUrl; // For display purposes
+    private Boolean hideQuestionText; // For display purposes
     private String answerText;
+    private String imageUrl;
+    private String extractedText;
     private Long selectedOptionId;
     private LocalDateTime submittedAt;
     private Integer marksAwarded; // Marks given by AI
     private Integer marksAvailable; // Total marks for the question
     private String aiFeedback; // AI-generated feedback
+    private String selectedOptionText; // Text of the selected option for MCQ questions
+    private Float extractionConfidence; // Confidence score for handwriting extraction
 
     // Correct answer fields (only shown after submission)
     private String correctAnswerText; // Correct answer for essay/text questions
@@ -98,6 +104,38 @@ public class StudentAnswerDto {
         this.answerText = answerText;
     }
 
+    public String getQuestionImageUrl() {
+        return questionImageUrl;
+    }
+
+    public void setQuestionImageUrl(String questionImageUrl) {
+        this.questionImageUrl = questionImageUrl;
+    }
+
+    public Boolean getHideQuestionText() {
+        return hideQuestionText;
+    }
+
+    public void setHideQuestionText(Boolean hideQuestionText) {
+        this.hideQuestionText = hideQuestionText;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getExtractedText() {
+        return extractedText;
+    }
+
+    public void setExtractedText(String extractedText) {
+        this.extractedText = extractedText;
+    }
+
     public void setSelectedOptionId(Long selectedOptionId) {
         this.selectedOptionId = selectedOptionId;
     }
@@ -141,4 +179,21 @@ public class StudentAnswerDto {
     public void setCorrectOptionText(String correctOptionText) {
         this.correctOptionText = correctOptionText;
     }
+
+    public String getSelectedOptionText() {
+        return selectedOptionText;
+    }
+
+    public void setSelectedOptionText(String selectedOptionText) {
+        this.selectedOptionText = selectedOptionText;
+    }
+
+    public Float getExtractionConfidence() {
+        return extractionConfidence;
+    }
+
+    public void setExtractionConfidence(Float extractionConfidence) {
+        this.extractionConfidence = extractionConfidence;
+    }
+
 }

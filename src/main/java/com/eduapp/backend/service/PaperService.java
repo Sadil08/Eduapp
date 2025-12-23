@@ -249,6 +249,14 @@ public class PaperService {
                 answer.setAttempt(savedAttempt);
                 answer.setQuestion(question);
 
+                logger.warn(
+                        "PAPER_SERVICE_DEBUG: Processing answer for question {}: ansDto.extractedText='{}' (length={})",
+                        question.getId(),
+                        (ansDto.getExtractedText() != null && !ansDto.getExtractedText().isEmpty())
+                                ? ansDto.getExtractedText()
+                                : "EMPTY",
+                        ansDto.getExtractedText() != null ? ansDto.getExtractedText().length() : 0);
+
                 if (ansDto.getSelectedOptionId() != null) {
                     // MCQ: set selected option and populate answerText with option text
                     QuestionOption option = questionOptionRepository.findById(ansDto.getSelectedOptionId())
@@ -258,8 +266,10 @@ public class PaperService {
                     // Store the option text as answerText for display purposes
                     answer.setAnswerText(option.getText());
                 } else {
-                    // Text/Essay question: use the provided answer text
+                    // Text/Essay question: use the provided answer text and image details
                     answer.setAnswerText(ansDto.getAnswerText());
+                    answer.setImageUrl(ansDto.getImageUrl());
+                    answer.setExtractedText(ansDto.getExtractedText());
                 }
 
                 studentAnswerRepository.save(answer);
@@ -297,6 +307,14 @@ public class PaperService {
 
         // Map to DTO
         StudentPaperAttemptDto dto = studentPaperAttemptMapper.toDto(attempt);
+
+        // Debug logging for image display
+        if (dto.getAnswers() != null) {
+            dto.getAnswers().forEach(ans -> {
+                logger.info("Retrieved answer for question {}: questionImg='{}', studentImg='{}', hideQ='{}'",
+                        ans.getQuestionId(), ans.getQuestionImageUrl(), ans.getImageUrl(), ans.getHideQuestionText());
+            });
+        }
 
         // Fetch and add overall analysis if available
         overallPaperAnalysisRepository.findByAttemptId(attemptId).ifPresent(analysis -> {

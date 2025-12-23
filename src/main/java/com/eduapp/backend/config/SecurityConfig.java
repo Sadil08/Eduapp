@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll() // open endpoints
+                        .requestMatchers("/api/files/**").permitAll() // serve uploaded files without auth
                         .requestMatchers(HttpMethod.GET, "/api/paper-bundles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/paper-bundles/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/subjects/**").permitAll()

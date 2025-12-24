@@ -64,8 +64,13 @@ public class AIAnalysisService {
     public void analyzeAttempt(StudentPaperAttempt attempt) {
         logger.info("Starting AI analysis for attempt ID: {}", attempt.getId());
 
+        // Re-fetch the attempt to ensure we have the latest state (especially answers)
+        // and that we're working with an attached entity in this thread's context.
+        StudentPaperAttempt freshAttempt = studentPaperAttemptRepository.findById(attempt.getId())
+                .orElse(attempt);
+
         try {
-            String prompt = buildPrompt(attempt);
+            String prompt = buildPrompt(freshAttempt);
             String analysisResultJson = callGeminiApi(prompt);
 
             // Parse JSON
@@ -88,7 +93,7 @@ public class AIAnalysisService {
                     String feedback = qNode.get("feedback").asText();
 
                     // Find and update the answer
-                    Optional<StudentAnswer> answerOpt = attempt.getAnswers().stream()
+                    Optional<StudentAnswer> answerOpt = freshAttempt.getAnswers().stream()
                             .filter(a -> a.getQuestion().getId().equals(qId))
                             .findFirst();
 

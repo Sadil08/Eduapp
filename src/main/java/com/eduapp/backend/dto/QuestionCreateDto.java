@@ -65,4 +65,34 @@ public class QuestionCreateDto {
     public void setOptions(List<QuestionOptionDto> options) {
         this.options = options;
     }
+
+    // New fields for image support
+    private String imageUrl;
+    private String modelAnswerImageUrl;
+    private String extractedText;
+    private Boolean requiresImageDisplay;
+    private Boolean hideQuestionText;
+    private Boolean allowImageAnswer;
+    private String answerTypeHint;
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public String getModelAnswerImageUrl() { return modelAnswerImageUrl; }
+    public void setModelAnswerImageUrl(String modelAnswerImageUrl) { this.modelAnswerImageUrl = modelAnswerImageUrl; }
+
+    public String getExtractedText() { return extractedText; }
+    public void setExtractedText(String extractedText) { this.extractedText = extractedText; }
+
+    public Boolean getRequiresImageDisplay() { return requiresImageDisplay; }
+    public void setRequiresImageDisplay(Boolean requiresImageDisplay) { this.requiresImageDisplay = requiresImageDisplay; }
+
+    public Boolean getHideQuestionText() { return hideQuestionText; }
+    public void setHideQuestionText(Boolean hideQuestionText) { this.hideQuestionText = hideQuestionText; }
+
+    public Boolean getAllowImageAnswer() { return allowImageAnswer; }
+    public void setAllowImageAnswer(Boolean allowImageAnswer) { this.allowImageAnswer = allowImageAnswer; }
+
+    public String getAnswerTypeHint() { return answerTypeHint; }
+    public void setAnswerTypeHint(String answerTypeHint) { this.answerTypeHint = answerTypeHint; }
 }

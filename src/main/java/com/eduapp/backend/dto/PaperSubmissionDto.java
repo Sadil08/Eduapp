@@ -56,5 +56,24 @@ public class PaperSubmissionDto {
         public void setAnswerText(String answerText) {
             this.answerText = answerText;
         }
+
+        private String imageUrl;
+        private String extractedText;
+
+        public String getImageUrl() {
+            return imageUrl;
+        }
+
+        public void setImageUrl(String imageUrl) {
+            this.imageUrl = imageUrl;
+        }
+
+        public String getExtractedText() {
+            return extractedText;
+        }
+
+        public void setExtractedText(String extractedText) {
+            this.extractedText = extractedText;
+        }
     }
 }

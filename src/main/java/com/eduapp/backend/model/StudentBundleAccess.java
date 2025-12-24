@@ -24,6 +24,9 @@ public class StudentBundleAccess {
     @Column
     private String paymentId;
 
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
     /**
      * Indicates whether this access was granted by an admin (true) or purchased by
      * student (false)
@@ -126,5 +129,13 @@ public class StudentBundleAccess {
 
     public void setPricePaid(java.math.BigDecimal pricePaid) {
         this.pricePaid = pricePaid;
+    }
+
+    public LocalDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(LocalDateTime expiresAt) {
+        this.expiresAt = expiresAt;
     }
 }

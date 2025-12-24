@@ -64,8 +64,13 @@ public class AIAnalysisService {
     public void analyzeAttempt(StudentPaperAttempt attempt) {
         logger.info("Starting AI analysis for attempt ID: {}", attempt.getId());
 
+        // Re-fetch the attempt to ensure we have the latest state (especially answers)
+        // and that we're working with an attached entity in this thread's context.
+        StudentPaperAttempt freshAttempt = studentPaperAttemptRepository.findById(attempt.getId())
+                .orElse(attempt);
+
         try {
-            String prompt = buildPrompt(attempt);
+            String prompt = buildPrompt(freshAttempt);
             String analysisResultJson = callGeminiApi(prompt);
 
             // Parse JSON
@@ -88,7 +93,7 @@ public class AIAnalysisService {
                     String feedback = qNode.get("feedback").asText();
 
                     // Find and update the answer
-                    Optional<StudentAnswer> answerOpt = attempt.getAnswers().stream()
+                    Optional<StudentAnswer> answerOpt = freshAttempt.getAnswers().stream()
                             .filter(a -> a.getQuestion().getId().equals(qId))
                             .findFirst();
 
@@ -139,7 +144,11 @@ public class AIAnalysisService {
 
         for (StudentAnswer answer : attempt.getAnswers()) {
             sb.append("Question ID: ").append(answer.getQuestion().getId()).append("\n");
-            sb.append("Question: ").append(answer.getQuestion().getText()).append("\n");
+            String qText = (answer.getQuestion().getExtractedText() != null
+                    && !answer.getQuestion().getExtractedText().isEmpty())
+                            ? answer.getQuestion().getExtractedText()
+                            : answer.getQuestion().getText();
+            sb.append("Question: ").append(qText).append("\n");
             sb.append("Marks Available: ").append(answer.getQuestion().getMarks()).append("\n");
             sb.append("Correct Answer: ").append(answer.getQuestion().getCorrectAnswerText()).append("\n");
 
@@ -150,8 +159,19 @@ public class AIAnalysisService {
                 sb.append(answer.getSelectedOption().getText());
                 sb.append(" (Selected Option ID: ").append(answer.getSelectedOption().getId()).append(")");
             } else {
-                // For text/essay questions: show the answer text
-                sb.append(answer.getAnswerText() != null ? answer.getAnswerText() : "No answer provided");
+                // For text/essay questions: show the answer text (prefer extracted if
+                // available)
+                String studentAns = (answer.getExtractedText() != null && !answer.getExtractedText().isEmpty())
+                        ? answer.getExtractedText()
+                        : answer.getAnswerText();
+
+                logger.warn("AI ANALYSIS DEBUG: questionId={}, studentAns='{}' (extracted={}, typed={})",
+                        answer.getQuestion().getId(),
+                        (studentAns != null && !studentAns.isEmpty()) ? studentAns : "EMPTY",
+                        answer.getExtractedText() != null && !answer.getExtractedText().isEmpty(),
+                        answer.getAnswerText() != null && !answer.getAnswerText().isEmpty());
+
+                sb.append(studentAns != null && !studentAns.isEmpty() ? studentAns : "No answer provided");
             }
             sb.append("\n\n");
         }

@@ -119,4 +119,40 @@ public class QuestionService {
         logger.debug("Question existence check for ID {}: {}", id, exists);
         return exists;
     }
+
+    /**
+     * Retrieves the subject and lesson names for a given paper ID.
+     * @param paperId the ID of the paper
+     * @return a Map containing "subject" and "lesson" keys, or empty map if not found
+     */
+    public java.util.Map<String, String> getPaperContext(Long paperId) {
+        Optional<Paper> paperOpt = paperRepository.findById(paperId);
+        java.util.Map<String, String> context = new java.util.HashMap<>();
+        
+        if (paperOpt.isPresent()) {
+            Paper paper = paperOpt.get();
+            if (paper.getBundle() != null) {
+                if (paper.getBundle().getSubject() != null) {
+                    context.put("subject", paper.getBundle().getSubject().getName());
+                }
+                if (paper.getBundle().getLesson() != null) {
+                    context.put("lesson", paper.getBundle().getLesson().getName());
+                }
+            }
+        }
+        return context;
+    }
+
+    /**
+     * Retrieves the subject and lesson names for a given question ID.
+     * @param questionId the ID of the question
+     * @return a Map containing "subject" and "lesson" keys, or empty map if not found
+     */
+    public java.util.Map<String, String> getQuestionContext(Long questionId) {
+        Optional<Question> questionOpt = questionRepository.findById(questionId);
+        if (questionOpt.isPresent() && questionOpt.get().getPaper() != null) {
+            return getPaperContext(questionOpt.get().getPaper().getId());
+        }
+        return new java.util.HashMap<>();
+    }
 }

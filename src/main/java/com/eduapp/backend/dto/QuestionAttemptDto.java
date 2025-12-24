@@ -9,6 +9,11 @@ public class QuestionAttemptDto {
     private String text;
     private QuestionType type;
     private Integer marks;
+    private String imageUrl;
+    private Boolean requiresImageDisplay;
+    private Boolean hideQuestionText;
+    private Boolean allowImageAnswer;
+    private String answerTypeHint;
     private List<QuestionOptionDto> options;
 
     public QuestionAttemptDto() {
@@ -60,6 +65,46 @@ public class QuestionAttemptDto {
 
     public void setMarks(Integer marks) {
         this.marks = marks;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public Boolean getRequiresImageDisplay() {
+        return requiresImageDisplay;
+    }
+
+    public void setRequiresImageDisplay(Boolean requiresImageDisplay) {
+        this.requiresImageDisplay = requiresImageDisplay;
+    }
+
+    public Boolean getHideQuestionText() {
+        return hideQuestionText;
+    }
+
+    public void setHideQuestionText(Boolean hideQuestionText) {
+        this.hideQuestionText = hideQuestionText;
+    }
+
+    public Boolean getAllowImageAnswer() {
+        return allowImageAnswer;
+    }
+
+    public void setAllowImageAnswer(Boolean allowImageAnswer) {
+        this.allowImageAnswer = allowImageAnswer;
+    }
+
+    public String getAnswerTypeHint() {
+        return answerTypeHint;
+    }
+
+    public void setAnswerTypeHint(String answerTypeHint) {
+        this.answerTypeHint = answerTypeHint;
     }
 
     public List<QuestionOptionDto> getOptions() {

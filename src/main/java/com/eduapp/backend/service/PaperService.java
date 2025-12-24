@@ -21,11 +21,11 @@ import com.eduapp.backend.model.StudentAnswer;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.model.Question;
 import com.eduapp.backend.model.QuestionOption;
-import com.eduapp.backend.model.OverallPaperAnalysis;
 import java.time.LocalDateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -207,6 +207,7 @@ public class PaperService {
         return paperMapper.toAttemptDto(paper);
     }
 
+    @Transactional
     public StudentPaperAttempt submitPaperAttempt(Long paperId, Long userId, PaperSubmissionDto submission) {
         logger.info("Submitting paper attempt for paper ID: {} and user ID: {}", paperId, userId);
 

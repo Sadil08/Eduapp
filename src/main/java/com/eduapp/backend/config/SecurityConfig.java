@@ -30,13 +30,33 @@ public class SecurityConfig {
         this.jwtFilter = jwtFilter;
     }
 
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        System.out.println("SECURITY DEBUG: Resolved FRONTEND_URL is: " + frontendUrl);
+    }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(java.util.List.of(frontendUrl));
-        config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(java.util.List.of("*"));
+        java.util.List<String> origins = new java.util.ArrayList<>();
+        if (frontendUrl != null && !frontendUrl.isEmpty()) {
+            origins.add(frontendUrl);
+            // Also allow variants
+            if (frontendUrl.contains("localhost")) {
+                origins.add(frontendUrl.replace("localhost", "127.0.0.1"));
+            }
+        }
+        // Safety defaults
+        if (origins.isEmpty()) {
+            origins.add("http://localhost:3000");
+        }
+
+        config.setAllowedOrigins(origins);
+        config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(
+                java.util.List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L); // 1 hour cache for preflight
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
@@ -49,6 +69,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll() // open endpoints
                         .requestMatchers("/api/files/**").permitAll() // serve uploaded files without auth
                         .requestMatchers(HttpMethod.GET, "/api/paper-bundles").permitAll()

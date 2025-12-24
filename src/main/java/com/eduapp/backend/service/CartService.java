@@ -16,9 +16,11 @@ public class CartService {
     private static final Logger logger = LoggerFactory.getLogger(CartService.class);
 
     private final CartRepository cartRepository;
+    private final com.eduapp.backend.repository.UserRepository userRepository;
 
-    public CartService(CartRepository cartRepository) {
+    public CartService(CartRepository cartRepository, com.eduapp.backend.repository.UserRepository userRepository) {
         this.cartRepository = cartRepository;
+        this.userRepository = userRepository;
     }
 
     public List<Cart> findAll() {
@@ -58,12 +60,28 @@ public class CartService {
     }
 
     public Cart getMyCart(Long userId) {
-        return cartRepository.findByUserId(userId)
-                .orElseGet(() -> {
-                    com.eduapp.backend.model.User user = new com.eduapp.backend.model.User();
-                    user.setId(userId);
-                    return cartRepository.save(new Cart(user));
-                });
+        List<Cart> carts = cartRepository.findByUserId(userId);
+        if (carts.isEmpty()) {
+            com.eduapp.backend.model.User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+            return cartRepository.save(new Cart(user));
+        }
+
+        // Return first, delete others if duplicates exist
+        if (carts.size() > 1) {
+            logger.warn("Found {} duplicate carts for user {}. Cleaning up...", carts.size(), userId);
+            Cart primary = carts.get(0);
+            for (int i = 1; i < carts.size(); i++) {
+                try {
+                    cartRepository.delete(carts.get(i));
+                } catch (Exception e) {
+                    logger.error("Failed to delete duplicate cart: " + carts.get(i).getId(), e);
+                }
+            }
+            return primary;
+        }
+
+        return carts.get(0);
     }
 
     @org.springframework.transaction.annotation.Transactional

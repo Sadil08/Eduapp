@@ -14,6 +14,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.eduapp.backend.model.ExamType;
 import com.eduapp.backend.model.Paper;
 import com.eduapp.backend.model.PaperBundle;
 import com.eduapp.backend.model.PaperType;
@@ -60,7 +61,9 @@ public class PaperControllerTest {
     @WithMockUser(username = "admin", roles = { "ADMIN" })
     void getAllPapers_ReturnsOk() throws Exception {
         // Arrange
-        PaperBundle bundle = new PaperBundle("Bundle", "Desc", null, PaperType.MCQ, "Exam", null, null, false);
+        ExamType examType = new ExamType();
+        examType.setName("Exam");
+        PaperBundle bundle = new PaperBundle("Bundle", "Desc", null, PaperType.MCQ, examType, null, null, false);
         bundle.setId(1L);
         User user = new User("user@example.com", "pass", "user");
         user.setId(1L);

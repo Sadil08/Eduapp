@@ -14,7 +14,7 @@ public interface PaperBundleRepository extends JpaRepository<PaperBundle, Long> 
         // Individual filter methods
         List<PaperBundle> findByType(PaperType type);
 
-        List<PaperBundle> findByExamType(String examType);
+        List<PaperBundle> findByExamTypeId(Long examTypeId);
 
         List<PaperBundle> findBySubjectId(Long subjectId);
 
@@ -34,7 +34,7 @@ public interface PaperBundleRepository extends JpaRepository<PaperBundle, Long> 
         // Combined filter method with all criteria
         @Query("SELECT pb FROM PaperBundle pb WHERE " +
                         "(:type IS NULL OR pb.type = :type) AND " +
-                        "(:examType IS NULL OR pb.examType = :examType) AND " +
+                        "(:examTypeId IS NULL OR pb.examType.id = :examTypeId) AND " +
                         "(:subjectId IS NULL OR pb.subject.id = :subjectId) AND " +
                         "(:lessonId IS NULL OR pb.lesson.id = :lessonId) AND " +
                         "(:isPastPaper IS NULL OR pb.isPastPaper = :isPastPaper) AND " +
@@ -43,7 +43,7 @@ public interface PaperBundleRepository extends JpaRepository<PaperBundle, Long> 
                         "(:name IS NULL OR LOWER(pb.name) LIKE :name)")
         List<PaperBundle> findByFilters(
                         @Param("type") PaperType type,
-                        @Param("examType") String examType,
+                        @Param("examTypeId") Long examTypeId,
                         @Param("subjectId") Long subjectId,
                         @Param("lessonId") Long lessonId,
                         @Param("isPastPaper") Boolean isPastPaper,

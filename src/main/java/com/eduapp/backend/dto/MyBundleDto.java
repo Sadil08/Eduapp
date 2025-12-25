@@ -15,7 +15,8 @@ public class MyBundleDto {
     private String bundleDescription;
     private BigDecimal price;
     private PaperType type;
-    private String examType;
+    private Long examTypeId;
+    private String examTypeName;
     private Boolean isPastPaper;
     private String subjectName;
     private String lessonName;
@@ -26,7 +27,7 @@ public class MyBundleDto {
     }
 
     public MyBundleDto(Long accessId, Long bundleId, String bundleName, String bundleDescription,
-            BigDecimal price, PaperType type, String examType, Boolean isPastPaper,
+            BigDecimal price, PaperType type, Long examTypeId, String examTypeName, Boolean isPastPaper,
             String subjectName, String lessonName, LocalDateTime purchasedAt, int paperCount) {
         this.accessId = accessId;
         this.bundleId = bundleId;
@@ -34,7 +35,8 @@ public class MyBundleDto {
         this.bundleDescription = bundleDescription;
         this.price = price;
         this.type = type;
-        this.examType = examType;
+        this.examTypeId = examTypeId;
+        this.examTypeName = examTypeName;
         this.isPastPaper = isPastPaper;
         this.subjectName = subjectName;
         this.lessonName = lessonName;
@@ -91,12 +93,20 @@ public class MyBundleDto {
         this.type = type;
     }
 
-    public String getExamType() {
-        return examType;
+    public Long getExamTypeId() {
+        return examTypeId;
     }
 
-    public void setExamType(String examType) {
-        this.examType = examType;
+    public void setExamTypeId(Long examTypeId) {
+        this.examTypeId = examTypeId;
+    }
+
+    public String getExamTypeName() {
+        return examTypeName;
+    }
+
+    public void setExamTypeName(String examTypeName) {
+        this.examTypeName = examTypeName;
     }
 
     public Boolean getIsPastPaper() {

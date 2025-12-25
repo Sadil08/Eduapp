@@ -28,19 +28,22 @@ public class AdminBundleService {
     private final StudentPaperAttemptRepository attemptRepository;
     private final QuestionRepository questionRepository;
     private final UserRepository userRepository;
+    private final ExamTypeRepository examTypeRepository;
 
     public AdminBundleService(PaperBundleRepository bundleRepository,
             PaperRepository paperRepository,
             StudentBundleAccessRepository accessRepository,
             StudentPaperAttemptRepository attemptRepository,
             QuestionRepository questionRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ExamTypeRepository examTypeRepository) {
         this.bundleRepository = bundleRepository;
         this.paperRepository = paperRepository;
         this.accessRepository = accessRepository;
         this.attemptRepository = attemptRepository;
         this.questionRepository = questionRepository;
         this.userRepository = userRepository;
+        this.examTypeRepository = examTypeRepository;
     }
 
     /**
@@ -121,7 +124,8 @@ public class AdminBundleService {
             dto.setDescription(bundle.getDescription());
             dto.setPrice(bundle.getPrice());
             dto.setType(bundle.getType());
-            dto.setExamType(bundle.getExamType());
+            dto.setExamTypeId(bundle.getExamType() != null ? bundle.getExamType().getId() : null);
+            dto.setExamTypeName(bundle.getExamType() != null ? bundle.getExamType().getName() : null);
             dto.setSubjectId(bundle.getSubject() != null ? bundle.getSubject().getId() : null);
             dto.setLessonId(bundle.getLesson() != null ? bundle.getLesson().getId() : null);
             dto.setIsPastPaper(bundle.getIsPastPaper());
@@ -150,7 +154,15 @@ public class AdminBundleService {
         bundle.setDescription(dto.getDescription());
         bundle.setPrice(dto.getPrice());
         bundle.setType(dto.getType());
-        bundle.setExamType(dto.getExamType());
+
+        bundle.setType(dto.getType());
+
+        if (dto.getExamTypeId() != null) {
+            com.eduapp.backend.model.ExamType examType = examTypeRepository.findById(dto.getExamTypeId())
+                    .orElseThrow(() -> new IllegalArgumentException("Exam Type not found"));
+            bundle.setExamType(examType);
+        }
+
         bundle.setIsPastPaper(dto.getIsPastPaper());
         // Set createdBy only if adminId is provided
         if (adminId != null) {
@@ -177,7 +189,15 @@ public class AdminBundleService {
         bundle.setDescription(dto.getDescription());
         bundle.setPrice(dto.getPrice());
         bundle.setType(dto.getType());
-        bundle.setExamType(dto.getExamType());
+
+        if (dto.getExamTypeId() != null) {
+            com.eduapp.backend.model.ExamType examType = examTypeRepository.findById(dto.getExamTypeId())
+                    .orElseThrow(() -> new IllegalArgumentException("Exam Type not found"));
+            bundle.setExamType(examType);
+        } else {
+            bundle.setExamType(null);
+        }
+
         bundle.setIsPastPaper(dto.getIsPastPaper());
 
         PaperBundle updated = bundleRepository.save(bundle);

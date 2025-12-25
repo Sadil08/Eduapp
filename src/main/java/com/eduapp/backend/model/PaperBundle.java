@@ -26,8 +26,9 @@ public class PaperBundle {
     @Enumerated(EnumType.STRING)
     private PaperType type;
 
-    @Column
-    private String examType;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "exam_type_id")
+    private ExamType examType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_id")
@@ -56,7 +57,7 @@ public class PaperBundle {
     public PaperBundle() {
     }
 
-    public PaperBundle(String name, String description, BigDecimal price, PaperType type, String examType,
+    public PaperBundle(String name, String description, BigDecimal price, PaperType type, ExamType examType,
             Subject subject, Lesson lesson, Boolean isPastPaper) {
         this.name = name;
         this.description = description;
@@ -109,11 +110,11 @@ public class PaperBundle {
         this.type = type;
     }
 
-    public String getExamType() {
+    public ExamType getExamType() {
         return examType;
     }
 
-    public void setExamType(String examType) {
+    public void setExamType(ExamType examType) {
         this.examType = examType;
     }
 

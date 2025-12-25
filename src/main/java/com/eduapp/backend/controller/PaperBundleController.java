@@ -87,7 +87,7 @@ public class PaperBundleController {
     @GetMapping("/filter")
     public ResponseEntity<List<com.eduapp.backend.dto.PaperBundleSummaryDto>> filterBundles(
             @RequestParam(required = false) com.eduapp.backend.model.PaperType type,
-            @RequestParam(required = false) String examType,
+            @RequestParam(required = false) Long examTypeId,
             @RequestParam(required = false) Long subjectId,
             @RequestParam(required = false) Long lessonId,
             @RequestParam(required = false) Boolean isPastPaper,
@@ -95,11 +95,11 @@ public class PaperBundleController {
             @RequestParam(required = false) java.math.BigDecimal maxPrice,
             @RequestParam(required = false) String name) {
         logger.info(
-                "Filtering bundles - type: {}, examType: {}, subjectId: {}, lessonId: {}, isPastPaper: {}, minPrice: {}, maxPrice: {}, name: {}",
-                type, examType, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
+                "Filtering bundles - type: {}, examTypeId: {}, subjectId: {}, lessonId: {}, isPastPaper: {}, minPrice: {}, maxPrice: {}, name: {}",
+                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
 
         List<com.eduapp.backend.dto.PaperBundleSummaryDto> bundles = paperBundleService.filterBundles(
-                type, examType, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
+                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
 
         return ResponseEntity.ok(bundles);
     }

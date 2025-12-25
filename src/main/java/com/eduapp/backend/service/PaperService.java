@@ -56,6 +56,7 @@ public class PaperService {
     private final StudentPaperAttemptMapper studentPaperAttemptMapper;
     private final OverallPaperAnalysisRepository overallPaperAnalysisRepository;
     private final ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository;
+    private final AIAnalysisService aiAnalysisService;
 
     /**
      * Constructor for dependency injection of repositories.
@@ -77,7 +78,8 @@ public class PaperService {
             PaperMapper paperMapper,
             StudentPaperAttemptMapper studentPaperAttemptMapper,
             OverallPaperAnalysisRepository overallPaperAnalysisRepository,
-            ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository) {
+            ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository,
+            AIAnalysisService aiAnalysisService) {
         this.paperRepository = paperRepository;
         this.paperBundleRepository = paperBundleRepository;
         this.studentBundleAccessRepository = studentBundleAccessRepository;
@@ -90,6 +92,7 @@ public class PaperService {
         this.studentPaperAttemptMapper = studentPaperAttemptMapper;
         this.overallPaperAnalysisRepository = overallPaperAnalysisRepository;
         this.extraAttemptPurchaseRepository = extraAttemptPurchaseRepository;
+        this.aiAnalysisService = aiAnalysisService;
     }
 
     /**
@@ -348,6 +351,13 @@ public class PaperService {
         }
 
         logger.info("Loaded attempt with {} answers for AI analysis", savedAttempt.getAnswers().size());
+
+        // Trigger AI Analysis asynchronously
+        try {
+            aiAnalysisService.analyzeAttempt(savedAttempt);
+        } catch (Exception e) {
+            logger.error("Failed to trigger AI analysis for attempt: {}", savedAttempt.getId(), e);
+        }
 
         return savedAttempt;
     }

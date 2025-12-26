@@ -34,4 +34,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(error);
     }
 
+    @ExceptionHandler(UploadLimitExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleUploadLimitExceeded(UploadLimitExceededException ex) {
+        Map<String, Object> error = Map.of(
+                "error", ex.getMessage(),
+                "code", 400,
+                "type", "UPLOAD_LIMIT_EXCEEDED");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
 }

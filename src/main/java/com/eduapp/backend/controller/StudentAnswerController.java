@@ -51,11 +51,25 @@ public class StudentAnswerController {
     public ResponseEntity<Map<String, String>> extractFromImage(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "questionId", required = false) Long questionId,
+            @RequestParam(value = "answerId", required = false) Long answerId,
             @RequestParam(value = "subject", required = false) String subjectName) {
         try {
             logger.info("Received request to extract text from student answer image");
 
             String lessonName = null;
+
+            // Check upload limit if answerId is provided
+            if (answerId != null) {
+                Optional<StudentAnswer> existingAnswer = studentAnswerService.findById(answerId);
+                if (existingAnswer.isPresent()) {
+                    StudentAnswer answer = existingAnswer.get();
+                    if (!answer.canUpload()) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Map.of("error", "Upload limit reached. Maximum " +
+                                        StudentAnswer.MAX_UPLOADS_PER_QUESTION + " uploads allowed per question."));
+                    }
+                }
+            }
 
             // Validate if question allows image answers and fetch context
             if (questionId != null) {
@@ -86,6 +100,14 @@ public class StudentAnswerController {
                             ? extractedText.substring(0, Math.min(extractedText.length(), 50)) + "..."
                             : "EMPTY",
                     subjectName, lessonName);
+
+            // Increment upload count if answerId provided
+            if (answerId != null) {
+                studentAnswerService.findById(answerId).ifPresent(answer -> {
+                    answer.incrementUploadCount();
+                    studentAnswerService.save(answer);
+                });
+            }
 
             return ResponseEntity.ok(Map.of(
                     "extractedText", extractedText,

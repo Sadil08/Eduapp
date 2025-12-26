@@ -121,10 +121,12 @@ public class QuestionController {
             java.util.List<java.util.Map<String, String>> results = new java.util.ArrayList<>();
             for (String id : idArray) {
                 String trimmedId = id.trim();
-                results.add(java.util.Map.of(
-                        "id", trimmedId,
-                        "extractedText", extractedTexts.getOrDefault(trimmedId, ""),
-                        "imageUrl", storedUrls.getOrDefault(trimmedId, "")));
+                java.util.Map<String, String> resultItem = new java.util.HashMap<>();
+                resultItem.put("id", trimmedId);
+                resultItem.put("extractedText",
+                        extractedTexts.containsKey(trimmedId) ? extractedTexts.get(trimmedId) : "");
+                resultItem.put("imageUrl", storedUrls.containsKey(trimmedId) ? storedUrls.get(trimmedId) : "");
+                results.add(resultItem);
             }
 
             logger.info("Batch extraction completed: {} images processed", results.size());

@@ -71,7 +71,8 @@ public class AIService {
                     Map.class);
 
             if (response.getBody() != null && response.getBody().containsKey("extracted_text")) {
-                return (String) response.getBody().get("extracted_text");
+                Object extracted = response.getBody().get("extracted_text");
+                return extracted != null ? (String) extracted : "";
             }
             return "";
         } catch (Exception e) {
@@ -144,7 +145,11 @@ public class AIService {
 
                 Map<String, String> extractedTexts = new java.util.HashMap<>();
                 for (Map<String, String> result : results) {
-                    extractedTexts.put(result.get("id"), result.get("extracted_text"));
+                    String id = result.get("id");
+                    String text = result.get("extracted_text");
+                    if (id != null) {
+                        extractedTexts.put(id, text != null ? text : "");
+                    }
                 }
 
                 logger.info("Batch extraction completed: {} images processed", extractedTexts.size());

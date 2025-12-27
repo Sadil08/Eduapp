@@ -21,14 +21,20 @@ public class PurchaseService {
 
     private final CartService cartService;
     private final StudentBundleAccessRepository studentBundleAccessRepository;
+    private final WalletService walletService;
+    private final com.eduapp.backend.repository.UserRepository userRepository;
 
-    public PurchaseService(CartService cartService, StudentBundleAccessRepository studentBundleAccessRepository) {
+    public PurchaseService(CartService cartService, StudentBundleAccessRepository studentBundleAccessRepository,
+            WalletService walletService, com.eduapp.backend.repository.UserRepository userRepository) {
         this.cartService = cartService;
         this.studentBundleAccessRepository = studentBundleAccessRepository;
+        this.walletService = walletService;
+        this.userRepository = userRepository;
     }
 
     @Transactional
     public void checkout(User user) {
+
         try {
             logger.info("Processing checkout for user: {}", user.getId());
 
@@ -42,7 +48,16 @@ public class PurchaseService {
             List<PaperBundle> bundles = new ArrayList<>(cart.getBundles());
             logger.info("User {} has {} bundles in cart", user.getId(), bundles.size());
 
-            String paymentId = "MOCK-" + UUID.randomUUID().toString();
+            java.math.BigDecimal totalAmount = bundles.stream()
+                    .map(PaperBundle::getPrice)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+            logger.info("Total checkout amount: {}", totalAmount);
+
+            // Debit wallet
+            walletService.debit(user, totalAmount, "Purchase of " + bundles.size() + " bundles");
+
+            String paymentId = "WALLET-" + UUID.randomUUID().toString();
 
             for (PaperBundle bundle : bundles) {
                 logger.info("Processing bundle: {} (ID: {}) for user: {}", bundle.getName(), bundle.getId(),

@@ -32,26 +32,15 @@ public class SecurityConfig {
 
     @jakarta.annotation.PostConstruct
     public void init() {
-        System.out.println("SECURITY DEBUG: Resolved FRONTEND_URL is: " + frontendUrl);
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        java.util.List<String> origins = new java.util.ArrayList<>();
-        if (frontendUrl != null && !frontendUrl.isEmpty()) {
-            origins.add(frontendUrl);
-            // Also allow variants
-            if (frontendUrl.contains("localhost")) {
-                origins.add(frontendUrl.replace("localhost", "127.0.0.1"));
-            }
-        }
-        // Safety defaults
-        if (origins.isEmpty()) {
-            origins.add("http://localhost:3000");
-        }
 
-        config.setAllowedOrigins(origins);
+        // Allow all origins for development to prevent CORS issues
+        config.setAllowedOriginPatterns(java.util.List.of("*"));
+
         config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(
                 java.util.List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));

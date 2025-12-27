@@ -67,8 +67,8 @@ public class UserServiceTest {
 
         // Act & Assert
         assertThatThrownBy(() -> userService.register(req))
-            .isInstanceOf(RuntimeException.class)
-            .hasMessage("Email already exists");
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Email already exists");
     }
 
     @Test
@@ -81,7 +81,7 @@ public class UserServiceTest {
         user.setId(1L);
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password", "encoded")).thenReturn(true);
-        when(jwtUtil.generateToken("test@example.com", Role.STUDENT, 1L)).thenReturn("jwtToken");
+        when(jwtUtil.generateToken("test@example.com", Role.STUDENT, 1L, null)).thenReturn("jwtToken");
 
         // Act
         String result = userService.login("test@example.com", "password");
@@ -101,7 +101,7 @@ public class UserServiceTest {
 
         // Act & Assert
         assertThatThrownBy(() -> userService.login("test@example.com", "wrong"))
-            .isInstanceOf(RuntimeException.class)
-            .hasMessage("Invalid password");
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid password");
     }
 }

@@ -88,6 +88,21 @@ public class UserService implements UserDetailsService {
                         user.setRole(Role.STUDENT);
                 }
 
+                // Handle Lifetime Attribution at Signup
+                String referralCode = req.getReferralCode();
+                if (referralCode != null && !referralCode.trim().isEmpty()) {
+                        userRepository.findByReferralCode(referralCode.trim().toUpperCase())
+                                        .ifPresentOrElse(referrer -> {
+                                                logger.info("Binding new user {} to referrer {}", req.getEmail(),
+                                                                referrer.getId());
+                                                user.setReferredBy(referrer);
+                                        }, () -> logger.warn("Invalid referral code used during signup: {}",
+                                                        referralCode));
+                }
+
+                // Generate unique referral code for the new user
+                user.setReferralCode(generateUniqueReferralCode());
+
                 return userRepository.save(user);
         }
 
@@ -116,7 +131,7 @@ public class UserService implements UserDetailsService {
                 if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
                         throw new RuntimeException("Invalid password");
                 }
-                return jwtUtil.generateToken(email, user.getRole(), user.getId());
+                return jwtUtil.generateToken(email, user.getRole(), user.getId(), user.getReferralCode());
         }
 
         public java.util.Optional<User> findById(Long id) {
@@ -193,5 +208,13 @@ public class UserService implements UserDetailsService {
                                 .password(user.getPassword())
                                 .authorities("ROLE_" + user.getRole().name())
                                 .build();
+        }
+
+        private String generateUniqueReferralCode() {
+                String code;
+                do {
+                        code = java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                } while (userRepository.findByReferralCode(code).isPresent());
+                return code;
         }
 }

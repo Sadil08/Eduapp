@@ -9,6 +9,8 @@ public class PaperDto {
     private String description;
     private PaperType type;
     private Long bundleId;
+    private Long subjectId;
+    private String subjectName;
     private Integer maxFreeAttempts;
     private Integer totalMarks;
     private List<QuestionDto> questions;
@@ -67,6 +69,22 @@ public class PaperDto {
 
     public void setBundleId(Long bundleId) {
         this.bundleId = bundleId;
+    }
+
+    public Long getSubjectId() {
+        return subjectId;
+    }
+
+    public void setSubjectId(Long subjectId) {
+        this.subjectId = subjectId;
+    }
+
+    public String getSubjectName() {
+        return subjectName;
+    }
+
+    public void setSubjectName(String subjectName) {
+        this.subjectName = subjectName;
     }
 
     public Integer getMaxFreeAttempts() {

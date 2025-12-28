@@ -17,6 +17,8 @@ public class QuestionDto {
     private String answerTypeHint;
     private Boolean hideQuestionText;
     private Integer marks;
+    private Long lessonId;
+    private String lessonName;
     private List<QuestionOptionDto> options;
 
     public QuestionDto() {
@@ -134,6 +136,22 @@ public class QuestionDto {
 
     public void setMarks(Integer marks) {
         this.marks = marks;
+    }
+
+    public Long getLessonId() {
+        return lessonId;
+    }
+
+    public void setLessonId(Long lessonId) {
+        this.lessonId = lessonId;
+    }
+
+    public String getLessonName() {
+        return lessonName;
+    }
+
+    public void setLessonName(String lessonName) {
+        this.lessonName = lessonName;
     }
 
     public List<QuestionOptionDto> getOptions() {

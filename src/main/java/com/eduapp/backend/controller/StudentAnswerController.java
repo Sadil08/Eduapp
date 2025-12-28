@@ -92,8 +92,8 @@ public class StudentAnswerController {
             // Store the file
             String imageUrl = fileStorageService.storeFile(file, "student-answers");
 
-            // Extract text with subject and lesson context
-            String extractedText = aiService.extractTextFromImage(file, subjectName, lessonName);
+            // Extract text with subject, lesson context, and mark as handwritten
+            String extractedText = aiService.extractTextFromImage(file, subjectName, lessonName, "handwritten");
 
             logger.warn("AI_SERVICE_DEBUG: Extracted text from image: '{}' (subject: {}, lesson: {})",
                     (extractedText != null && !extractedText.isEmpty())

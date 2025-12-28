@@ -56,8 +56,13 @@ public class Question {
     @Column
     private Integer marks;
 
+    @ManyToOne(fetch = FetchType.EAGER) // Eagerly load lesson for context
+    @JoinColumn(name = "lesson_id")
+    private Lesson lesson;
+
     @ManyToOne
     @JoinColumn(name = "created_by")
+    @JsonIgnore
     private User createdBy;
 
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -186,6 +191,14 @@ public class Question {
 
     public void setMarks(Integer marks) {
         this.marks = marks;
+    }
+
+    public Lesson getLesson() {
+        return lesson;
+    }
+
+    public void setLesson(Lesson lesson) {
+        this.lesson = lesson;
     }
 
     public User getCreatedBy() {

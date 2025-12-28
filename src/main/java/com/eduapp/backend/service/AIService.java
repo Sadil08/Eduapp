@@ -30,17 +30,21 @@ public class AIService {
     private static final String AI_SERVICE_URL = "http://localhost:8000";
 
     public String extractTextFromImage(MultipartFile file) {
-        return extractTextFromImage(file, null, null);
+        return extractTextFromImage(file, null, null, "question");
     }
 
     public String extractTextFromImage(MultipartFile file, String subjectName) {
-        return extractTextFromImage(file, subjectName, null);
+        return extractTextFromImage(file, subjectName, null, "question");
     }
 
     public String extractTextFromImage(MultipartFile file, String subjectName, String lessonName) {
+        return extractTextFromImage(file, subjectName, lessonName, "question");
+    }
+
+    public String extractTextFromImage(MultipartFile file, String subjectName, String lessonName, String docType) {
         try {
-            logger.info("Sending image to AI service for extraction (subject: {}, lesson: {})", subjectName,
-                    lessonName);
+            logger.info("Sending image to AI service for extraction (subject: {}, lesson: {}, docType: {})",
+                    subjectName, lessonName, docType);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.MULTIPART_FORM_DATA);
@@ -61,6 +65,11 @@ public class AIService {
             // Add lesson parameter if provided
             if (lessonName != null && !lessonName.isEmpty()) {
                 body.add("lesson", lessonName);
+            }
+
+            // Add docType parameter
+            if (docType != null && !docType.isEmpty()) {
+                body.add("docType", docType);
             }
 
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);

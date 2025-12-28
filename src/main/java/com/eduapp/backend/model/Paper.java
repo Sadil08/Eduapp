@@ -1,6 +1,7 @@
 package com.eduapp.backend.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalDateTime;
@@ -21,7 +22,12 @@ public class Paper {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bundle_id", nullable = false)
+    @JsonIgnore
     private PaperBundle bundle;
+
+    @ManyToOne(fetch = FetchType.EAGER) // Eagerly load subject for context
+    @JoinColumn(name = "subject_id")
+    private Subject subject;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -35,6 +41,7 @@ public class Paper {
 
     @ManyToOne
     @JoinColumn(name = "created_by")
+    @JsonIgnore
     private User createdBy;
 
     @Column(name = "created_at")
@@ -92,6 +99,14 @@ public class Paper {
 
     public void setBundle(PaperBundle bundle) {
         this.bundle = bundle;
+    }
+
+    public Subject getSubject() {
+        return subject;
+    }
+
+    public void setSubject(Subject subject) {
+        this.subject = subject;
     }
 
     public PaperType getType() {

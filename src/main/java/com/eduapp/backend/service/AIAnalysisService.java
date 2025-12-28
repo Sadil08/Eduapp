@@ -133,39 +133,46 @@ public class AIAnalysisService {
 
     private String buildPrompt(StudentPaperAttempt attempt) {
         StringBuilder sb = new StringBuilder();
-        sb.append("""
-                You are an experienced exam marker. Analyze the following student paper attempt and grade each question.
+        sb.append(
+                """
+                        You are an experienced exam marker. Analyze the following student paper attempt and grade each question.
 
-                **CRITICAL MARKING INSTRUCTIONS:**
+                        **CRITICAL MARKING INSTRUCTIONS:**
 
-                1. **For MCQ Questions**: Award full marks if the selected option is correct, 0 marks otherwise.
+                        1. **For MCQ Questions**: Award full marks if the selected option is correct, 0 marks otherwise.
 
-                2. **For ESSAY/SHORT_ANSWER Questions with a Marking Scheme**:
-                   - The 'Correct Answer' field contains a MARKING SCHEME with specific criteria and marks.
-                   - You MUST follow this scheme EXACTLY:
-                     - Award marks ONLY for the specific steps/criteria shown in the scheme.
-                     - Each criterion has a mark allocation (e.g., B1, M1, A1 = 1 mark each; DM1 = dependent 1 mark).
-                     - Check if the student's answer contains each required step.
-                     - Sum the marks for criteria the student satisfies.
-                     - Do NOT award full marks just because the final answer is correct - each step must be shown.
-                   - If the scheme has a table format (Answer | Marks | Guidance), follow it strictly.
+                        2. **For ESSAY/SHORT_ANSWER Questions with a Marking Scheme**:
+                           - The 'Correct Answer' field contains a MARKING SCHEME with specific criteria and marks.
+                           - You MUST follow this scheme EXACTLY:
+                             - Award marks ONLY for the specific steps/criteria shown in the scheme.
+                             - Each criterion has a mark allocation (e.g., B1, M1, A1 = 1 mark each; DM1 = dependent 1 mark).
+                             - Check if the student's answer contains each required step.
+                             - Sum the marks for criteria the student satisfies.
+                             - Do NOT award full marks just because the final answer is correct - each step must be shown.
+                           - If the scheme has a table format (Answer | Marks | Guidance), follow it strictly.
 
-                3. **For ESSAY Questions without a structured scheme**:
-                   - Break down the question into logical marking points.
-                   - Award partial marks for partially correct answers.
-                   - Be strict but fair.
+                        3. **For ESSAY Questions without a structured scheme**:
+                           - Break down the question into logical marking points.
+                           - Award partial marks for partially correct answers.
+                           - Be strict but fair.
 
-                **OUTPUT FORMAT:**
-                Respond ONLY with valid JSON (no markdown code blocks). The JSON must have:
-                - 'questions': Array of {questionId, marksAwarded, feedback}
-                  - marksAwarded: integer between 0 and the maximum marks for that question
-                  - feedback: detailed explanation of marks awarded/deducted referencing the marking scheme
-                - 'overallFeedback': string with summary and improvement suggestions
-                - 'totalMarks': integer (sum of all marksAwarded)
+                        4. **For UNANSWERED Questions** (where Student's Answer is "No answer provided"):
+                           - Award 0 marks.
+                           - Provide feedback: "Question not attempted."
 
-                **PAPER TO MARK:**
+                        **OUTPUT FORMAT:**
+                        Respond ONLY with valid JSON (no markdown code blocks). The JSON must have:
+                        - 'questions': Array of {questionId, marksAwarded, feedback}
+                          - marksAwarded: integer between 0 and the maximum marks for that question
+                          - feedback: detailed explanation of marks awarded/deducted referencing the marking scheme.
+                            **IMPORTANT: Write feedback in PLAIN TEXT only. Do NOT use LaTeX syntax.
+                            Instead of LaTeX like backslash-frac, backslash-cosh, use readable text like "3/4", "cosh(1)", "x^2", etc.**
+                        - 'overallFeedback': string with summary and improvement suggestions (in plain text, no LaTeX)
+                        - 'totalMarks': integer (sum of all marksAwarded)
 
-                """);
+                        **PAPER TO MARK:**
+
+                        """);
         sb.append("Paper: ").append(attempt.getPaper().getName()).append("\n");
         sb.append("Description: ").append(attempt.getPaper().getDescription()).append("\n\n");
 
@@ -237,6 +244,17 @@ public class AIAnalysisService {
         if (response.getStatusCode().is2xxSuccessful()) {
             logger.info("Gemini API call successful");
             JsonNode root = objectMapper.readTree(response.getBody());
+
+            // Log token usage for cost tracking
+            if (root.has("usageMetadata")) {
+                JsonNode usage = root.get("usageMetadata");
+                int promptTokens = usage.has("promptTokenCount") ? usage.get("promptTokenCount").asInt() : 0;
+                int candidateTokens = usage.has("candidatesTokenCount") ? usage.get("candidatesTokenCount").asInt() : 0;
+                int totalTokens = promptTokens + candidateTokens;
+                logger.info("[TOKEN USAGE] AI Analysis | Prompt: {} | Response: {} | Total: {} tokens",
+                        promptTokens, candidateTokens, totalTokens);
+            }
+
             String aiResponse = root.path("candidates").get(0).path("content").path("parts").get(0).path("text")
                     .asText();
             logger.debug("Raw AI Response: {}", aiResponse);

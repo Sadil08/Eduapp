@@ -308,17 +308,25 @@ public class PaperService {
 
         StudentPaperAttempt savedAttempt = studentPaperAttemptRepository.save(attempt);
 
-        // Save Answers
+        // Create a map of submitted answers for quick lookup
+        java.util.Map<Long, PaperSubmissionDto.StudentAnswerSubmissionDto> submittedAnswersMap = new java.util.HashMap<>();
         if (submission.getAnswers() != null) {
             for (PaperSubmissionDto.StudentAnswerSubmissionDto ansDto : submission.getAnswers()) {
-                Question question = questionRepository.findById(ansDto.getQuestionId())
-                        .orElseThrow(
-                                () -> new IllegalArgumentException("Question not found: " + ansDto.getQuestionId()));
+                submittedAnswersMap.put(ansDto.getQuestionId(), ansDto);
+            }
+        }
 
-                StudentAnswer answer = new StudentAnswer();
-                answer.setAttempt(savedAttempt);
-                answer.setQuestion(question);
+        // Create StudentAnswer for ALL questions in the paper (including unanswered
+        // ones)
+        for (Question question : paper.getQuestions()) {
+            StudentAnswer answer = new StudentAnswer();
+            answer.setAttempt(savedAttempt);
+            answer.setQuestion(question);
 
+            PaperSubmissionDto.StudentAnswerSubmissionDto ansDto = submittedAnswersMap.get(question.getId());
+
+            if (ansDto != null) {
+                // Question was answered
                 logger.warn(
                         "PAPER_SERVICE_DEBUG: Processing answer for question {}: ansDto.extractedText='{}' (length={})",
                         question.getId(),
@@ -341,13 +349,18 @@ public class PaperService {
                     answer.setImageUrl(ansDto.getImageUrl());
                     answer.setExtractedText(ansDto.getExtractedText());
                 }
-
-                studentAnswerRepository.save(answer);
-
-                // Add to the attempt's list so it's available for AI analysis immediately
-                // This avoids Hibernate cache issues where the list might appear empty
-                savedAttempt.getAnswers().add(answer);
+            } else {
+                // Question was NOT answered - create empty record for proper display
+                logger.info("Creating empty answer record for unanswered question {}", question.getId());
+                answer.setAnswerText(null);
+                answer.setMarksAwarded(0); // Unanswered = 0 marks
             }
+
+            studentAnswerRepository.save(answer);
+
+            // Add to the attempt's list so it's available for AI analysis immediately
+            // This avoids Hibernate cache issues where the list might appear empty
+            savedAttempt.getAnswers().add(answer);
         }
 
         logger.info("Loaded attempt with {} answers for AI analysis", savedAttempt.getAnswers().size());

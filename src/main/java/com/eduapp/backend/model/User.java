@@ -85,6 +85,10 @@ public class User {
         this.username = username;
     }
 
+    public String getName() {
+        return username;
+    }
+
     public Role getRole() {
         return role;
     }

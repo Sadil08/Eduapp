@@ -1,6 +1,8 @@
 package com.eduapp.backend.service;
 
+import com.eduapp.backend.dto.CartDto;
 import com.eduapp.backend.model.Cart;
+import com.eduapp.backend.model.PaperBundle;
 import com.eduapp.backend.repository.CartRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @SuppressWarnings("null")
@@ -59,7 +62,11 @@ public class CartService {
         return cartRepository.existsById(id);
     }
 
-    public Cart getMyCart(Long userId) {
+    /**
+     * Get or create a cart for the user. Returns the Cart entity for internal
+     * service use.
+     */
+    public Cart getOrCreateCart(Long userId) {
         List<Cart> carts = cartRepository.findByUserId(userId);
         if (carts.isEmpty()) {
             com.eduapp.backend.model.User user = userRepository.findById(userId)
@@ -84,24 +91,57 @@ public class CartService {
         return carts.get(0);
     }
 
+    /**
+     * Convert Cart entity to CartDto to avoid Hibernate proxy serialization issues.
+     */
+    private CartDto toCartDto(Cart cart) {
+        List<CartDto.CartBundleDto> bundleDtos = cart.getBundles().stream()
+                .map(this::toBundleDto)
+                .collect(Collectors.toList());
+
+        return new CartDto(
+                cart.getId(),
+                cart.getUser().getId(),
+                bundleDtos);
+    }
+
+    private CartDto.CartBundleDto toBundleDto(PaperBundle bundle) {
+        String examTypeName = bundle.getExamType() != null ? bundle.getExamType().getName() : null;
+        return new CartDto.CartBundleDto(
+                bundle.getId(),
+                bundle.getName(),
+                bundle.getDescription(),
+                bundle.getPrice(),
+                bundle.getType() != null ? bundle.getType().name() : null,
+                examTypeName,
+                bundle.getIsPastPaper());
+    }
+
+    public CartDto getMyCart(Long userId) {
+        Cart cart = getOrCreateCart(userId);
+        return toCartDto(cart);
+    }
+
     @org.springframework.transaction.annotation.Transactional
-    public Cart addToCart(Long userId, Long bundleId, com.eduapp.backend.repository.PaperBundleRepository bundleRepo) {
-        Cart cart = getMyCart(userId);
+    public CartDto addToCart(Long userId, Long bundleId,
+            com.eduapp.backend.repository.PaperBundleRepository bundleRepo) {
+        Cart cart = getOrCreateCart(userId);
         com.eduapp.backend.model.PaperBundle bundle = bundleRepo.findById(bundleId)
                 .orElseThrow(() -> new RuntimeException("Bundle not found"));
 
         // Avoid duplicates
         if (cart.getBundles().stream().noneMatch(b -> b.getId().equals(bundleId))) {
             cart.getBundles().add(bundle);
-            return cartRepository.save(cart);
+            cart = cartRepository.save(cart);
         }
-        return cart;
+        return toCartDto(cart);
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public Cart removeFromCart(Long userId, Long bundleId) {
-        Cart cart = getMyCart(userId);
+    public CartDto removeFromCart(Long userId, Long bundleId) {
+        Cart cart = getOrCreateCart(userId);
         cart.getBundles().removeIf(b -> b.getId().equals(bundleId));
-        return cartRepository.save(cart);
+        cart = cartRepository.save(cart);
+        return toCartDto(cart);
     }
 }

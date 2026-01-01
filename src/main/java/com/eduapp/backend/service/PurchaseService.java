@@ -38,7 +38,7 @@ public class PurchaseService {
         try {
             logger.info("Processing checkout for user: {}", user.getId());
 
-            Cart cart = cartService.getMyCart(user.getId());
+            Cart cart = cartService.getOrCreateCart(user.getId());
 
             if (cart.getBundles().isEmpty()) {
                 logger.warn("User {} tried to checkout with an empty cart", user.getId());

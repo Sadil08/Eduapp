@@ -1,5 +1,6 @@
 package com.eduapp.backend.controller;
 
+import com.eduapp.backend.dto.CartDto;
 import com.eduapp.backend.model.Cart;
 import com.eduapp.backend.service.CartService;
 import org.slf4j.Logger;
@@ -71,14 +72,14 @@ public class CartController {
     }
 
     @GetMapping("/my-cart")
-    public ResponseEntity<Cart> getMyCart(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<CartDto> getMyCart(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.substring(7);
         Long userId = jwtUtil.extractUserId(token);
         return ResponseEntity.ok(cartService.getMyCart(userId));
     }
 
     @PostMapping("/my-cart/items/{bundleId}")
-    public ResponseEntity<Cart> addToCart(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<CartDto> addToCart(@RequestHeader("Authorization") String authHeader,
             @PathVariable Long bundleId) {
         String token = authHeader.substring(7);
         Long userId = jwtUtil.extractUserId(token);
@@ -86,7 +87,7 @@ public class CartController {
     }
 
     @DeleteMapping("/my-cart/items/{bundleId}")
-    public ResponseEntity<Cart> removeFromCart(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<CartDto> removeFromCart(@RequestHeader("Authorization") String authHeader,
             @PathVariable Long bundleId) {
         String token = authHeader.substring(7);
         Long userId = jwtUtil.extractUserId(token);

@@ -27,7 +27,8 @@ public class AIService {
     private static final Logger logger = LoggerFactory.getLogger(AIService.class);
     private final RestTemplate restTemplate = new RestTemplate();
 
-    private static final String AI_SERVICE_URL = "http://localhost:8000";
+    @org.springframework.beans.factory.annotation.Value("${ai.service.url:http://localhost:8000}")
+    private String aiServiceUrl;
 
     public String extractTextFromImage(MultipartFile file) {
         return extractTextFromImage(file, null, null, "question");
@@ -75,7 +76,7 @@ public class AIService {
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    AI_SERVICE_URL + "/extract",
+                    aiServiceUrl + "/extract",
                     requestEntity,
                     Map.class);
 
@@ -144,7 +145,7 @@ public class AIService {
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    AI_SERVICE_URL + "/extract-batch",
+                    aiServiceUrl + "/extract-batch",
                     requestEntity,
                     Map.class);
 
@@ -213,7 +214,7 @@ public class AIService {
 
         try {
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    AI_SERVICE_URL + "/mark",
+                    aiServiceUrl + "/mark",
                     payload,
                     Map.class);
 

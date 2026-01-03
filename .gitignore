@@ -7,6 +7,8 @@ src/main/resources/application.yml
 
 src/main/resources/application.yml
 BACKEND_LEARNING_GUIDE.md
+src/main/resources/application.yml
+src/main/resources/application.properties
 
 ### STS ###
 .apt_generated

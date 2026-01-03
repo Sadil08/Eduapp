@@ -1,94 +1,149 @@
 package com.eduapp.backend.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.net.URI;
 import java.util.UUID;
 
 @Service
 public class FileStorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
-    private static final String UPLOAD_DIR = "uploads/";
+
+    @Value("${supabase.s3.endpoint}")
+    private String s3Endpoint;
+
+    @Value("${supabase.s3.region:us-east-1}")
+    private String s3Region;
+
+    @Value("${supabase.s3.access-key}")
+    private String accessKey;
+
+    @Value("${supabase.s3.secret-key}")
+    private String secretKey;
+
+    @Value("${supabase.s3.bucket-name}")
+    private String bucketName;
+
+    // Supabase project ID for constructing public URLs if needed, or derived from
+    // endpoint
+    @Value("${supabase.project.url:}")
+    private String projectUrl;
+
+    private S3Client s3Client;
 
     public FileStorageService() {
-        // Create upload directories if they don't exist
+        // Client initialized in @PostConstruct or lazily to allow property injection
+    }
+
+    @jakarta.annotation.PostConstruct
+    public void init() {
         try {
-            Files.createDirectories(Paths.get(UPLOAD_DIR + "questions"));
-            Files.createDirectories(Paths.get(UPLOAD_DIR + "model-answers"));
-            Files.createDirectories(Paths.get(UPLOAD_DIR + "student-answers"));
-        } catch (IOException e) {
-            logger.error("Could not create upload directories", e);
+            this.s3Client = S3Client.builder()
+                    .region(Region.of(s3Region))
+                    .endpointOverride(URI.create(s3Endpoint))
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create(accessKey, secretKey)))
+                    .forcePathStyle(true) // Required for Supabase/MinIO
+                    .build();
+            logger.info("S3 Client initialized for endpoint: {}", s3Endpoint);
+        } catch (Exception e) {
+            logger.error("Failed to initialize S3 Client: {}", e.getMessage());
         }
     }
 
     /**
-     * Store an uploaded file in the appropriate category folder
+     * Store an uploaded file in the appropriate category folder in S3 bucket
      * 
      * @param file     The multipart file to store
      * @param category Category folder: 'questions', 'model-answers', or
      *                 'student-answers'
-     * @return The URL/path to access the stored file
+     * @return The Public URL to access the stored file
      */
     public String storeFile(MultipartFile file, String category) throws IOException {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("Cannot store empty file");
         }
 
-        // Validate file type
         String contentType = file.getContentType();
         if (contentType == null || !isValidImageType(contentType)) {
             throw new IllegalArgumentException("Only image files (JPG, PNG, HEIC) are allowed");
         }
 
-        // Validate file size (5MB max)
         if (file.getSize() > 5 * 1024 * 1024) {
             throw new IllegalArgumentException("File size exceeds maximum of 5MB");
         }
 
-        // Generate unique filename
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null && originalFilename.contains(".")
                 ? originalFilename.substring(originalFilename.lastIndexOf("."))
                 : "";
 
+        // Sanitize extension
+        if (extension.length() > 10)
+            extension = "";
+
         String filename = UUID.randomUUID().toString() + extension;
-        String categoryPath = UPLOAD_DIR + category + "/";
-        Path targetLocation = Paths.get(categoryPath + filename);
+        String s3Key = category + "/" + filename;
 
-        // Store file
-        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .contentType(contentType)
+                    // .acl(ObjectCannedACL.PUBLIC_READ) // Supabase handles permissions via
+                    // policies, usually not ACL
+                    .build();
 
-        // Return URL that can be served by backend
-        String fileUrl = "/api/files/" + category + "/" + filename;
-        logger.info("Successfully stored file: {}", fileUrl);
+            s3Client.putObject(putObjectRequest,
+                    RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
-        return fileUrl;
+            logger.info("Successfully uploaded file to S3: {}", s3Key);
+
+            // Construct Public URL
+            String publicBaseUrl = s3Endpoint.replace("/s3", "/object/public");
+            return publicBaseUrl + "/" + bucketName + "/" + s3Key;
+
+        } catch (Exception e) {
+            logger.error("Failed to upload file to S3: {}", e.getMessage(), e);
+            throw new IOException("Failed to upload file to storage provider", e);
+        }
     }
 
     /**
      * Delete a file given its URL
      */
     public void deleteFile(String fileUrl) {
+        if (fileUrl == null || fileUrl.isEmpty())
+            return;
+
         try {
-            if (fileUrl == null || !fileUrl.startsWith("/api/files/")) {
-                return;
+            String splitToken = "/" + bucketName + "/";
+            int index = fileUrl.indexOf(splitToken);
+            if (index != -1) {
+                String key = fileUrl.substring(index + splitToken.length());
+
+                DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(key)
+                        .build();
+
+                s3Client.deleteObject(deleteRequest);
+                logger.info("Deleted file from S3: {}", key);
             }
-
-            // Extract path from URL
-            String relativePath = fileUrl.substring("/api/files/".length());
-            Path filePath = Paths.get(UPLOAD_DIR + relativePath);
-
-            Files.deleteIfExists(filePath);
-            logger.info("Deleted file: {}", fileUrl);
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error("Failed to delete file: {}", fileUrl, e);
         }
     }

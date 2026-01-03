@@ -2,6 +2,8 @@ server:
   port: 8080
   max-http-header-size: 16384
 
+FRONTEND_URL: ${FRONTEND_URL}
+
 spring:
   datasource:
     url: jdbc:postgresql://aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require

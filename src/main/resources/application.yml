@@ -39,3 +39,7 @@ supabase:
     access-key: ${SUPABASE_S3_ACCESS_KEY}
     secret-key: ${SUPABASE_S3_SECRET_KEY}
     bucket-name: ${SUPABASE_BUCKET_NAME}
+
+ai:
+  service:
+    url: ${AI_SERVICE_URL:https://eduapp-ai-service.onrender.com}

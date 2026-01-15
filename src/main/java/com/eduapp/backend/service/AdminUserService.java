@@ -44,10 +44,16 @@ public class AdminUserService {
     /**
      * Get all users with statistics
      */
-    public List<AdminUserDto> getAllUsers() {
-        logger.info("Fetching all users with statistics");
+    public List<AdminUserDto> getAllUsers(String search) {
+        logger.info("Fetching all users with statistics (search={})", search);
 
-        List<User> users = userRepository.findAll();
+        List<User> users;
+        if (search != null && !search.trim().isEmpty()) {
+            users = userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                    search.trim(), search.trim());
+        } else {
+            users = userRepository.findAll();
+        }
 
         return users.stream().map(user -> {
             int bundleCount = accessRepository.findByStudentId(user.getId()).size();

@@ -15,6 +15,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByReferralCode(String referralCode);
 
+    List<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(String username, String email);
+
     /**
      * Optimized query for user analytics with pagination.
      * Single query with JOINs and aggregations instead of N+1 queries.

@@ -30,9 +30,11 @@ public class WalletController {
     }
 
     @GetMapping("/transactions")
-    public ResponseEntity<List<WalletTransaction>> getTransactions(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<org.springframework.data.domain.Page<WalletTransaction>> getTransactions(
+            @RequestHeader("Authorization") String authHeader,
+            org.springframework.data.domain.Pageable pageable) {
         Long userId = extractUserId(authHeader);
-        return ResponseEntity.ok(walletService.getTransactions(userId));
+        return ResponseEntity.ok(walletService.getTransactions(userId, pageable));
     }
 
     @PostMapping("/topup")

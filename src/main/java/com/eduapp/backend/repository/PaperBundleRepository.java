@@ -41,7 +41,16 @@ public interface PaperBundleRepository extends JpaRepository<PaperBundle, Long> 
                 org.springframework.data.domain.Pageable pageable);
 
         // Combined filter method with all criteria AND pagination
-        @Query("SELECT pb FROM PaperBundle pb WHERE " +
+        @Query(value = "SELECT pb FROM PaperBundle pb WHERE " +
+                        "(:type IS NULL OR pb.type = :type) AND " +
+                        "(:examTypeId IS NULL OR pb.examType.id = :examTypeId) AND " +
+                        "(:subjectId IS NULL OR pb.subject.id = :subjectId) AND " +
+                        "(:lessonId IS NULL OR pb.lesson.id = :lessonId) AND " +
+                        "(:isPastPaper IS NULL OR pb.isPastPaper = :isPastPaper) AND " +
+                        "(:minPrice IS NULL OR pb.price >= :minPrice) AND " +
+                        "(:maxPrice IS NULL OR pb.price <= :maxPrice) AND " +
+                        "(:name IS NULL OR LOWER(pb.name) LIKE :name)",
+               countQuery = "SELECT count(pb) FROM PaperBundle pb WHERE " +
                         "(:type IS NULL OR pb.type = :type) AND " +
                         "(:examTypeId IS NULL OR pb.examType.id = :examTypeId) AND " +
                         "(:subjectId IS NULL OR pb.subject.id = :subjectId) AND " +

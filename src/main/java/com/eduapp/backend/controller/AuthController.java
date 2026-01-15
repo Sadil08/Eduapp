@@ -19,18 +19,29 @@ public class AuthController {
         this.userService = userService;
     }
 
-
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@RequestBody RegisterRequest req) {
-        User saved = userService.register(req);
-        return ResponseEntity.ok(new UserResponse(saved.getId(), saved.getUsername(), saved.getEmail(), saved.getRole()));
+    public ResponseEntity<UserResponse> register(@RequestBody RegisterRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        String ip = getClientIp(request);
+        User saved = userService.register(req, ip);
+        return ResponseEntity
+                .ok(new UserResponse(saved.getId(), saved.getUsername(), saved.getEmail(), saved.getRole()));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest req) {
-        String token = userService.login(req.getEmail(), req.getPassword());
+    public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        String ip = getClientIp(request);
+        String token = userService.login(req.getEmail(), req.getPassword(), ip);
         return ResponseEntity.ok(new JwtResponse(token));
     }
 
-    
+    private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+
 }

@@ -48,6 +48,9 @@ public class StudentAnswer {
     @Column(name = "upload_count")
     private Integer uploadCount = 0;
 
+    @Column(name = "is_draft", nullable = false)
+    private Boolean isDraft = true;  // true for drafts, false for final submission
+
     public static final int MAX_UPLOADS_PER_QUESTION = 2;
 
     public StudentAnswer() {
@@ -169,5 +172,13 @@ public class StudentAnswer {
         } else {
             this.uploadCount++;
         }
+    }
+
+    public Boolean getIsDraft() {
+        return isDraft;
+    }
+
+    public void setIsDraft(Boolean isDraft) {
+        this.isDraft = isDraft;
     }
 }

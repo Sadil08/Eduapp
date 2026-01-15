@@ -21,6 +21,10 @@ public class StudentPaperAttemptDto {
     private Integer totalMarks; // Total marks awarded by AI
     private Integer paperTotalMarks; // Total marks allocated for the paper
 
+    private String analysisError;
+    private Boolean analysisCompleted;
+    private Integer submissionCount;
+
     public StudentPaperAttemptDto() {
     }
 
@@ -132,5 +136,29 @@ public class StudentPaperAttemptDto {
 
     public void setPaperTotalMarks(Integer paperTotalMarks) {
         this.paperTotalMarks = paperTotalMarks;
+    }
+
+    public String getAnalysisError() {
+        return analysisError;
+    }
+
+    public void setAnalysisError(String analysisError) {
+        this.analysisError = analysisError;
+    }
+
+    public Boolean getAnalysisCompleted() {
+        return analysisCompleted;
+    }
+
+    public void setAnalysisCompleted(Boolean analysisCompleted) {
+        this.analysisCompleted = analysisCompleted;
+    }
+
+    public Integer getSubmissionCount() {
+        return submissionCount;
+    }
+
+    public void setSubmissionCount(Integer submissionCount) {
+        this.submissionCount = submissionCount;
     }
 }

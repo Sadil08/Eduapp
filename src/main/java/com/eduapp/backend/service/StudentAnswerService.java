@@ -123,4 +123,75 @@ public class StudentAnswerService {
         logger.debug("Student answer existence check for ID {}: {}", id, exists);
         return exists;
     }
+
+    /**
+     * Save draft answers for an attempt (autosave functionality).
+     * Replaces existing drafts with new ones.
+     * 
+     * @param attemptId the attempt ID
+     * @param draftAnswers list of draft answers to save
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void saveDraftAnswers(Long attemptId, List<StudentAnswer> draftAnswers) {
+        logger.info("Saving {} draft answers for attempt {}", draftAnswers.size(), attemptId);
+        
+        // Delete existing drafts
+        studentAnswerRepository.deleteByAttemptIdAndIsDraft(attemptId, true);
+        logger.debug("Deleted existing draft answers for attempt {}", attemptId);
+        
+        // Verify attempt exists
+        StudentPaperAttempt attempt = attemptRepository.findById(attemptId)
+            .orElseThrow(() -> new IllegalArgumentException("Attempt not found: " + attemptId));
+        
+        // Save new drafts
+        for (StudentAnswer answer : draftAnswers) {
+            answer.setAttempt(attempt);
+            answer.setIsDraft(true);
+            answer.setSubmittedAt(java.time.LocalDateTime.now());
+            
+            // Validate question exists
+            if (answer.getQuestion() != null && answer.getQuestion().getId() != null) {
+                questionRepository.findById(answer.getQuestion().getId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                        "Question not found: " + answer.getQuestion().getId()));
+            }
+            
+            studentAnswerRepository.save(answer);
+        }
+        
+        logger.info("Successfully saved {} draft answers for attempt {}", draftAnswers.size(), attemptId);
+    }
+
+    /**
+     * Retrieve draft answers for an attempt.
+     * 
+     * @param attemptId the attempt ID
+     * @return list of draft answers
+     */
+    public List<StudentAnswer> getDraftAnswers(Long attemptId) {
+        logger.info("Retrieving draft answers for attempt {}", attemptId);
+        List<StudentAnswer> drafts = studentAnswerRepository.findByAttemptIdAndIsDraft(attemptId, true);
+        logger.info("Found {} draft answers for attempt {}", drafts.size(), attemptId);
+        return drafts;
+    }
+
+    /**
+     * Mark all draft answers as final submission.
+     * Called when student submits the paper.
+     * 
+     * @param attemptId the attempt ID
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void finalizeDraftAnswers(Long attemptId) {
+        logger.info("Finalizing draft answers for attempt {}", attemptId);
+        List<StudentAnswer> drafts = studentAnswerRepository.findByAttemptIdAndIsDraft(attemptId, true);
+        
+        for (StudentAnswer draft : drafts) {
+            draft.setIsDraft(false);
+            draft.setSubmittedAt(java.time.LocalDateTime.now());
+            studentAnswerRepository.save(draft);
+        }
+        
+        logger.info("Finalized {} draft answers for attempt {}", drafts.size(), attemptId);
+    }
 }

@@ -78,9 +78,11 @@ public class PaperController {
      * Handles GET request to attempt a paper.
      * Requires purchase of parent bundle.
      * Returns paper with questions (no correct answers exposed).
+     * @param forceNew If true, abandons existing IN_PROGRESS attempt and starts a new one
      */
     @GetMapping("/{id}/attempt")
     public ResponseEntity<PaperAttemptDto> attemptPaper(@PathVariable Long id,
+            @RequestParam(value = "forceNew", defaultValue = "false") boolean forceNew,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             logger.warn("Missing or malformed Authorization header");
@@ -88,9 +90,9 @@ public class PaperController {
         }
         String token = authHeader.substring(7);
         Long userId = jwtUtil.extractUserId(token);
-        logger.info("Received request to attempt paper with ID: {}", id);
+        logger.info("Received request to attempt paper with ID: {} (forceNew={})", id, forceNew);
         try {
-            PaperAttemptDto dto = paperService.getPaperAttempt(id, userId);
+            PaperAttemptDto dto = paperService.getPaperAttempt(id, userId, forceNew);
             return ResponseEntity.ok(dto);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();

@@ -61,6 +61,7 @@ public class AIAnalysisService {
     }
 
     @Async
+    @org.springframework.transaction.annotation.Transactional
     public void analyzeAttempt(StudentPaperAttempt attempt) {
         logger.info("Starting AI analysis for attempt ID: {}", attempt.getId());
 
@@ -128,6 +129,26 @@ public class AIAnalysisService {
 
         } catch (Exception e) {
             logger.error("Error during AI analysis for attempt ID: {}", attempt.getId(), e);
+            
+            // IMPORTANT: Update attempt with error state so frontend knows to show retry button
+            try {
+                // Fetch fresh to avoid detached entity issues
+                StudentPaperAttempt errorAttempt = studentPaperAttemptRepository.findById(attempt.getId())
+                        .orElse(attempt);
+                
+                String errorMessage = e.getMessage();
+                if (e instanceof org.springframework.web.client.HttpClientErrorException.TooManyRequests) {
+                    errorMessage = "AI Service busy (Rate Limit Exceeded). Please retry in a few moments.";
+                }
+                
+                errorAttempt.setAnalysisError(errorMessage);
+                errorAttempt.setAnalysisAttempted(true);
+                errorAttempt.setAnalysisCompleted(false);
+                studentPaperAttemptRepository.save(errorAttempt);
+                logger.info("Updated attempt {} with analysis error", attempt.getId());
+            } catch (Exception dbError) {
+                logger.error("Failed to save analysis error state for attempt {}", attempt.getId(), dbError);
+            }
         }
     }
 

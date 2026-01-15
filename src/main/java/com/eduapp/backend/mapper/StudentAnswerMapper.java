@@ -66,7 +66,25 @@ public interface StudentAnswerMapper {
     StudentAnswer toEntity(StudentAnswerDto dto);
 
     /**
+     * Post-mapping to set Question entity reference from questionId in DTO.
+     * Required for draft saving to work correctly.
+     */
+    @AfterMapping
+    default void setQuestionReference(@MappingTarget StudentAnswer entity, StudentAnswerDto dto) {
+        if (dto.getQuestionId() != null) {
+            com.eduapp.backend.model.Question question = new com.eduapp.backend.model.Question();
+            question.setId(dto.getQuestionId());
+            entity.setQuestion(question);
+        }
+    }
+
+    /**
      * Maps list of entities to list of DTOs.
      */
     List<StudentAnswerDto> toDtoList(List<StudentAnswer> answers);
+
+    /**
+     * Maps list of DTOs to list of entities.
+     */
+    List<StudentAnswer> toEntityList(List<StudentAnswerDto> dtos);
 }

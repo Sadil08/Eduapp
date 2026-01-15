@@ -41,12 +41,21 @@ public class PaperBundleController {
     public ResponseEntity<org.springframework.data.domain.Page<com.eduapp.backend.dto.PaperBundleSummaryDto>> getAllPaperBundles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String search, // Kept for backward compatibility
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") String sortDir) {
+            @RequestParam(defaultValue = "DESC") String sortDir,
+            // Add filter parameters
+            @RequestParam(required = false) com.eduapp.backend.model.PaperType type,
+            @RequestParam(required = false) Long examTypeId,
+            @RequestParam(required = false) Long subjectId,
+            @RequestParam(required = false) Long lessonId,
+            @RequestParam(required = false) Boolean isPastPaper,
+            @RequestParam(required = false) java.math.BigDecimal minPrice,
+            @RequestParam(required = false) java.math.BigDecimal maxPrice,
+            @RequestParam(required = false) String name) {
         
-        logger.info("Getting all bundles - page: {}, size: {}, search: '{}', sort: {} {}", 
-                    page, size, search, sortBy, sortDir);
+        logger.info("Getting bundles with filters - page: {}, size: {}, search: {}, type: {}, examType: {}, subject: {}, lesson: {}", 
+                    page, size, search, type, examTypeId, subjectId, lessonId);
         
         // Limit max page size
         size = Math.min(size, 100);
@@ -62,13 +71,13 @@ public class PaperBundleController {
             org.springframework.data.domain.PageRequest.of(page, size, 
                 org.springframework.data.domain.Sort.by(direction, sortBy));
         
-        org.springframework.data.domain.Page<com.eduapp.backend.dto.PaperBundleSummaryDto> result;
-        
-        if (search != null && !search.isBlank()) {
-            result = paperBundleService.searchBundles(search, pageable);
-        } else {
-            result = paperBundleService.getAllSummariesPaginated(pageable);
-        }
+        // Use 'name' if provided, otherwise fallback to 'search' for backward compatibility
+        String nameFilter = name != null ? name : search;
+
+        // Use the new paginated filter method which handles all criteria
+        org.springframework.data.domain.Page<com.eduapp.backend.dto.PaperBundleSummaryDto> result = 
+            paperBundleService.filterBundlesPaginated(
+                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, nameFilter, pageable);
         
         return ResponseEntity.ok(result);
     }
@@ -133,10 +142,13 @@ public class PaperBundleController {
                 "Filtering bundles - type: {}, examTypeId: {}, subjectId: {}, lessonId: {}, isPastPaper: {}, minPrice: {}, maxPrice: {}, name: {}",
                 type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
 
-        List<com.eduapp.backend.dto.PaperBundleSummaryDto> bundles = paperBundleService.filterBundles(
-                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
+        // Use paginated method with default size for legacy support
+        org.springframework.data.domain.Page<com.eduapp.backend.dto.PaperBundleSummaryDto> pageResult = 
+            paperBundleService.filterBundlesPaginated(
+                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name,
+                org.springframework.data.domain.PageRequest.of(0, 100));
 
-        return ResponseEntity.ok(bundles);
+        return ResponseEntity.ok(pageResult.getContent());
     }
 
     // Handles GET request to search bundles by name

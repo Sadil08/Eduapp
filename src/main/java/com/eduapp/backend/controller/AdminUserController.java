@@ -38,9 +38,9 @@ public class AdminUserController {
      * GET /api/admin/users
      */
     @GetMapping
-    public ResponseEntity<List<AdminUserDto>> getAllUsers() {
-        logger.info("Admin requested all users");
-        List<AdminUserDto> users = adminUserService.getAllUsers();
+    public ResponseEntity<List<AdminUserDto>> getAllUsers(@RequestParam(required = false) String search) {
+        logger.info("Admin requested all users (search={})", search);
+        List<AdminUserDto> users = adminUserService.getAllUsers(search);
         return ResponseEntity.ok(users);
     }
 

@@ -196,7 +196,7 @@ public class PaperBundleService {
      * @param name        the name search term
      * @return a list of PaperBundleSummaryDto matching the criteria
      */
-    public List<PaperBundleSummaryDto> filterBundles(
+    public org.springframework.data.domain.Page<PaperBundleSummaryDto> filterBundlesPaginated(
             PaperType type,
             Long examTypeId,
             Long subjectId,
@@ -204,25 +204,21 @@ public class PaperBundleService {
             Boolean isPastPaper,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            String name) {
+            String name,
+            org.springframework.data.domain.Pageable pageable) {
         logger.info(
-                "Filtering bundles - type: {}, examTypeId: {}, subjectId: {}, lessonId: {}, isPastPaper: {}, minPrice: {}, maxPrice: {}, name: {}",
-                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
+                "Filtering bundles paginated - type: {}, examTypeId: {}, subjectId: {}, lessonId: {}, isPastPaper: {}, minPrice: {}, maxPrice: {}, name: {}, page: {}, size: {}",
+                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name, pageable.getPageNumber(), pageable.getPageSize());
 
         String namePattern = null;
         if (name != null && !name.trim().isEmpty()) {
             namePattern = "%" + name.trim().toLowerCase() + "%";
         }
 
-        List<PaperBundle> bundles = paperBundleRepository.findByFilters(
-                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, namePattern);
+        org.springframework.data.domain.Page<PaperBundle> bundles = paperBundleRepository.findByFiltersPaginated(
+                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, namePattern, pageable);
 
-        List<PaperBundleSummaryDto> result = bundles.stream()
-                .map(paperBundleMapper::toSummaryDto)
-                .collect(Collectors.toList());
-
-        logger.info("Found {} bundles matching filter criteria", result.size());
-        return result;
+        return bundles.map(paperBundleMapper::toSummaryDto);
     }
 
     /**

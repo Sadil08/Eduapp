@@ -1,5 +1,6 @@
 package com.eduapp.backend.dto.analytics;
 
+import com.eduapp.backend.model.Role;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -10,6 +11,7 @@ public class UserAnalyticsDto {
     private Long userId;
     private String username;
     private String email;
+    private Role role;
     private String country;
     private LocalDateTime registrationDate;
     private LocalDateTime lastLoginTime;
@@ -23,13 +25,14 @@ public class UserAnalyticsDto {
     public UserAnalyticsDto() {
     }
 
-    public UserAnalyticsDto(Long userId, String username, String email, String country,
+    public UserAnalyticsDto(Long userId, String username, String email, Role role, String country,
                             LocalDateTime registrationDate, LocalDateTime lastLoginTime,
                             Long totalBundlesPurchased, BigDecimal totalSpent, Long totalExtractions,
                             Long totalPaperAttempts, Double averageScore) {
         this.userId = userId;
         this.username = username;
         this.email = email;
+        this.role = role;
         this.country = country;
         this.registrationDate = registrationDate;
         this.lastLoginTime = lastLoginTime;
@@ -63,6 +66,14 @@ public class UserAnalyticsDto {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public String getCountry() {

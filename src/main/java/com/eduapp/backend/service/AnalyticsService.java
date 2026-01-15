@@ -1,6 +1,7 @@
 package com.eduapp.backend.service;
 
 import com.eduapp.backend.dto.analytics.*;
+import com.eduapp.backend.model.Role;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.repository.*;
 import org.slf4j.Logger;
@@ -126,6 +127,7 @@ public class AnalyticsService {
                     userId,
                     user.getUsername(),
                     user.getEmail(),
+                    user.getRole(),
                     user.getCountry(),
                     user.getCreatedAt(),
                     user.getLastLoginTime(),

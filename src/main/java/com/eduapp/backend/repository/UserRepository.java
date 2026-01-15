@@ -27,7 +27,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return Page of UserAnalyticsDto
      */
     @Query("SELECT new com.eduapp.backend.dto.analytics.UserAnalyticsDto(" +
-           "u.id, u.username, u.email, u.country, u.createdAt, u.lastLoginTime, " +
+           "u.id, u.username, u.email, u.role, u.country, u.createdAt, u.lastLoginTime, " +
            "COUNT(DISTINCT sba.id), " +
            "COALESCE(SUM(sba.pricePaid), 0), " +
            "COUNT(DISTINCT qet.id), " +
@@ -42,7 +42,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
            "AND (:search IS NULL OR " +
            "     LOWER(u.username) LIKE :search OR " +
            "     LOWER(u.email) LIKE :search) " +
-           "GROUP BY u.id, u.username, u.email, u.country, u.createdAt, u.lastLoginTime")
+           "GROUP BY u.id, u.username, u.email, u.role, u.country, u.createdAt, u.lastLoginTime")
     org.springframework.data.domain.Page<com.eduapp.backend.dto.analytics.UserAnalyticsDto> findUserAnalyticsOptimized(
         @Param("country") String country,
         @Param("search") String search,

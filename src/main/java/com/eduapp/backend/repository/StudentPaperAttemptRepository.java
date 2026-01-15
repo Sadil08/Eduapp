@@ -63,6 +63,11 @@ public interface StudentPaperAttemptRepository extends JpaRepository<StudentPape
      * Used for viewing attempt history.
      */
     List<StudentPaperAttempt> findByStudentIdAndPaperIdOrderByStartedAtDesc(Long studentId, Long paperId);
+    /**
+     * Find specific attempts by status.
+     * Returns a list in case of duplicates (should strictly be one, but we handle potential data inconsistency).
+     */
+    List<StudentPaperAttempt> findByStudentIdAndPaperIdAndStatusOrderByStartedAtDesc(Long studentId, Long paperId, com.eduapp.backend.model.AttemptStatus status);
 
     /**
      * Calculate average score for a paper (for admin statistics).
@@ -73,4 +78,9 @@ public interface StudentPaperAttemptRepository extends JpaRepository<StudentPape
         // TODO: Implement with @Query to calculate average of totalMarks
         return null;
     }
+
+    // Analytics queries
+    @Query("SELECT spa.student.id, COUNT(spa) FROM StudentPaperAttempt spa " +
+           "GROUP BY spa.student.id")
+    List<Object[]> countAttemptsByUser();
 }

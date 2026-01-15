@@ -16,6 +16,9 @@ public class QuestionAttemptDto {
     private String answerTypeHint;
     private List<QuestionOptionDto> options;
 
+    // NEW: Extraction tracking for current attempt
+    private Integer extractionsUsed;
+
     public QuestionAttemptDto() {
     }
 
@@ -113,5 +116,13 @@ public class QuestionAttemptDto {
 
     public void setOptions(List<QuestionOptionDto> options) {
         this.options = options;
+    }
+
+    public Integer getExtractionsUsed() {
+        return extractionsUsed;
+    }
+
+    public void setExtractionsUsed(Integer extractionsUsed) {
+        this.extractionsUsed = extractionsUsed;
     }
 }

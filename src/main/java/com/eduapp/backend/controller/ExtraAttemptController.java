@@ -9,6 +9,7 @@ import com.eduapp.backend.repository.UserRepository;
 import com.eduapp.backend.security.JwtUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.eduapp.backend.service.WalletService;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -24,15 +25,18 @@ public class ExtraAttemptController {
     private final PaperRepository paperRepository;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
+    private final WalletService walletService;
 
     public ExtraAttemptController(ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository,
             PaperRepository paperRepository,
             UserRepository userRepository,
-            JwtUtil jwtUtil) {
+            JwtUtil jwtUtil,
+            WalletService walletService) {
         this.extraAttemptPurchaseRepository = extraAttemptPurchaseRepository;
         this.paperRepository = paperRepository;
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
+        this.walletService = walletService;
     }
 
     /**
@@ -58,6 +62,9 @@ public class ExtraAttemptController {
         String paymentId = "MOCK-EXTRA-" + UUID.randomUUID().toString();
         BigDecimal pricePerAttempt = new BigDecimal("5.00"); // Mock price
         BigDecimal totalPrice = pricePerAttempt.multiply(new BigDecimal(request.getAttemptsCount()));
+
+        // Debit wallet
+        walletService.debit(user, totalPrice, "Purchase of " + request.getAttemptsCount() + " extra attempts for paper: " + paper.getName());
 
         ExtraAttemptPurchase purchase = new ExtraAttemptPurchase(
                 user,

@@ -57,6 +57,7 @@ public class PaperService {
     private final OverallPaperAnalysisRepository overallPaperAnalysisRepository;
     private final ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository;
     private final AIAnalysisService aiAnalysisService;
+    private final com.eduapp.backend.service.ExtractionTrackingService extractionTrackingService;
 
     /**
      * Constructor for dependency injection of repositories.
@@ -79,7 +80,8 @@ public class PaperService {
             StudentPaperAttemptMapper studentPaperAttemptMapper,
             OverallPaperAnalysisRepository overallPaperAnalysisRepository,
             ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository,
-            AIAnalysisService aiAnalysisService) {
+            AIAnalysisService aiAnalysisService,
+            com.eduapp.backend.service.ExtractionTrackingService extractionTrackingService) {
         this.paperRepository = paperRepository;
         this.paperBundleRepository = paperBundleRepository;
         this.studentBundleAccessRepository = studentBundleAccessRepository;
@@ -93,6 +95,7 @@ public class PaperService {
         this.overallPaperAnalysisRepository = overallPaperAnalysisRepository;
         this.extraAttemptPurchaseRepository = extraAttemptPurchaseRepository;
         this.aiAnalysisService = aiAnalysisService;
+        this.extractionTrackingService = extractionTrackingService;
     }
 
     /**
@@ -228,17 +231,14 @@ public class PaperService {
      * @throws IllegalArgumentException if paper not found
      */
     /**
-     * Retrieves paper details for an attempt.
-     * Checks if the user has purchased the parent bundle.
-     * 
-     * @param paperId the ID of the paper
-     * @param userId  the ID of the user requesting the attempt
-     * @return PaperAttemptDto if access is granted
-     * @throws SecurityException        if access is denied
-     * @throws IllegalArgumentException if paper not found
+     * Get paper attempt for student.
+     * @param paperId Paper ID
+     * @param userId User ID
+     * @param forceNew If true, abandon existing IN_PROGRESS attempt and start fresh
+     * @return PaperAttemptDto
      */
-    public PaperAttemptDto getPaperAttempt(Long paperId, Long userId) {
-        logger.info("Fetching paper attempt for paper ID: {} and user ID: {}", paperId, userId);
+    public PaperAttemptDto getPaperAttempt(Long paperId, Long userId, boolean forceNew) {
+        logger.info("Getting paper attempt for paper {} user {} (forceNew={})", paperId, userId, forceNew);
         Paper paper = paperRepository.findById(paperId)
                 .orElseThrow(() -> new IllegalArgumentException("Paper not found"));
 
@@ -263,6 +263,88 @@ public class PaperService {
         dto.setMaxAttempts(limitInfo.maxAttempts);
         dto.setRemainingAttempts(limitInfo.remainingAttempts);
         dto.setCanAttempt(limitInfo.canAttempt);
+
+        // Find existing active attempt or create a new one if allowed
+        List<StudentPaperAttempt> activeAttempts = studentPaperAttemptRepository
+                .findByStudentIdAndPaperIdAndStatusOrderByStartedAtDesc(userId, paperId, com.eduapp.backend.model.AttemptStatus.IN_PROGRESS);
+
+        if (!activeAttempts.isEmpty()) {
+            StudentPaperAttempt latestActive = activeAttempts.get(0);
+            
+            // If forceNew is requested, abandon existing attempt and create new one
+            if (forceNew) {
+                logger.info("Force new attempt requested - abandoning attempt {} for user {} paper {}", 
+                    latestActive.getId(), userId, paperId);
+                latestActive.setStatus(com.eduapp.backend.model.AttemptStatus.ABANDONED);
+                latestActive.setCompletedAt(LocalDateTime.now());
+                studentPaperAttemptRepository.save(latestActive);
+                
+                // Create fresh attempt
+                if (limitInfo.canAttempt) {
+                    StudentPaperAttempt newAttempt = new StudentPaperAttempt();
+                    newAttempt.setStudent(userRepository.getReferenceById(userId));
+                    newAttempt.setPaper(paper);
+                    newAttempt.setStartedAt(LocalDateTime.now());
+                    newAttempt.setStatus(com.eduapp.backend.model.AttemptStatus.IN_PROGRESS);
+                    newAttempt.setAttemptNumber(limitInfo.attemptsMade + 1);
+                    
+                    StudentPaperAttempt saved = studentPaperAttemptRepository.save(newAttempt);
+                    dto.setAttemptId(saved.getId());
+                    logger.info("Created new attempt {} (force new) for user {} paper {}", saved.getId(), userId, paperId);
+                    
+                    // Initialize extraction tracking for the fresh attempt
+                    extractionTrackingService.initializeTrackingForAttempt(saved);
+                    logger.info("Initialized extraction tracking for attempt {} (force new)", saved.getId());
+                } else {
+                    logger.warn("Cannot create new attempt - limit reached for user {} paper {}", userId, paperId);
+                }
+            } else {
+                dto.setAttemptId(latestActive.getId());
+                logger.info("Found active attempt {} for user {} paper {}", latestActive.getId(), userId, paperId);
+                
+                // If multiple active attempts exist (which shouldn't happen), log a warning
+                if (activeAttempts.size() > 1) {
+                    logger.warn("Found {} active attempts for user {} paper {}. Using latest: {}", 
+                        activeAttempts.size(), userId, paperId, latestActive.getId());
+                }
+            }
+        } else if (limitInfo.canAttempt) {
+            // Create new attempt
+            StudentPaperAttempt newAttempt = new StudentPaperAttempt();
+            newAttempt.setStudent(userRepository.getReferenceById(userId));
+            newAttempt.setPaper(paper);
+            newAttempt.setStartedAt(LocalDateTime.now());
+            newAttempt.setStatus(com.eduapp.backend.model.AttemptStatus.IN_PROGRESS);
+            newAttempt.setAttemptNumber(limitInfo.attemptsMade + 1);
+            
+            StudentPaperAttempt saved = studentPaperAttemptRepository.save(newAttempt);
+            dto.setAttemptId(saved.getId());
+            logger.info("Created new attempt {} for user {} paper {}", saved.getId(), userId, paperId);
+            
+            // Initialize extraction tracking for all questions in this attempt
+            extractionTrackingService.initializeTrackingForAttempt(saved);
+            logger.info("Initialized extraction tracking for attempt {}", saved.getId());
+        } else {
+            logger.warn("No active attempt and limit reached for user {} paper {}", userId, paperId);
+        }
+
+        // Populate extraction counts for each question if attemptId is available
+        if (dto.getAttemptId() != null) {
+            java.util.Map<Long, Integer> extractionCounts = 
+                extractionTrackingService.getAllExtractionCounts(dto.getAttemptId());
+            
+            logger.info("Populating extraction counts for attempt {}: found {} tracked questions", 
+                dto.getAttemptId(), extractionCounts.size());
+            
+            for (com.eduapp.backend.dto.QuestionAttemptDto questionDto : dto.getQuestions()) {
+                Integer extractionsUsed = extractionCounts.getOrDefault(questionDto.getId(), 0);
+                questionDto.setExtractionsUsed(extractionsUsed);
+                logger.info("Question {} has {} extractions used in attempt {}", 
+                    questionDto.getId(), extractionsUsed, dto.getAttemptId());
+            }
+        } else {
+            logger.warn("No attemptId available, cannot populate extraction counts!");
+        }
 
         return dto;
     }
@@ -355,6 +437,9 @@ public class PaperService {
                 answer.setAnswerText(null);
                 answer.setMarksAwarded(0); // Unanswered = 0 marks
             }
+
+            // MARK AS FINAL SUBMISSION (NOT DRAFT)
+            answer.setIsDraft(false);
 
             studentAnswerRepository.save(answer);
 

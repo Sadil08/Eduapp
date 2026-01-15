@@ -50,4 +50,14 @@ public interface PaperBundleRepository extends JpaRepository<PaperBundle, Long> 
                         @Param("minPrice") BigDecimal minPrice,
                         @Param("maxPrice") BigDecimal maxPrice,
                         @Param("name") String name);
+
+        /**
+         * Search bundles by name or description with pagination
+         */
+        @Query("SELECT pb FROM PaperBundle pb WHERE " +
+               "LOWER(pb.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+               "LOWER(pb.description) LIKE LOWER(CONCAT('%', :search, '%'))")
+        org.springframework.data.domain.Page<PaperBundle> searchBundles(
+                @Param("search") String search, 
+                org.springframework.data.domain.Pageable pageable);
 }

@@ -31,6 +31,7 @@ public class StudentPaperAttemptService {
     private final PaperRepository paperRepository;
     private final com.eduapp.backend.mapper.StudentPaperAttemptSummaryMapper summaryMapper;
     private final com.eduapp.backend.repository.OverallPaperAnalysisRepository analysisRepository;
+    private final ExtractionTrackingService extractionTrackingService;
 
     /**
      * Constructor for dependency injection of repositories.
@@ -43,12 +44,14 @@ public class StudentPaperAttemptService {
             UserRepository userRepository,
             PaperRepository paperRepository,
             com.eduapp.backend.mapper.StudentPaperAttemptSummaryMapper summaryMapper,
-            com.eduapp.backend.repository.OverallPaperAnalysisRepository analysisRepository) {
+            com.eduapp.backend.repository.OverallPaperAnalysisRepository analysisRepository,
+            ExtractionTrackingService extractionTrackingService) {
         this.attemptRepository = attemptRepository;
         this.userRepository = userRepository;
         this.paperRepository = paperRepository;
         this.summaryMapper = summaryMapper;
         this.analysisRepository = analysisRepository;
+        this.extractionTrackingService = extractionTrackingService;
     }
 
     /**
@@ -107,8 +110,18 @@ public class StudentPaperAttemptService {
                 throw new IllegalArgumentException("Paper does not exist");
             }
         }
+        // Check if this is a new attempt (no ID yet)
+        boolean isNewAttempt = (attempt.getId() == null);
+
         StudentPaperAttempt savedAttempt = attemptRepository.save(attempt);
         logger.info("Student paper attempt saved with ID: {}", savedAttempt.getId());
+
+        // Initialize extraction tracking for new attempts
+        if (isNewAttempt && savedAttempt.getPaper() != null) {
+            logger.info("Initializing extraction tracking for new attempt ID: {}", savedAttempt.getId());
+            extractionTrackingService.initializeTrackingForAttempt(savedAttempt);
+        }
+
         return savedAttempt;
     }
 

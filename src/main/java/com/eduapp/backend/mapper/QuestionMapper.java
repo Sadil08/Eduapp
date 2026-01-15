@@ -31,5 +31,6 @@ public interface QuestionMapper {
     @Mapping(source = "hideQuestionText", target = "hideQuestionText")
     @Mapping(source = "allowImageAnswer", target = "allowImageAnswer")
     @Mapping(source = "answerTypeHint", target = "answerTypeHint")
+    @Mapping(target = "extractionsUsed", ignore = true) // Populated manually in PaperService
     QuestionAttemptDto toAttemptDto(Question entity);
 }

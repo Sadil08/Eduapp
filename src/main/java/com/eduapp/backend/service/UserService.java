@@ -37,6 +37,7 @@ public class UserService implements UserDetailsService {
         private final ProgressMapper progressMapper;
         private final LeaderboardEntryMapper leaderboardEntryMapper;
         private final AIAnalysisMapper aiAnalysisMapper;
+        private final GeoLocationService geoLocationService;
 
         public UserService(UserRepository userRepository,
                         StudentBundleAccessRepository studentBundleAccessRepository,
@@ -50,7 +51,8 @@ public class UserService implements UserDetailsService {
                         StudentPaperAttemptMapper studentPaperAttemptMapper,
                         ProgressMapper progressMapper,
                         LeaderboardEntryMapper leaderboardEntryMapper,
-                        AIAnalysisMapper aiAnalysisMapper) {
+                        AIAnalysisMapper aiAnalysisMapper,
+                        GeoLocationService geoLocationService) {
                 this.userRepository = userRepository;
                 this.studentBundleAccessRepository = studentBundleAccessRepository;
                 this.studentPaperAttemptRepository = studentPaperAttemptRepository;
@@ -64,11 +66,12 @@ public class UserService implements UserDetailsService {
                 this.progressMapper = progressMapper;
                 this.leaderboardEntryMapper = leaderboardEntryMapper;
                 this.aiAnalysisMapper = aiAnalysisMapper;
+                this.geoLocationService = geoLocationService;
         }
 
         // --- Register normal student ---
         @Transactional
-        public User register(RegisterRequest req) {
+        public User register(RegisterRequest req, String ipAddress) {
                 if (req == null) {
                         throw new IllegalArgumentException("RegisterRequest cannot be null");
                 }
@@ -100,6 +103,11 @@ public class UserService implements UserDetailsService {
                                                         referralCode));
                 }
 
+                // Location Tracking
+                user.setRegistrationIp(ipAddress);
+                String country = geoLocationService.getCountryFromIp(ipAddress);
+                user.setCountry(country);
+
                 // Generate unique referral code for the new user
                 user.setReferralCode(generateUniqueReferralCode());
 
@@ -124,13 +132,19 @@ public class UserService implements UserDetailsService {
         }
 
         // --- Login ---
-        public String login(String email, String rawPassword) {
+        public String login(String email, String rawPassword, String ipAddress) {
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
                 if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
                         throw new RuntimeException("Invalid password");
                 }
+
+                // Update login stats
+                user.setLastLoginIp(ipAddress);
+                user.setLastLoginTime(java.time.LocalDateTime.now());
+                userRepository.save(user);
+
                 return jwtUtil.generateToken(email, user.getRole(), user.getId(), user.getReferralCode());
         }
 

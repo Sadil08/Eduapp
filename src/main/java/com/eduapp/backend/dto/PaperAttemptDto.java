@@ -8,9 +8,18 @@ public class PaperAttemptDto extends PaperSummaryDto {
     private Integer maxAttempts;
     private Integer remainingAttempts;
     private Boolean canAttempt;
+    private Long attemptId;
 
     public PaperAttemptDto() {
         super();
+    }
+
+    public Long getAttemptId() {
+        return attemptId;
+    }
+
+    public void setAttemptId(Long attemptId) {
+        this.attemptId = attemptId;
     }
 
     public List<QuestionAttemptDto> getQuestions() {

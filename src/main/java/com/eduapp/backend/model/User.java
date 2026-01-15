@@ -32,6 +32,19 @@ public class User {
     @Column(name = "referral_code", unique = true)
     private String referralCode;
 
+    // Location Tracking Fields
+    @Column(name = "country")
+    private String country;
+
+    @Column(name = "registration_ip")
+    private String registrationIp;
+
+    @Column(name = "last_login_time")
+    private LocalDateTime lastLoginTime;
+
+    @Column(name = "last_login_ip")
+    private String lastLoginIp;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "referred_by_id")
     @JsonIgnore
@@ -131,6 +144,38 @@ public class User {
 
     public void setReferredBy(User referredBy) {
         this.referredBy = referredBy;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    public String getRegistrationIp() {
+        return registrationIp;
+    }
+
+    public void setRegistrationIp(String registrationIp) {
+        this.registrationIp = registrationIp;
+    }
+
+    public LocalDateTime getLastLoginTime() {
+        return lastLoginTime;
+    }
+
+    public void setLastLoginTime(LocalDateTime lastLoginTime) {
+        this.lastLoginTime = lastLoginTime;
+    }
+
+    public String getLastLoginIp() {
+        return lastLoginIp;
+    }
+
+    public void setLastLoginIp(String lastLoginIp) {
+        this.lastLoginIp = lastLoginIp;
     }
 
     @Override

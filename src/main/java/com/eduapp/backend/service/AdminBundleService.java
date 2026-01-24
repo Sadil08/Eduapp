@@ -29,14 +29,17 @@ public class AdminBundleService {
     private final QuestionRepository questionRepository;
     private final UserRepository userRepository;
     private final ExamTypeRepository examTypeRepository;
+    private final CustomBundleRepository customBundleRepository;
 
     public AdminBundleService(PaperBundleRepository bundleRepository,
             PaperRepository paperRepository,
             StudentBundleAccessRepository accessRepository,
             StudentPaperAttemptRepository attemptRepository,
             QuestionRepository questionRepository,
+
             UserRepository userRepository,
-            ExamTypeRepository examTypeRepository) {
+            ExamTypeRepository examTypeRepository,
+            CustomBundleRepository customBundleRepository) {
         this.bundleRepository = bundleRepository;
         this.paperRepository = paperRepository;
         this.accessRepository = accessRepository;
@@ -44,6 +47,7 @@ public class AdminBundleService {
         this.questionRepository = questionRepository;
         this.userRepository = userRepository;
         this.examTypeRepository = examTypeRepository;
+        this.customBundleRepository = customBundleRepository;
     }
 
     /**
@@ -60,10 +64,18 @@ public class AdminBundleService {
 
         // Calculate total revenue from all bundle purchases
         // Calculate total revenue from all bundle purchases
-        BigDecimal totalRevenue = accessRepository.sumPricePaid();
-        if (totalRevenue == null) {
-            totalRevenue = BigDecimal.ZERO;
+        // Calculate total revenue from all bundle purchases (Standard + Custom)
+        BigDecimal standardRevenue = accessRepository.sumPricePaid();
+        if (standardRevenue == null) {
+            standardRevenue = BigDecimal.ZERO;
         }
+        
+        BigDecimal customRevenue = customBundleRepository.sumTotalRevenue();
+        if (customRevenue == null) {
+            customRevenue = BigDecimal.ZERO;
+        }
+        
+        BigDecimal totalRevenue = standardRevenue.add(customRevenue);
 
         SystemStatsDto stats = new SystemStatsDto(
                 totalBundles, totalPapers, totalQuestions,

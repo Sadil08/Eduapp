@@ -32,6 +32,7 @@ public class AnalyticsService {
     private final QuestionExtractionTrackingRepository extractionRepository;
     private final ProgressRepository progressRepository;
     private final LeaderboardEntryRepository leaderboardRepository;
+    private final CustomBundleRepository customBundleRepository;
 
     public AnalyticsService(
             UserRepository userRepository,
@@ -39,13 +40,15 @@ public class AnalyticsService {
             StudentPaperAttemptRepository attemptRepository,
             QuestionExtractionTrackingRepository extractionRepository,
             ProgressRepository progressRepository,
-            LeaderboardEntryRepository leaderboardRepository) {
+            LeaderboardEntryRepository leaderboardRepository,
+            CustomBundleRepository customBundleRepository) {
         this.userRepository = userRepository;
         this.bundleAccessRepository = bundleAccessRepository;
         this.attemptRepository = attemptRepository;
         this.extractionRepository = extractionRepository;
         this.progressRepository = progressRepository;
         this.leaderboardRepository = leaderboardRepository;
+        this.customBundleRepository = customBundleRepository;
     }
 
     /**
@@ -64,15 +67,30 @@ public class AnalyticsService {
         Long activeUsersToday = (long) userRepository.findActiveUsersSince(startOfToday).size();
         Long activeUsersThisMonth = (long) userRepository.findActiveUsersSince(startOfMonth).size();
 
-        // Revenue metrics
-        BigDecimal totalRevenue = bundleAccessRepository.sumPricePaid();
-        if (totalRevenue == null) totalRevenue = BigDecimal.ZERO;
+        // Revenue metrics - Standard bundles
+        BigDecimal standardTotalRevenue = bundleAccessRepository.sumPricePaid();
+        if (standardTotalRevenue == null) standardTotalRevenue = BigDecimal.ZERO;
 
-        BigDecimal revenueToday = bundleAccessRepository.sumRevenueonDate(today);
-        if (revenueToday == null) revenueToday = BigDecimal.ZERO;
+        BigDecimal standardRevenueToday = bundleAccessRepository.sumRevenueonDate(today);
+        if (standardRevenueToday == null) standardRevenueToday = BigDecimal.ZERO;
 
-        BigDecimal revenueThisMonth = bundleAccessRepository.sumRevenueThisMonth(startOfMonth);
-        if (revenueThisMonth == null) revenueThisMonth = BigDecimal.ZERO;
+        BigDecimal standardRevenueThisMonth = bundleAccessRepository.sumRevenueThisMonth(startOfMonth);
+        if (standardRevenueThisMonth == null) standardRevenueThisMonth = BigDecimal.ZERO;
+
+        // Revenue metrics - Custom bundles
+        BigDecimal customTotalRevenue = customBundleRepository.sumTotalRevenue();
+        if (customTotalRevenue == null) customTotalRevenue = BigDecimal.ZERO;
+
+        BigDecimal customRevenueToday = customBundleRepository.sumRevenueOnDate(today);
+        if (customRevenueToday == null) customRevenueToday = BigDecimal.ZERO;
+
+        BigDecimal customRevenueThisMonth = customBundleRepository.sumRevenueThisMonth(startOfMonth);
+        if (customRevenueThisMonth == null) customRevenueThisMonth = BigDecimal.ZERO;
+
+        // Combined revenue
+        BigDecimal totalRevenue = standardTotalRevenue.add(customTotalRevenue);
+        BigDecimal revenueToday = standardRevenueToday.add(customRevenueToday);
+        BigDecimal revenueThisMonth = standardRevenueThisMonth.add(customRevenueThisMonth);
 
         // Extraction metrics
         Long totalExtractions = extractionRepository.sumAllExtractionCounts();
@@ -81,13 +99,21 @@ public class AnalyticsService {
         Long extractionsToday = extractionRepository.sumTodayExtractionCounts(today.atStartOfDay());
         if (extractionsToday == null) extractionsToday = 0L;
 
-        // Bundle sales
-        Long totalBundlesSold = bundleAccessRepository.countTotalBundlesSold();
-        if (totalBundlesSold == null) totalBundlesSold = 0L;
+        // Bundle sales - Standard + Custom
+        Long standardBundlesSold = bundleAccessRepository.countTotalBundlesSold();
+        if (standardBundlesSold == null) standardBundlesSold = 0L;
+
+        Long customBundlesSold = customBundleRepository.countPurchasedBundles();
+        if (customBundlesSold == null) customBundlesSold = 0L;
+
+        Long totalBundlesSold = standardBundlesSold + customBundlesSold;
 
         // Country diversity
         Integer totalCountries = userRepository.countDistinctCountries();
         if (totalCountries == null) totalCountries = 0;
+
+        logger.info("Analytics overview: standardRevenue={}, customRevenue={}, totalRevenue={}, standardBundles={}, customBundles={}", 
+            standardTotalRevenue, customTotalRevenue, totalRevenue, standardBundlesSold, customBundlesSold);
 
         return new AnalyticsOverviewDto(
                 totalUsers,
@@ -166,7 +192,12 @@ public class AnalyticsService {
         List<Object[]> usersByCountry = userRepository.countUsersByCountry();
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
         List<Object[]> activeByCountry = userRepository.countActiveUsersByCountrySince(oneMonthAgo);
-        List<Object[]> revenueByCountry = bundleAccessRepository.getRevenueByCountry();
+        
+        // Standard bundle revenue by country
+        List<Object[]> standardRevenueByCountry = bundleAccessRepository.getRevenueByCountry();
+        // Custom bundle revenue by country
+        List<Object[]> customRevenueByCountry = customBundleRepository.getRevenueByCountry();
+        
         Map<String, Long> extractionsByCountry = getExtractionsByCountryMap();
 
         // Create maps for quick lookup
@@ -176,11 +207,18 @@ public class AnalyticsService {
                         row -> ((Number) row[1]).longValue()
                 ));
 
-        Map<String, BigDecimal> revenueMap = revenueByCountry.stream()
-                .collect(Collectors.toMap(
-                        row -> (String) row[0],
-                        row -> (BigDecimal) row[1]
-                ));
+        // Combine standard and custom bundle revenue by country
+        Map<String, BigDecimal> revenueMap = new HashMap<>();
+        standardRevenueByCountry.forEach(row -> {
+            String country = (String) row[0];
+            BigDecimal revenue = (BigDecimal) row[1];
+            revenueMap.merge(country, revenue, BigDecimal::add);
+        });
+        customRevenueByCountry.forEach(row -> {
+            String country = (String) row[0];
+            BigDecimal revenue = (BigDecimal) row[1];
+            revenueMap.merge(country, revenue, BigDecimal::add);
+        });
 
         return usersByCountry.stream().map(row -> {
             String country = (String) row[0];
@@ -200,17 +238,45 @@ public class AnalyticsService {
     public List<DailyRevenueDto> getDailyRevenue(String startDate, String endDate) {
         logger.info("Fetching daily revenue from {} to {}", startDate, endDate);
 
-        // Assuming the repository method can handle String dates or they are parsed internally
-        List<Object[]> dailyData = bundleAccessRepository.getDailyRevenue(LocalDate.parse(startDate), LocalDate.parse(endDate));
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
 
-        return dailyData.stream().map(row -> {
+        // Standard bundle daily revenue
+        List<Object[]> standardDailyData = bundleAccessRepository.getDailyRevenue(start, end);
+        // Custom bundle daily revenue
+        List<Object[]> customDailyData = customBundleRepository.getDailyRevenue(start, end);
+
+        // Combine by date
+        Map<LocalDate, DailyRevenueDto> revenueByDate = new TreeMap<>();
+        
+        standardDailyData.forEach(row -> {
             LocalDate date = ((java.sql.Date) row[0]).toLocalDate();
             BigDecimal revenue = (BigDecimal) row[1];
             Long transactions = ((Number) row[2]).longValue();
             Long uniqueUsers = ((Number) row[3]).longValue();
+            revenueByDate.put(date, new DailyRevenueDto(date, revenue, transactions, uniqueUsers));
+        });
+        
+        customDailyData.forEach(row -> {
+            LocalDate date = ((java.sql.Date) row[0]).toLocalDate();
+            BigDecimal revenue = (BigDecimal) row[1];
+            Long transactions = ((Number) row[2]).longValue();
+            Long uniqueUsers = ((Number) row[3]).longValue();
+            
+            if (revenueByDate.containsKey(date)) {
+                DailyRevenueDto existing = revenueByDate.get(date);
+                revenueByDate.put(date, new DailyRevenueDto(
+                    date,
+                    existing.getRevenue().add(revenue),
+                    existing.getTransactions() + transactions,
+                    existing.getUniqueUsers() + uniqueUsers // Note: This might overcount if same user bought both
+                ));
+            } else {
+                revenueByDate.put(date, new DailyRevenueDto(date, revenue, transactions, uniqueUsers));
+            }
+        });
 
-            return new DailyRevenueDto(date, revenue, transactions, uniqueUsers);
-        }).collect(Collectors.toList());
+        return new ArrayList<>(revenueByDate.values());
     }
 
     /**
@@ -291,11 +357,24 @@ public class AnalyticsService {
 
     // Helper methods
     private Map<Long, BigDecimal> getRevenuePerUserMap() {
-        List<Object[]> results = bundleAccessRepository.getRevenuePerUser();
-        return results.stream().collect(Collectors.toMap(
-                row -> ((Number) row[0]).longValue(),
-                row -> (BigDecimal) row[1]
-        ));
+        // Standard bundle revenue per user
+        List<Object[]> standardResults = bundleAccessRepository.getRevenuePerUser();
+        Map<Long, BigDecimal> revenueMap = new HashMap<>();
+        standardResults.forEach(row -> {
+            Long userId = ((Number) row[0]).longValue();
+            BigDecimal revenue = (BigDecimal) row[1];
+            revenueMap.merge(userId, revenue, BigDecimal::add);
+        });
+        
+        // Custom bundle revenue per user
+        List<Object[]> customResults = customBundleRepository.getRevenuePerUser();
+        customResults.forEach(row -> {
+            Long userId = ((Number) row[0]).longValue();
+            BigDecimal revenue = (BigDecimal) row[1];
+            revenueMap.merge(userId, revenue, BigDecimal::add);
+        });
+        
+        return revenueMap;
     }
 
     private Map<Long, Long> getExtractionsPerUserMap() {

@@ -8,7 +8,7 @@ public class PaperDto {
     private String name;
     private String description;
     private PaperType type;
-    private Long bundleId;
+    private List<Long> bundleIds; // Changed from single bundleId to list
     private Long subjectId;
     private String subjectName;
     private Integer maxFreeAttempts;
@@ -18,14 +18,14 @@ public class PaperDto {
     public PaperDto() {
     }
 
-    public PaperDto(Long id, String name, String description, PaperType type, Long bundleId, Integer maxFreeAttempts,
+    public PaperDto(Long id, String name, String description, PaperType type, List<Long> bundleIds, Integer maxFreeAttempts,
             Integer totalMarks,
             List<QuestionDto> questions) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.type = type;
-        this.bundleId = bundleId;
+        this.bundleIds = bundleIds;
         this.maxFreeAttempts = maxFreeAttempts;
         this.totalMarks = totalMarks;
         this.questions = questions;
@@ -63,12 +63,12 @@ public class PaperDto {
         this.type = type;
     }
 
-    public Long getBundleId() {
-        return bundleId;
+    public List<Long> getBundleIds() {
+        return bundleIds;
     }
 
-    public void setBundleId(Long bundleId) {
-        this.bundleId = bundleId;
+    public void setBundleIds(List<Long> bundleIds) {
+        this.bundleIds = bundleIds;
     }
 
     public Long getSubjectId() {

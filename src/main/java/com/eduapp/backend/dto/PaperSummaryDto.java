@@ -1,13 +1,14 @@
 package com.eduapp.backend.dto;
 
 import com.eduapp.backend.model.PaperType;
+import java.util.List;
 
 public class PaperSummaryDto {
     private Long id;
     private String name;
     private String description;
     private PaperType type;
-    private Long bundleId;
+    private List<Long> bundleIds;
     private Long subjectId;
     private String subjectName;
     private Integer maxFreeAttempts;
@@ -16,13 +17,13 @@ public class PaperSummaryDto {
     public PaperSummaryDto() {
     }
 
-    public PaperSummaryDto(Long id, String name, String description, PaperType type, Long bundleId,
+    public PaperSummaryDto(Long id, String name, String description, PaperType type, List<Long> bundleIds,
             Integer maxFreeAttempts, Integer totalMarks) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.type = type;
-        this.bundleId = bundleId;
+        this.bundleIds = bundleIds;
         this.maxFreeAttempts = maxFreeAttempts;
         this.totalMarks = totalMarks;
     }
@@ -59,12 +60,12 @@ public class PaperSummaryDto {
         this.type = type;
     }
 
-    public Long getBundleId() {
-        return bundleId;
+    public List<Long> getBundleIds() {
+        return bundleIds;
     }
 
-    public void setBundleId(Long bundleId) {
-        this.bundleId = bundleId;
+    public void setBundleIds(List<Long> bundleIds) {
+        this.bundleIds = bundleIds;
     }
 
     public Long getSubjectId() {

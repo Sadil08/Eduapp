@@ -24,6 +24,7 @@ public class StudentPaperAttemptDto {
     private String analysisError;
     private Boolean analysisCompleted;
     private Integer submissionCount;
+    private Long originBundleId;
 
     public StudentPaperAttemptDto() {
     }
@@ -160,5 +161,23 @@ public class StudentPaperAttemptDto {
 
     public void setSubmissionCount(Integer submissionCount) {
         this.submissionCount = submissionCount;
+    }
+
+    public Long getOriginBundleId() {
+        return originBundleId;
+    }
+
+    public void setOriginBundleId(Long originBundleId) {
+        this.originBundleId = originBundleId;
+    }
+
+    private Long originCustomBundleId;
+
+    public Long getOriginCustomBundleId() {
+        return originCustomBundleId;
+    }
+
+    public void setOriginCustomBundleId(Long originCustomBundleId) {
+        this.originCustomBundleId = originCustomBundleId;
     }
 }

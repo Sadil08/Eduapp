@@ -93,10 +93,8 @@ public class AdminBundleService {
 
         int totalStudentsWithAccess = accessRepository.countByBundleId(bundleId);
 
-        // Count total attempts across all papers in bundle
-        int totalAttempts = bundle.getPapers() != null ? bundle.getPapers().stream()
-                .mapToInt(paper -> (int) attemptRepository.countByPaperId(paper.getId()))
-                .sum() : 0;
+        // Count total attempts made within this bundle context
+        int totalAttempts = (int) attemptRepository.countByOriginBundleId(bundleId);
 
         BundleStatsDto stats = new BundleStatsDto(
                 bundleId, bundle.getName(), totalPapers, totalQuestions,
@@ -234,7 +232,13 @@ public class AdminBundleService {
         Paper paper = paperRepository.findById(paperId)
                 .orElseThrow(() -> new IllegalArgumentException("Paper not found"));
 
-        paper.setBundle(bundle);
+        // Check if paper is already in the bundle
+        if (paper.getBundles().contains(bundle)) {
+             logger.warn("Paper {} is already in bundle {}", paper.getName(), bundle.getName());
+             return;
+        }
+
+        paper.getBundles().add(bundle);
         paperRepository.save(paper);
 
         logger.info("Paper {} added to bundle {}", paper.getName(), bundle.getName());
@@ -250,11 +254,19 @@ public class AdminBundleService {
         Paper paper = paperRepository.findById(paperId)
                 .orElseThrow(() -> new IllegalArgumentException("Paper not found"));
 
-        if (paper.getBundle() == null || !paper.getBundle().getId().equals(bundleId)) {
+        // Check if paper is in this bundle (using ID comparison for safety)
+        boolean isInBundle = paper.getBundles() != null && paper.getBundles().stream()
+                .anyMatch(b -> b.getId().equals(bundleId));
+
+        if (!isInBundle) {
             throw new IllegalArgumentException("Paper is not in this bundle");
         }
 
-        paper.setBundle(null);
+        // Remove the bundle from the paper's bundle list
+        if (paper.getBundles() != null) {
+            paper.getBundles().removeIf(b -> b.getId().equals(bundleId));
+        }
+        
         paperRepository.save(paper);
 
         logger.info("Paper {} removed from bundle", paper.getName());

@@ -26,6 +26,14 @@ public class StudentPaperAttempt {
     @Column
     private Integer attemptNumber;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "origin_bundle_id")
+    private PaperBundle originBundle;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "origin_custom_bundle_id")
+    private CustomBundle originCustomBundle;
+
     @Column
     private LocalDateTime startedAt;
 
@@ -215,5 +223,21 @@ public class StudentPaperAttempt {
 
     public void setExtractionTrackings(List<QuestionExtractionTracking> extractionTrackings) {
         this.extractionTrackings = extractionTrackings;
+    }
+
+    public PaperBundle getOriginBundle() {
+        return originBundle;
+    }
+
+    public void setOriginBundle(PaperBundle originBundle) {
+        this.originBundle = originBundle;
+    }
+
+    public CustomBundle getOriginCustomBundle() {
+        return originCustomBundle;
+    }
+
+    public void setOriginCustomBundle(CustomBundle originCustomBundle) {
+        this.originCustomBundle = originCustomBundle;
     }
 }

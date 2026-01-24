@@ -190,18 +190,19 @@ public class AdminUserService {
         List<StudentBundleAccess> accesses = accessRepository.findByStudentId(userId);
 
         return accesses.stream()
-                .flatMap(access -> access.getBundle().getPapers().stream())
-                .map(paper -> {
-                    int attemptsMade = attemptRepository.countByStudentIdAndPaperId(userId, paper.getId());
-                    int maxAttempts = paper.getMaxFreeAttempts() != null ? paper.getMaxFreeAttempts() : 0;
+                .flatMap(access -> access.getBundle().getPapers().stream()
+                        .map(paper -> {
+                            int attemptsMade = attemptRepository.countByStudentIdAndPaperIdAndOriginBundleId(
+                                    userId, paper.getId(), access.getBundle().getId());
+                            int maxAttempts = paper.getMaxFreeAttempts() != null ? paper.getMaxFreeAttempts() : 0;
 
-                    return new UserAttemptInfoDto(
-                            userId,
-                            paper.getId(),
-                            paper.getName(),
-                            attemptsMade,
-                            maxAttempts);
-                })
+                            return new UserAttemptInfoDto(
+                                    userId,
+                                    paper.getId(),
+                                    paper.getName(),
+                                    attemptsMade,
+                                    maxAttempts);
+                        }))
                 .collect(Collectors.toList());
     }
 

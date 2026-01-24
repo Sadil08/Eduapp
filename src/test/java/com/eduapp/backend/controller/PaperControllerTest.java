@@ -67,7 +67,7 @@ public class PaperControllerTest {
         bundle.setId(1L);
         User user = new User("user@example.com", "pass", "user");
         user.setId(1L);
-        Paper paper = new Paper("Paper1", "Desc", PaperType.MCQ, bundle, 2, 100);
+        Paper paper = new Paper("Paper1", "Desc", PaperType.MCQ, List.of(bundle), 2, 100);
         paper.setId(1L);
         paper.setCreatedBy(user);
 

@@ -26,6 +26,8 @@ public interface StudentPaperAttemptMapper {
     @Mapping(source = "analysisError", target = "analysisError")
     @Mapping(source = "analysisCompleted", target = "analysisCompleted")
     @Mapping(source = "submissionCount", target = "submissionCount")
+    @Mapping(source = "originBundle.id", target = "originBundleId")
+    @Mapping(source = "originCustomBundle.id", target = "originCustomBundleId")
     @Mapping(target = "overallFeedback", ignore = true)
     @Mapping(target = "totalMarks", ignore = true)
     StudentPaperAttemptDto toDto(StudentPaperAttempt entity);

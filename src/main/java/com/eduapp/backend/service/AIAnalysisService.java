@@ -106,7 +106,7 @@ public class AIAnalysisService {
                         studentAnswerRepository.save(answer);
 
                         totalObtainedMarks += marks;
-                        totalAllocatedMarks += answer.getQuestion().getMarks();
+                        totalAllocatedMarks += (answer.getQuestion().getMarks() != null ? answer.getQuestion().getMarks() : 0);
                     }
                 }
             }
@@ -206,7 +206,7 @@ public class AIAnalysisService {
                             ? answer.getQuestion().getExtractedText()
                             : answer.getQuestion().getText();
             sb.append("Question: ").append(qText).append("\n");
-            sb.append("Maximum Marks: ").append(answer.getQuestion().getMarks()).append("\n");
+            sb.append("Maximum Marks: ").append(answer.getQuestion().getMarks() != null ? answer.getQuestion().getMarks() : "N/A").append("\n");
             sb.append("Correct Answer / Marking Scheme:\n").append(answer.getQuestion().getCorrectAnswerText())
                     .append("\n\n");
 

@@ -38,13 +38,13 @@ public class PaperServiceTest {
         bundle.setId(1L);
         Paper paper = new Paper();
         paper.setName("Test Paper");
-        paper.setBundle(bundle);
+        paper.getBundles().add(bundle);
         paper.setTotalMarks(100);
 
         Paper savedPaper = new Paper();
         savedPaper.setId(10L);
 
-        when(paperBundleRepository.findById(1L)).thenReturn(Optional.of(bundle));
+        when(paperBundleRepository.existsById(1L)).thenReturn(true);
         when(paperRepository.save(paper)).thenReturn(savedPaper);
 
         // Act
@@ -62,13 +62,13 @@ public class PaperServiceTest {
         bundle.setId(1L);
         Paper paper = new Paper();
         paper.setName("Test Paper");
-        paper.setBundle(bundle);
+        paper.getBundles().add(bundle);
 
         when(paperBundleRepository.findById(1L)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> paperService.save(paper))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("PaperBundle does not exist");
+                 .hasMessage("PaperBundle does not exist: 1");
     }
 }

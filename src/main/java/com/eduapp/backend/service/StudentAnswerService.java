@@ -80,6 +80,7 @@ public class StudentAnswerService {
         logger.info("Saving student answer for attempt ID: {} and question ID: {}",
                     answer.getAttempt() != null ? answer.getAttempt().getId() : null,
                     answer.getQuestion() != null ? answer.getQuestion().getId() : null);
+        
         if (answer.getAttempt() != null && answer.getAttempt().getId() != null) {
             Optional<StudentPaperAttempt> attempt = attemptRepository.findById(answer.getAttempt().getId());
             if (attempt.isEmpty()) {
@@ -87,6 +88,7 @@ public class StudentAnswerService {
                 throw new IllegalArgumentException("StudentPaperAttempt does not exist");
             }
         }
+        
         if (answer.getQuestion() != null && answer.getQuestion().getId() != null) {
             Optional<Question> question = questionRepository.findById(answer.getQuestion().getId());
             if (question.isEmpty()) {
@@ -94,6 +96,49 @@ public class StudentAnswerService {
                 throw new IllegalArgumentException("Question does not exist");
             }
         }
+
+        // Check for existing answer to avoid duplicate key violation
+        Long attemptIdToCheck = (answer.getAttempt() != null) ? answer.getAttempt().getId() : null;
+        Long questionIdToCheck = (answer.getQuestion() != null) ? answer.getQuestion().getId() : null;
+        
+        logger.info("UPSERT CHECK: answerId={}, attemptId={}, questionId={}", 
+            answer.getId(), attemptIdToCheck, questionIdToCheck);
+        
+        if (answer.getId() == null && attemptIdToCheck != null && questionIdToCheck != null) {
+            
+            logger.info("Checking for existing answer with attemptId={} and questionId={}",
+                attemptIdToCheck, questionIdToCheck);
+            
+            Optional<StudentAnswer> existing = studentAnswerRepository.findByAttemptIdAndQuestionId(
+                attemptIdToCheck, questionIdToCheck);
+            
+            logger.info("Existing answer found: {}", existing.isPresent());
+                
+            if (existing.isPresent()) {
+                logger.info("Found existing answer ID {} for attempt {} question {}. Merging data.",
+                    existing.get().getId(), attemptIdToCheck, questionIdToCheck);
+                
+                // Merge data from incoming answer to existing managed entity
+                StudentAnswer existingAnswer = existing.get();
+                existingAnswer.setAnswerText(answer.getAnswerText());
+                existingAnswer.setImageUrl(answer.getImageUrl());
+                existingAnswer.setExtractedText(answer.getExtractedText());
+                existingAnswer.setExtractionConfidence(answer.getExtractionConfidence());
+                existingAnswer.setSelectedOption(answer.getSelectedOption());
+                existingAnswer.setSubmittedAt(answer.getSubmittedAt());
+                existingAnswer.setMarksAwarded(answer.getMarksAwarded());
+                existingAnswer.setAiFeedback(answer.getAiFeedback());
+                existingAnswer.setUploadCount(answer.getUploadCount());
+                existingAnswer.setIsDraft(answer.getIsDraft());
+                
+                // Save the existing (managed) entity
+                StudentAnswer savedAnswer = studentAnswerRepository.save(existingAnswer);
+                logger.info("Student answer updated with ID: {}", savedAnswer.getId());
+                return savedAnswer;
+            }
+        }
+
+        // No existing answer found - save as new
         StudentAnswer savedAnswer = studentAnswerRepository.save(answer);
         logger.info("Student answer saved with ID: {}", savedAnswer.getId());
         return savedAnswer;

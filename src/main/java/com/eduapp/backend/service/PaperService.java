@@ -62,6 +62,7 @@ public class PaperService {
     private final ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository;
     private final AIAnalysisService aiAnalysisService;
     private final com.eduapp.backend.service.ExtractionTrackingService extractionTrackingService;
+    private final StudentAnswerService studentAnswerService;
 
     /**
      * Constructor for dependency injection of repositories.
@@ -86,8 +87,10 @@ public class PaperService {
             StudentPaperAttemptMapper studentPaperAttemptMapper,
             OverallPaperAnalysisRepository overallPaperAnalysisRepository,
             ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository,
+
             AIAnalysisService aiAnalysisService,
-            com.eduapp.backend.service.ExtractionTrackingService extractionTrackingService) {
+            com.eduapp.backend.service.ExtractionTrackingService extractionTrackingService,
+            StudentAnswerService studentAnswerService) {
         this.paperRepository = paperRepository;
         this.paperBundleRepository = paperBundleRepository;
         this.customBundleRepository = customBundleRepository;
@@ -103,6 +106,7 @@ public class PaperService {
         this.extraAttemptPurchaseRepository = extraAttemptPurchaseRepository;
         this.aiAnalysisService = aiAnalysisService;
         this.extractionTrackingService = extractionTrackingService;
+        this.studentAnswerService = studentAnswerService;
     }
 
     /**
@@ -542,11 +546,26 @@ public class PaperService {
             }
         }
 
-        // Create StudentAnswer for ALL questions in the paper (including unanswered ones)
+        // IMPORTANT: Query ALL existing answers for this attempt ONCE before the loop
+        // This avoids Hibernate auto-flush issues when querying inside the loop
+        List<StudentAnswer> existingAnswers = studentAnswerRepository.findByAttemptId(savedAttempt.getId());
+        java.util.Map<Long, StudentAnswer> existingAnswersMap = new java.util.HashMap<>();
+        for (StudentAnswer ea : existingAnswers) {
+            existingAnswersMap.put(ea.getQuestion().getId(), ea);
+        }
+        logger.info("Found {} existing answers for attempt {}", existingAnswers.size(), savedAttempt.getId());
+
+        // Create or update StudentAnswer for ALL questions in the paper (including unanswered ones)
         for (Question question : paper.getQuestions()) {
-            StudentAnswer answer = new StudentAnswer();
-            answer.setAttempt(savedAttempt);
-            answer.setQuestion(question);
+            // Check if answer already exists for this question
+            StudentAnswer answer = existingAnswersMap.get(question.getId());
+            boolean isNew = (answer == null);
+            
+            if (isNew) {
+                answer = new StudentAnswer();
+                answer.setAttempt(savedAttempt);
+                answer.setQuestion(question);
+            }
 
             PaperSubmissionDto.StudentAnswerSubmissionDto ansDto = submittedAnswersMap.get(question.getId());
 
@@ -573,8 +592,11 @@ public class PaperService {
             // MARK AS FINAL SUBMISSION (NOT DRAFT)
             answer.setIsDraft(false);
 
-            studentAnswerRepository.save(answer);
-            savedAttempt.getAnswers().add(answer);
+            // Save the answer (either new or updated existing)
+            StudentAnswer savedAnswer = studentAnswerRepository.save(answer);
+            if (isNew) {
+                savedAttempt.getAnswers().add(savedAnswer);
+            }
         }
         
 

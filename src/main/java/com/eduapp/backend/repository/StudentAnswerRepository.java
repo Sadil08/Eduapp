@@ -12,6 +12,11 @@ public interface StudentAnswerRepository extends JpaRepository<StudentAnswer, Lo
     List<StudentAnswer> findByAttemptId(Long attemptId);
 
     /**
+     * Find a specific answer for an attempt and question
+     */
+    java.util.Optional<StudentAnswer> findByAttemptIdAndQuestionId(Long attemptId, Long questionId);
+
+    /**
      * Find all draft answers for a specific attempt
      */
     List<StudentAnswer> findByAttemptIdAndIsDraft(Long attemptId, Boolean isDraft);

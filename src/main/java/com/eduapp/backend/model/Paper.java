@@ -43,6 +43,9 @@ public class Paper {
     @Column
     private Integer totalMarks;
 
+    @Column(name = "video_url", length = 500)
+    private String videoUrl;
+
     @ManyToOne
     @JoinColumn(name = "created_by")
     @JsonIgnore
@@ -135,6 +138,14 @@ public class Paper {
 
     public void setTotalMarks(Integer totalMarks) {
         this.totalMarks = totalMarks;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
     public User getCreatedBy() {

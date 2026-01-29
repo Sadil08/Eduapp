@@ -13,6 +13,7 @@ public class PaperDto {
     private String subjectName;
     private Integer maxFreeAttempts;
     private Integer totalMarks;
+    private String videoUrl;
     private List<QuestionDto> questions;
 
     public PaperDto() {
@@ -101,6 +102,14 @@ public class PaperDto {
 
     public void setTotalMarks(Integer totalMarks) {
         this.totalMarks = totalMarks;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
     public List<QuestionDto> getQuestions() {

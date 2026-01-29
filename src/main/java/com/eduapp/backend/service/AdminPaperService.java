@@ -88,6 +88,7 @@ public class AdminPaperService {
         paper.setType(dto.getType());
         paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
         paper.setTotalMarks(dto.getTotalMarks());
+        paper.setVideoUrl(dto.getVideoUrl());
         
         // Fetch and set bundles if bundleIds are provided
         if (dto.getBundleIds() != null && !dto.getBundleIds().isEmpty()) {
@@ -125,6 +126,7 @@ public class AdminPaperService {
         paper.setType(dto.getType());
         paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
         paper.setTotalMarks(dto.getTotalMarks());
+        paper.setVideoUrl(dto.getVideoUrl());
         
         // Update bundles if provided
         if (dto.getBundleIds() != null) {
@@ -314,6 +316,7 @@ public class AdminPaperService {
         dto.setBundleIds(paper.getBundles().stream().map(PaperBundle::getId).collect(java.util.stream.Collectors.toList()));
         dto.setMaxFreeAttempts(paper.getMaxFreeAttempts());
         dto.setTotalMarks(paper.getTotalMarks());
+        dto.setVideoUrl(paper.getVideoUrl());
 
         // Admin fields
         dto.setCreatedAt(paper.getCreatedAt());

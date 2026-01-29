@@ -13,6 +13,7 @@ public class PaperSummaryDto {
     private String subjectName;
     private Integer maxFreeAttempts;
     private Integer totalMarks;
+    private String videoUrl;
 
     public PaperSummaryDto() {
     }
@@ -98,5 +99,13 @@ public class PaperSummaryDto {
 
     public void setTotalMarks(Integer totalMarks) {
         this.totalMarks = totalMarks;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 }

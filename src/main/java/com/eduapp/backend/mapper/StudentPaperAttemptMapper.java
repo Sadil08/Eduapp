@@ -23,6 +23,7 @@ public interface StudentPaperAttemptMapper {
     @Mapping(source = "student.id", target = "studentId")
     @Mapping(source = "status", target = "status")
     @Mapping(source = "paper.totalMarks", target = "paperTotalMarks")
+    @Mapping(source = "paper.videoUrl", target = "videoUrl")
     @Mapping(source = "analysisError", target = "analysisError")
     @Mapping(source = "analysisCompleted", target = "analysisCompleted")
     @Mapping(source = "submissionCount", target = "submissionCount")

@@ -20,6 +20,7 @@ public class StudentPaperAttemptDto {
     private String overallFeedback; // AI-generated overall feedback
     private Integer totalMarks; // Total marks awarded by AI
     private Integer paperTotalMarks; // Total marks allocated for the paper
+    private String videoUrl; // YouTube video URL from the paper
 
     private String analysisError;
     private Boolean analysisCompleted;
@@ -137,6 +138,14 @@ public class StudentPaperAttemptDto {
 
     public void setPaperTotalMarks(Integer paperTotalMarks) {
         this.paperTotalMarks = paperTotalMarks;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
     public String getAnalysisError() {

@@ -33,12 +33,11 @@ public class QuestionController {
     private final QuestionModelAnswerService modelAnswerService;
 
     public QuestionController(
-        QuestionService questionService, 
-        QuestionMapper questionMapper, 
-        AIService aiService,
-        FileStorageService fileStorageService,
-        QuestionModelAnswerService modelAnswerService
-    ) {
+            QuestionService questionService,
+            QuestionMapper questionMapper,
+            AIService aiService,
+            FileStorageService fileStorageService,
+            QuestionModelAnswerService modelAnswerService) {
         this.questionService = questionService;
         this.questionMapper = questionMapper;
         this.aiService = aiService;
@@ -48,13 +47,12 @@ public class QuestionController {
 
     @PostMapping("/extract-from-image")
     public ResponseEntity<java.util.Map<String, String>> extractFromImage(
-        @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-        @RequestParam(value = "subject", required = false) String subjectName,
-        @RequestParam(value = "paperId", required = false) Long paperId
-    ) {
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "subject", required = false) String subjectName,
+            @RequestParam(value = "paperId", required = false) Long paperId) {
         try {
             logger.info("Received request to extract text from image (subject: {}, paperId: {})", subjectName, paperId);
-            
+
             String lessonName = null;
 
             // If subject not provided but paperId is, try to fetch from DB
@@ -65,21 +63,81 @@ public class QuestionController {
                 }
                 lessonName = context.get("lesson");
             }
-            
+
             // Store the file
             String imageUrl = fileStorageService.storeFile(file, "questions");
-            
+
             // Extract text with subject and lesson context
             String extractedText = aiService.extractTextFromImage(file, subjectName, lessonName);
-            
+
             return ResponseEntity.ok(java.util.Map.of(
-                "extractedText", extractedText,
-                "imageUrl", imageUrl
-            ));
+                    "extractedText", extractedText,
+                    "imageUrl", imageUrl));
         } catch (Exception e) {
             logger.error("Failed to process image: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(java.util.Map.of("error", e.getMessage()));
+                    .body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Batch extract text from multiple question/model answer images.
+     * Use this for admin operations like creating papers with multiple questions.
+     * Reduces API overhead by processing all images in one request.
+     */
+    @PostMapping("/extract-batch")
+    public ResponseEntity<java.util.Map<String, Object>> extractFromImageBatch(
+            @RequestParam("files") org.springframework.web.multipart.MultipartFile[] files,
+            @RequestParam("ids") String ids,
+            @RequestParam(value = "subject", required = false) String subjectName) {
+        try {
+            logger.info("Received batch extraction request for {} images (subject: {})", files.length, subjectName);
+
+            String[] idArray = ids.split(",");
+            if (files.length != idArray.length) {
+                return ResponseEntity.badRequest()
+                        .body(java.util.Map.of("error",
+                                "Mismatch: " + files.length + " files but " + idArray.length + " IDs"));
+            }
+
+            // Build map of ID -> file
+            java.util.Map<String, org.springframework.web.multipart.MultipartFile> filesWithIds = new java.util.LinkedHashMap<>();
+            java.util.Map<String, String> storedUrls = new java.util.HashMap<>();
+
+            for (int i = 0; i < files.length; i++) {
+                String id = idArray[i].trim();
+                filesWithIds.put(id, files[i]);
+
+                // Store each file and save URL
+                String imageUrl = fileStorageService.storeFile(files[i], "questions");
+                storedUrls.put(id, imageUrl);
+            }
+
+            // Batch extract text
+            java.util.Map<String, String> extractedTexts = aiService.extractTextFromImagesBatch(filesWithIds,
+                    subjectName);
+
+            // Combine results
+            java.util.List<java.util.Map<String, String>> results = new java.util.ArrayList<>();
+            for (String id : idArray) {
+                String trimmedId = id.trim();
+                java.util.Map<String, String> resultItem = new java.util.HashMap<>();
+                resultItem.put("id", trimmedId);
+                resultItem.put("extractedText",
+                        extractedTexts.containsKey(trimmedId) ? extractedTexts.get(trimmedId) : "");
+                resultItem.put("imageUrl", storedUrls.containsKey(trimmedId) ? storedUrls.get(trimmedId) : "");
+                results.add(resultItem);
+            }
+
+            logger.info("Batch extraction completed: {} images processed", results.size());
+
+            return ResponseEntity.ok(java.util.Map.of(
+                    "results", results,
+                    "totalProcessed", results.size()));
+        } catch (Exception e) {
+            logger.error("Failed to process batch images: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("error", e.getMessage()));
         }
     }
 

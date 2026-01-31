@@ -1,6 +1,7 @@
 package com.eduapp.backend.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalDateTime;
@@ -19,9 +20,18 @@ public class Paper {
     @Column(length = 1000)
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bundle_id", nullable = false)
-    private PaperBundle bundle;
+    @ManyToMany
+    @JoinTable(
+        name = "paper_bundles_papers",
+        joinColumns = @JoinColumn(name = "paper_id"),
+        inverseJoinColumns = @JoinColumn(name = "paper_bundle_id")
+    )
+    @JsonIgnore
+    private List<PaperBundle> bundles = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.EAGER) // Eagerly load subject for context
+    @JoinColumn(name = "subject_id")
+    private Subject subject;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -33,8 +43,12 @@ public class Paper {
     @Column
     private Integer totalMarks;
 
+    @Column(name = "video_url", length = 500)
+    private String videoUrl;
+
     @ManyToOne
     @JoinColumn(name = "created_by")
+    @JsonIgnore
     private User createdBy;
 
     @Column(name = "created_at")
@@ -51,12 +65,12 @@ public class Paper {
     public Paper() {
     }
 
-    public Paper(String name, String description, PaperType type, PaperBundle bundle, Integer maxFreeAttempts,
+    public Paper(String name, String description, PaperType type, List<PaperBundle> bundles, Integer maxFreeAttempts,
             Integer totalMarks) {
         this.name = name;
         this.description = description;
         this.type = type;
-        this.bundle = bundle;
+        this.bundles = bundles != null ? bundles : new ArrayList<>();
         this.maxFreeAttempts = maxFreeAttempts != null ? maxFreeAttempts : 2;
         this.totalMarks = totalMarks;
     }
@@ -86,12 +100,20 @@ public class Paper {
         this.description = description;
     }
 
-    public PaperBundle getBundle() {
-        return bundle;
+    public List<PaperBundle> getBundles() {
+        return bundles;
     }
 
-    public void setBundle(PaperBundle bundle) {
-        this.bundle = bundle;
+    public void setBundles(List<PaperBundle> bundles) {
+        this.bundles = bundles;
+    }
+
+    public Subject getSubject() {
+        return subject;
+    }
+
+    public void setSubject(Subject subject) {
+        this.subject = subject;
     }
 
     public PaperType getType() {
@@ -116,6 +138,14 @@ public class Paper {
 
     public void setTotalMarks(Integer totalMarks) {
         this.totalMarks = totalMarks;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
     public User getCreatedBy() {

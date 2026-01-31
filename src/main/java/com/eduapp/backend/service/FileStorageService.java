@@ -17,7 +17,7 @@ public class FileStorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
     private static final String UPLOAD_DIR = "uploads/";
-    
+
     public FileStorageService() {
         // Create upload directories if they don't exist
         try {
@@ -31,8 +31,10 @@ public class FileStorageService {
 
     /**
      * Store an uploaded file in the appropriate category folder
-     * @param file The multipart file to store
-     * @param category Category folder: 'questions', 'model-answers', or 'student-answers'
+     * 
+     * @param file     The multipart file to store
+     * @param category Category folder: 'questions', 'model-answers', or
+     *                 'student-answers'
      * @return The URL/path to access the stored file
      */
     public String storeFile(MultipartFile file, String category) throws IOException {
@@ -53,21 +55,21 @@ public class FileStorageService {
 
         // Generate unique filename
         String originalFilename = file.getOriginalFilename();
-        String extension = originalFilename != null && originalFilename.contains(".") 
-            ? originalFilename.substring(originalFilename.lastIndexOf("."))
-            : "";
-        
+        String extension = originalFilename != null && originalFilename.contains(".")
+                ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                : "";
+
         String filename = UUID.randomUUID().toString() + extension;
         String categoryPath = UPLOAD_DIR + category + "/";
         Path targetLocation = Paths.get(categoryPath + filename);
 
         // Store file
         Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-        
+
         // Return URL that can be served by backend
         String fileUrl = "/api/files/" + category + "/" + filename;
         logger.info("Successfully stored file: {}", fileUrl);
-        
+
         return fileUrl;
     }
 
@@ -79,11 +81,11 @@ public class FileStorageService {
             if (fileUrl == null || !fileUrl.startsWith("/api/files/")) {
                 return;
             }
-            
+
             // Extract path from URL
             String relativePath = fileUrl.substring("/api/files/".length());
             Path filePath = Paths.get(UPLOAD_DIR + relativePath);
-            
+
             Files.deleteIfExists(filePath);
             logger.info("Deleted file: {}", fileUrl);
         } catch (IOException e) {
@@ -92,10 +94,11 @@ public class FileStorageService {
     }
 
     private boolean isValidImageType(String contentType) {
-        return contentType.equals("image/jpeg") 
-            || contentType.equals("image/jpg")
-            || contentType.equals("image/png")
-            || contentType.equals("image/heic")
-            || contentType.equals("image/heif");
+        return contentType.equals("image/jpeg")
+                || contentType.equals("image/jpg")
+                || contentType.equals("image/png")
+                || contentType.equals("image/webp")
+                || contentType.equals("image/heic")
+                || contentType.equals("image/heif");
     }
 }

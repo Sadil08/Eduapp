@@ -37,6 +37,7 @@ public class UserService implements UserDetailsService {
         private final ProgressMapper progressMapper;
         private final LeaderboardEntryMapper leaderboardEntryMapper;
         private final AIAnalysisMapper aiAnalysisMapper;
+        private final GeoLocationService geoLocationService;
 
         public UserService(UserRepository userRepository,
                         StudentBundleAccessRepository studentBundleAccessRepository,
@@ -50,7 +51,8 @@ public class UserService implements UserDetailsService {
                         StudentPaperAttemptMapper studentPaperAttemptMapper,
                         ProgressMapper progressMapper,
                         LeaderboardEntryMapper leaderboardEntryMapper,
-                        AIAnalysisMapper aiAnalysisMapper) {
+                        AIAnalysisMapper aiAnalysisMapper,
+                        GeoLocationService geoLocationService) {
                 this.userRepository = userRepository;
                 this.studentBundleAccessRepository = studentBundleAccessRepository;
                 this.studentPaperAttemptRepository = studentPaperAttemptRepository;
@@ -64,11 +66,12 @@ public class UserService implements UserDetailsService {
                 this.progressMapper = progressMapper;
                 this.leaderboardEntryMapper = leaderboardEntryMapper;
                 this.aiAnalysisMapper = aiAnalysisMapper;
+                this.geoLocationService = geoLocationService;
         }
 
         // --- Register normal student ---
         @Transactional
-        public User register(RegisterRequest req) {
+        public User register(RegisterRequest req, String ipAddress) {
                 if (req == null) {
                         throw new IllegalArgumentException("RegisterRequest cannot be null");
                 }
@@ -87,6 +90,26 @@ public class UserService implements UserDetailsService {
                 } else {
                         user.setRole(Role.STUDENT);
                 }
+
+                // Handle Lifetime Attribution at Signup
+                String referralCode = req.getReferralCode();
+                if (referralCode != null && !referralCode.trim().isEmpty()) {
+                        userRepository.findByReferralCode(referralCode.trim().toUpperCase())
+                                        .ifPresentOrElse(referrer -> {
+                                                logger.info("Binding new user {} to referrer {}", req.getEmail(),
+                                                                referrer.getId());
+                                                user.setReferredBy(referrer);
+                                        }, () -> logger.warn("Invalid referral code used during signup: {}",
+                                                        referralCode));
+                }
+
+                // Location Tracking
+                user.setRegistrationIp(ipAddress);
+                String country = geoLocationService.getCountryFromIp(ipAddress);
+                user.setCountry(country);
+
+                // Generate unique referral code for the new user
+                user.setReferralCode(generateUniqueReferralCode());
 
                 return userRepository.save(user);
         }
@@ -109,14 +132,24 @@ public class UserService implements UserDetailsService {
         }
 
         // --- Login ---
-        public String login(String email, String rawPassword) {
+        public String login(String email, String rawPassword, String ipAddress) {
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
                 if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
                         throw new RuntimeException("Invalid password");
                 }
-                return jwtUtil.generateToken(email, user.getRole(), user.getId());
+
+                // Update login stats
+                user.setLastLoginIp(ipAddress);
+                user.setLastLoginTime(java.time.LocalDateTime.now());
+                userRepository.save(user);
+
+                return jwtUtil.generateToken(email, user.getRole(), user.getId(), user.getReferralCode());
+        }
+
+        public java.util.Optional<User> findById(Long id) {
+                return userRepository.findById(id);
         }
 
         // --- Get all users (admin) ---
@@ -189,5 +222,13 @@ public class UserService implements UserDetailsService {
                                 .password(user.getPassword())
                                 .authorities("ROLE_" + user.getRole().name())
                                 .build();
+        }
+
+        private String generateUniqueReferralCode() {
+                String code;
+                do {
+                        code = java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                } while (userRepository.findByReferralCode(code).isPresent());
+                return code;
         }
 }

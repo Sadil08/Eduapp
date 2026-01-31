@@ -13,8 +13,10 @@ import java.util.Optional;
 
 /**
  * Service class for managing Question entities.
- * Provides business logic for CRUD operations on questions, including validation of associated papers.
- * Follows Single Responsibility Principle by handling only question-related operations.
+ * Provides business logic for CRUD operations on questions, including
+ * validation of associated papers.
+ * Follows Single Responsibility Principle by handling only question-related
+ * operations.
  */
 @Service
 @SuppressWarnings("null")
@@ -27,8 +29,9 @@ public class QuestionService {
 
     /**
      * Constructor for dependency injection of repositories.
+     * 
      * @param questionRepository the repository for Question entities
-     * @param paperRepository the repository for Paper entities
+     * @param paperRepository    the repository for Paper entities
      */
     public QuestionService(QuestionRepository questionRepository, PaperRepository paperRepository) {
         this.questionRepository = questionRepository;
@@ -37,6 +40,7 @@ public class QuestionService {
 
     /**
      * Retrieves all questions from the database.
+     * 
      * @return a list of all Question entities
      */
     public List<Question> findAll() {
@@ -48,6 +52,7 @@ public class QuestionService {
 
     /**
      * Retrieves a question by its ID.
+     * 
      * @param id the ID of the question to retrieve
      * @return an Optional containing the Question if found, or empty if not
      */
@@ -58,7 +63,8 @@ public class QuestionService {
         logger.info("Fetching question with ID: {}", id);
         Optional<Question> question = questionRepository.findById(id);
         if (question.isPresent()) {
-            logger.info("Question found: {}", question.get().getText().substring(0, Math.min(50, question.get().getText().length())));
+            logger.info("Question found: {}",
+                    question.get().getText().substring(0, Math.min(50, question.get().getText().length())));
         } else {
             logger.warn("Question with ID {} not found", id);
         }
@@ -68,6 +74,7 @@ public class QuestionService {
     /**
      * Saves a new or updated question to the database.
      * Validates that the associated paper exists.
+     * 
      * @param question the Question entity to save
      * @return the saved Question entity
      * @throws IllegalArgumentException if the paper does not exist
@@ -76,7 +83,8 @@ public class QuestionService {
         if (question == null) {
             throw new IllegalArgumentException("Question cannot be null");
         }
-        logger.info("Saving question for paper ID: {}", question.getPaper() != null ? question.getPaper().getId() : null);
+        logger.info("Saving question for paper ID: {}",
+                question.getPaper() != null ? question.getPaper().getId() : null);
         if (question.getPaper() != null && question.getPaper().getId() != null) {
             Optional<Paper> paper = paperRepository.findById(question.getPaper().getId());
             if (paper.isEmpty()) {
@@ -91,6 +99,7 @@ public class QuestionService {
 
     /**
      * Deletes a question by its ID.
+     * 
      * @param id the ID of the question to delete
      */
     public void deleteById(Long id) {
@@ -108,6 +117,7 @@ public class QuestionService {
 
     /**
      * Checks if a question exists by its ID.
+     * 
      * @param id the ID to check
      * @return true if the question exists, false otherwise
      */
@@ -122,21 +132,28 @@ public class QuestionService {
 
     /**
      * Retrieves the subject and lesson names for a given paper ID.
+     * 
      * @param paperId the ID of the paper
-     * @return a Map containing "subject" and "lesson" keys, or empty map if not found
+     * @return a Map containing "subject" and "lesson" keys, or empty map if not
+     *         found
      */
     public java.util.Map<String, String> getPaperContext(Long paperId) {
         Optional<Paper> paperOpt = paperRepository.findById(paperId);
         java.util.Map<String, String> context = new java.util.HashMap<>();
-        
+
         if (paperOpt.isPresent()) {
             Paper paper = paperOpt.get();
-            if (paper.getBundle() != null) {
-                if (paper.getBundle().getSubject() != null) {
-                    context.put("subject", paper.getBundle().getSubject().getName());
+            // Use paper's direct subject if available
+            if (paper.getSubject() != null) {
+                context.put("subject", paper.getSubject().getName());
+            } else if (paper.getBundles() != null && !paper.getBundles().isEmpty()) {
+                // Fallback to first bundle's subject
+                var firstBundle = paper.getBundles().get(0);
+                if (firstBundle.getSubject() != null) {
+                    context.put("subject", firstBundle.getSubject().getName());
                 }
-                if (paper.getBundle().getLesson() != null) {
-                    context.put("lesson", paper.getBundle().getLesson().getName());
+                if (firstBundle.getLesson() != null) {
+                    context.put("lesson", firstBundle.getLesson().getName());
                 }
             }
         }
@@ -145,14 +162,50 @@ public class QuestionService {
 
     /**
      * Retrieves the subject and lesson names for a given question ID.
+     * 
      * @param questionId the ID of the question
-     * @return a Map containing "subject" and "lesson" keys, or empty map if not found
+     * @return a Map containing "subject" and "lesson" keys, or empty map if not
+     *         found
      */
     public java.util.Map<String, String> getQuestionContext(Long questionId) {
         Optional<Question> questionOpt = questionRepository.findById(questionId);
-        if (questionOpt.isPresent() && questionOpt.get().getPaper() != null) {
-            return getPaperContext(questionOpt.get().getPaper().getId());
+        java.util.Map<String, String> context = new java.util.HashMap<>();
+
+        if (questionOpt.isPresent()) {
+            Question question = questionOpt.get();
+
+            // Get lesson from question directly
+            if (question.getLesson() != null) {
+                context.put("lesson", question.getLesson().getName());
+                logger.warn("[CONTEXT DEBUG] Found lesson for question {}: {}", questionId,
+                        question.getLesson().getName());
+            } else {
+                logger.warn("[CONTEXT DEBUG] No lesson set for question {}", questionId);
+            }
+
+            // Get subject from paper
+            if (question.getPaper() != null) {
+                Paper paper = question.getPaper();
+
+                // First try paper's direct subject
+                if (paper.getSubject() != null) {
+                    context.put("subject", paper.getSubject().getName());
+                    logger.warn("[CONTEXT DEBUG] Found subject from paper for question {}: {}", questionId,
+                            paper.getSubject().getName());
+                } else if (paper.getBundles() != null && !paper.getBundles().isEmpty() && paper.getBundles().get(0).getSubject() != null) {
+                    // Fallback to first bundle's subject
+                    context.put("subject", paper.getBundles().get(0).getSubject().getName());
+                    logger.warn("[CONTEXT DEBUG] Found subject from bundle for question {}: {}", questionId,
+                            paper.getBundles().get(0).getSubject().getName());
+                } else {
+                    logger.warn("[CONTEXT DEBUG] No subject found for question {}", questionId);
+                }
+            }
         }
-        return new java.util.HashMap<>();
+
+        logger.info("Question context for ID {}: subject='{}', lesson='{}'",
+                questionId, context.get("subject"), context.get("lesson"));
+
+        return context;
     }
 }

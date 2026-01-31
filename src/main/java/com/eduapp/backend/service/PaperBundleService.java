@@ -10,6 +10,7 @@ import com.eduapp.backend.model.PaperType;
 import com.eduapp.backend.model.Subject;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.model.StudentBundleAccess;
+import com.eduapp.backend.repository.ExamTypeRepository;
 import com.eduapp.backend.repository.LessonRepository;
 import com.eduapp.backend.repository.PaperBundleRepository;
 import com.eduapp.backend.repository.SubjectRepository;
@@ -42,31 +43,23 @@ public class PaperBundleService {
     private final LessonRepository lessonRepository;
     private final StudentBundleAccessRepository studentBundleAccessRepository;
     private final UserRepository userRepository;
+    private final ExamTypeRepository examTypeRepository;
     private final PaperBundleMapper paperBundleMapper;
 
-    /**
-     * Constructor for dependency injection of repositories and mapper.
-     * 
-     * @param paperBundleRepository         the repository for PaperBundle entities
-     * @param subjectRepository             the repository for Subject entities
-     * @param lessonRepository              the repository for Lesson entities
-     * @param studentBundleAccessRepository the repository for StudentBundleAccess
-     *                                      entities
-     * @param userRepository                the repository for User entities
-     * @param paperBundleMapper             the mapper for PaperBundle DTOs
-     */
     public PaperBundleService(PaperBundleRepository paperBundleRepository,
             SubjectRepository subjectRepository,
             LessonRepository lessonRepository,
             StudentBundleAccessRepository studentBundleAccessRepository,
             UserRepository userRepository,
-            PaperBundleMapper paperBundleMapper) {
+            PaperBundleMapper paperBundleMapper,
+            ExamTypeRepository examTypeRepository) {
         this.paperBundleRepository = paperBundleRepository;
         this.subjectRepository = subjectRepository;
         this.lessonRepository = lessonRepository;
         this.studentBundleAccessRepository = studentBundleAccessRepository;
         this.userRepository = userRepository;
         this.paperBundleMapper = paperBundleMapper;
+        this.examTypeRepository = examTypeRepository;
     }
 
     /**
@@ -94,8 +87,11 @@ public class PaperBundleService {
                     .orElseThrow(() -> new IllegalArgumentException("Lesson not found"));
             entity.setLesson(lesson);
         }
-        // Set createdBy (assume from context, placeholder)
-        // entity.setCreatedBy(currentUser);
+        if (dto.getExamTypeId() != null) {
+            com.eduapp.backend.model.ExamType examType = examTypeRepository.findById(dto.getExamTypeId())
+                    .orElseThrow(() -> new IllegalArgumentException("Exam Type not found"));
+            entity.setExamType(examType);
+        }
 
         PaperBundle saved = paperBundleRepository.save(entity);
         logger.info("Paper bundle created with ID: {}", saved.getId());
@@ -143,8 +139,6 @@ public class PaperBundleService {
 
         // Check access
         boolean hasAccess = studentBundleAccessRepository.existsByStudentIdAndBundleId(userId, bundleId);
-        // Also allow if it's a free bundle or admin (logic can be expanded)
-        // For now, strict check on purchase
 
         if (!hasAccess) {
             logger.warn("User {} denied access to bundle {}", userId, bundleId);
@@ -193,7 +187,7 @@ public class PaperBundleService {
      * All parameters are optional (can be null).
      * 
      * @param type        the paper type filter
-     * @param examType    the exam type filter
+     * @param examTypeId  the exam type ID filter
      * @param subjectId   the subject ID filter
      * @param lessonId    the lesson ID filter
      * @param isPastPaper the past paper status filter
@@ -202,33 +196,29 @@ public class PaperBundleService {
      * @param name        the name search term
      * @return a list of PaperBundleSummaryDto matching the criteria
      */
-    public List<PaperBundleSummaryDto> filterBundles(
+    public org.springframework.data.domain.Page<PaperBundleSummaryDto> filterBundlesPaginated(
             PaperType type,
-            String examType,
+            Long examTypeId,
             Long subjectId,
             Long lessonId,
             Boolean isPastPaper,
             BigDecimal minPrice,
             BigDecimal maxPrice,
-            String name) {
+            String name,
+            org.springframework.data.domain.Pageable pageable) {
         logger.info(
-                "Filtering bundles - type: {}, examType: {}, subjectId: {}, lessonId: {}, isPastPaper: {}, minPrice: {}, maxPrice: {}, name: {}",
-                type, examType, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name);
+                "Filtering bundles paginated - type: {}, examTypeId: {}, subjectId: {}, lessonId: {}, isPastPaper: {}, minPrice: {}, maxPrice: {}, name: {}, page: {}, size: {}",
+                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, name, pageable.getPageNumber(), pageable.getPageSize());
 
         String namePattern = null;
         if (name != null && !name.trim().isEmpty()) {
             namePattern = "%" + name.trim().toLowerCase() + "%";
         }
 
-        List<PaperBundle> bundles = paperBundleRepository.findByFilters(
-                type, examType, subjectId, lessonId, isPastPaper, minPrice, maxPrice, namePattern);
+        org.springframework.data.domain.Page<PaperBundle> bundles = paperBundleRepository.findByFiltersPaginated(
+                type, examTypeId, subjectId, lessonId, isPastPaper, minPrice, maxPrice, namePattern, pageable);
 
-        List<PaperBundleSummaryDto> result = bundles.stream()
-                .map(paperBundleMapper::toSummaryDto)
-                .collect(Collectors.toList());
-
-        logger.info("Found {} bundles matching filter criteria", result.size());
-        return result;
+        return bundles.map(paperBundleMapper::toSummaryDto);
     }
 
     /**
@@ -248,5 +238,40 @@ public class PaperBundleService {
 
         logger.info("Found {} bundles matching name '{}'", result.size(), name);
         return result;
+    }
+
+    /**
+     * Retrieves all paper bundle summaries with pagination.
+     * 
+     * @param pageable Pagination information
+     * @return a Page of PaperBundleSummaryDto
+     */
+    public org.springframework.data.domain.Page<PaperBundleSummaryDto> getAllSummariesPaginated(
+            org.springframework.data.domain.Pageable pageable) {
+        logger.info("Fetching paginated bundle summaries - page: {}, size: {}", 
+                    pageable.getPageNumber(), pageable.getPageSize());
+        
+        org.springframework.data.domain.Page<PaperBundle> bundles = 
+            paperBundleRepository.findAll(pageable);
+        
+        return bundles.map(paperBundleMapper::toSummaryDto);
+    }
+
+    /**
+     * Search bundles by name or description with pagination.
+     * 
+     * @param search Search term for name/description
+     * @param pageable Pagination information
+     * @return a Page of PaperBundleSummaryDto matching the search
+     */
+    public org.springframework.data.domain.Page<PaperBundleSummaryDto> searchBundles(
+            String search, org.springframework.data.domain.Pageable pageable) {
+        logger.info("Searching bundles with pagination - search: '{}', page: {}, size: {}", 
+                    search, pageable.getPageNumber(), pageable.getPageSize());
+        
+        org.springframework.data.domain.Page<PaperBundle> bundles = 
+            paperBundleRepository.searchBundles(search, pageable);
+        
+        return bundles.map(paperBundleMapper::toSummaryDto);
     }
 }

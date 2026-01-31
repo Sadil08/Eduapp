@@ -6,6 +6,8 @@ import com.eduapp.backend.model.Question;
 import com.eduapp.backend.model.QuestionOption;
 import com.eduapp.backend.repository.*;
 import com.eduapp.backend.model.PaperBundle;
+import com.eduapp.backend.repository.SubjectRepository;
+import com.eduapp.backend.repository.LessonRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -29,19 +31,25 @@ public class AdminPaperService {
     private final StudentPaperAttemptRepository attemptRepository;
     private final UserRepository userRepository;
     private final PaperBundleRepository paperBundleRepository;
+    private final SubjectRepository subjectRepository;
+    private final LessonRepository lessonRepository;
 
     public AdminPaperService(PaperRepository paperRepository,
             QuestionRepository questionRepository,
             QuestionOptionRepository optionRepository,
             StudentPaperAttemptRepository attemptRepository,
             UserRepository userRepository,
-            PaperBundleRepository paperBundleRepository) {
+            PaperBundleRepository paperBundleRepository,
+            SubjectRepository subjectRepository,
+            LessonRepository lessonRepository) {
         this.paperRepository = paperRepository;
         this.questionRepository = questionRepository;
         this.optionRepository = optionRepository;
         this.attemptRepository = attemptRepository;
         this.userRepository = userRepository;
         this.paperBundleRepository = paperBundleRepository;
+        this.subjectRepository = subjectRepository;
+        this.lessonRepository = lessonRepository;
     }
 
     /**
@@ -74,21 +82,24 @@ public class AdminPaperService {
     public Paper createPaper(PaperDto dto, Long adminId) {
         logger.info("Creating new paper: {} by admin ID: {}", dto.getName(), adminId);
 
-        // Fetch the PaperBundle entity if bundleId is provided
-        PaperBundle bundle = null;
-        if (dto.getBundleId() != null) {
-            bundle = paperBundleRepository.findById(dto.getBundleId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Paper bundle not found with ID: " + dto.getBundleId()));
-        }
-
         Paper paper = new Paper();
         paper.setName(dto.getName());
         paper.setDescription(dto.getDescription());
         paper.setType(dto.getType());
         paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
         paper.setTotalMarks(dto.getTotalMarks());
-        paper.setBundle(bundle);
+        paper.setVideoUrl(dto.getVideoUrl());
+        
+        // Fetch and set bundles if bundleIds are provided
+        if (dto.getBundleIds() != null && !dto.getBundleIds().isEmpty()) {
+            List<PaperBundle> bundles = paperBundleRepository.findAllById(dto.getBundleIds());
+            paper.setBundles(bundles);
+        }
+        
+        // Set subject if provided
+        if (dto.getSubjectId() != null) {
+            subjectRepository.findById(dto.getSubjectId()).ifPresent(paper::setSubject);
+        }
         // Set createdBy only if adminId is provided
         if (adminId != null) {
             userRepository.findById(adminId).ifPresent(paper::setCreatedBy);
@@ -115,6 +126,20 @@ public class AdminPaperService {
         paper.setType(dto.getType());
         paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
         paper.setTotalMarks(dto.getTotalMarks());
+        paper.setVideoUrl(dto.getVideoUrl());
+        
+        // Update bundles if provided
+        if (dto.getBundleIds() != null) {
+            List<PaperBundle> bundles = paperBundleRepository.findAllById(dto.getBundleIds());
+            paper.setBundles(bundles);
+        }
+        
+        // Update subject if provided
+        if (dto.getSubjectId() != null) {
+            subjectRepository.findById(dto.getSubjectId()).ifPresent(paper::setSubject);
+        } else {
+            paper.setSubject(null);
+        }
 
         Paper updated = paperRepository.save(paper);
         logger.info("Paper updated: {}", updated.getName());
@@ -160,6 +185,10 @@ public class AdminPaperService {
         question.setHideQuestionText(dto.getHideQuestionText());
         question.setAllowImageAnswer(dto.getAllowImageAnswer());
         question.setAnswerTypeHint(dto.getAnswerTypeHint());
+        // Set lesson if provided
+        if (dto.getLessonId() != null) {
+            lessonRepository.findById(dto.getLessonId()).ifPresent(question::setLesson);
+        }
 
         Question savedQuestion = questionRepository.save(question);
 
@@ -203,6 +232,12 @@ public class AdminPaperService {
         question.setHideQuestionText(dto.getHideQuestionText());
         question.setAllowImageAnswer(dto.getAllowImageAnswer());
         question.setAnswerTypeHint(dto.getAnswerTypeHint());
+        // Update lesson if provided
+        if (dto.getLessonId() != null) {
+            lessonRepository.findById(dto.getLessonId()).ifPresent(question::setLesson);
+        } else {
+            question.setLesson(null);
+        }
 
         // Update options logic
         if (dto.getOptions() != null && dto.getType() == com.eduapp.backend.model.QuestionType.MCQ) {
@@ -278,14 +313,16 @@ public class AdminPaperService {
         dto.setName(paper.getName());
         dto.setDescription(paper.getDescription());
         dto.setType(paper.getType());
-        dto.setBundleId(paper.getBundle() != null ? paper.getBundle().getId() : null);
+        dto.setBundleIds(paper.getBundles().stream().map(PaperBundle::getId).collect(java.util.stream.Collectors.toList()));
         dto.setMaxFreeAttempts(paper.getMaxFreeAttempts());
         dto.setTotalMarks(paper.getTotalMarks());
+        dto.setVideoUrl(paper.getVideoUrl());
 
         // Admin fields
         dto.setCreatedAt(paper.getCreatedAt());
         dto.setUpdatedAt(paper.getUpdatedAt());
         dto.setCreatedBy(paper.getCreatedBy() != null ? paper.getCreatedBy().getId() : null);
+        dto.setSubjectId(paper.getSubject() != null ? paper.getSubject().getId() : null);
 
         // Statistics
         int totalAttempts = (int) attemptRepository.countByPaperId(paper.getId());
@@ -324,6 +361,12 @@ public class AdminPaperService {
         dto.setHideQuestionText(question.getHideQuestionText());
         dto.setAllowImageAnswer(question.getAllowImageAnswer());
         dto.setAnswerTypeHint(question.getAnswerTypeHint());
+
+        // Set lesson context
+        if (question.getLesson() != null) {
+            dto.setLessonId(question.getLesson().getId());
+            dto.setLessonName(question.getLesson().getName());
+        }
 
         if (question.getOptions() != null) {
             List<QuestionOptionDto> options = question.getOptions().stream()

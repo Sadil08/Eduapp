@@ -45,6 +45,14 @@ public class StudentAnswer {
     @Column(length = 4000)
     private String aiFeedback;
 
+    @Column(name = "upload_count")
+    private Integer uploadCount = 0;
+
+    @Column(name = "is_draft", nullable = false)
+    private Boolean isDraft = true;  // true for drafts, false for final submission
+
+    public static final int MAX_UPLOADS_PER_QUESTION = 2;
+
     public StudentAnswer() {
     }
 
@@ -144,5 +152,33 @@ public class StudentAnswer {
 
     public void setExtractionConfidence(Float extractionConfidence) {
         this.extractionConfidence = extractionConfidence;
+    }
+
+    public Integer getUploadCount() {
+        return uploadCount;
+    }
+
+    public void setUploadCount(Integer uploadCount) {
+        this.uploadCount = uploadCount;
+    }
+
+    public boolean canUpload() {
+        return uploadCount == null || uploadCount < MAX_UPLOADS_PER_QUESTION;
+    }
+
+    public void incrementUploadCount() {
+        if (this.uploadCount == null) {
+            this.uploadCount = 1;
+        } else {
+            this.uploadCount++;
+        }
+    }
+
+    public Boolean getIsDraft() {
+        return isDraft;
+    }
+
+    public void setIsDraft(Boolean isDraft) {
+        this.isDraft = isDraft;
     }
 }

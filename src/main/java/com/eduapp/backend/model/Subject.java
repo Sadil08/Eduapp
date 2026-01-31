@@ -1,6 +1,7 @@
 package com.eduapp.backend.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,36 +27,73 @@ public class Subject {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties({ "subject", "bundles", "createdBy" })
     private List<Lesson> lessons = new ArrayList<>();
 
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PaperBundle> bundles = new ArrayList<>();
 
-    public Subject() {}
+    public Subject() {
+    }
 
     public Subject(String name) {
         this.name = name;
     }
 
     // getters/setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getName() {
+        return name;
+    }
 
-    public User getCreatedBy() { return createdBy; }
-    public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getDescription() {
+        return description;
+    }
 
-    public List<Lesson> getLessons() { return lessons; }
-    public void setLessons(List<Lesson> lessons) { this.lessons = lessons; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public List<PaperBundle> getBundles() { return bundles; }
-    public void setBundles(List<PaperBundle> bundles) { this.bundles = bundles; }
+    public User getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public List<Lesson> getLessons() {
+        return lessons;
+    }
+
+    public void setLessons(List<Lesson> lessons) {
+        this.lessons = lessons;
+    }
+
+    public List<PaperBundle> getBundles() {
+        return bundles;
+    }
+
+    public void setBundles(List<PaperBundle> bundles) {
+        this.bundles = bundles;
+    }
 }

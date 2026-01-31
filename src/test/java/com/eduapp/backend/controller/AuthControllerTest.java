@@ -41,7 +41,7 @@ public class AuthControllerTest {
         user.setEmail("test@example.com");
         user.setUsername("Test User");
         user.setRole(Role.STUDENT);
-        when(userService.register(any(RegisterRequest.class))).thenReturn(user);
+        when(userService.register(any(RegisterRequest.class), any(String.class))).thenReturn(user);
 
         // Act & Assert
         mockMvc.perform(post("/api/auth/register")

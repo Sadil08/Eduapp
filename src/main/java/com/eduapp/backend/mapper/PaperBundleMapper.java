@@ -10,14 +10,19 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = { PaperMapper.class })
 public interface PaperBundleMapper {
 
-    // Maps PaperBundle entity to DTO, extracting subject and lesson IDs for frontend consumption
+    // Maps PaperBundle entity to DTO, extracting subject and lesson IDs for
+    // frontend consumption
     @Mapping(source = "subject.id", target = "subjectId")
     @Mapping(source = "lesson.id", target = "lessonId")
+    @Mapping(source = "examType.id", target = "examTypeId")
+    @Mapping(source = "examType.name", target = "examTypeName")
     PaperBundleDto toDto(PaperBundle entity);
 
-    // Maps DTO to entity, ignoring relationships that are set manually in service layer
+    // Maps DTO to entity, ignoring relationships that are set manually in service
+    // layer
     @Mapping(target = "subject", ignore = true)
     @Mapping(target = "lesson", ignore = true)
+    @Mapping(target = "examType", ignore = true)
     @Mapping(target = "papers", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
@@ -30,10 +35,14 @@ public interface PaperBundleMapper {
     @Named("toSummaryDto")
     @Mapping(source = "subject.id", target = "subjectId")
     @Mapping(source = "lesson.id", target = "lessonId")
+    @Mapping(source = "examType.id", target = "examTypeId")
+    @Mapping(source = "examType.name", target = "examTypeName")
     PaperBundleSummaryDto toSummaryDto(PaperBundle entity);
 
     @Mapping(source = "subject.id", target = "subjectId")
     @Mapping(source = "lesson.id", target = "lessonId")
+    @Mapping(source = "examType.id", target = "examTypeId")
+    @Mapping(source = "examType.name", target = "examTypeName")
     PaperBundleDetailDto toDetailDto(PaperBundle entity);
 
     @IterableMapping(qualifiedByName = "toSummaryDto")

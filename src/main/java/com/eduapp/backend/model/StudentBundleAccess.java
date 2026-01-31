@@ -120,6 +120,17 @@ public class StudentBundleAccess {
         this.grantReason = grantReason;
     }
 
+    @Column(name = "price_paid")
+    private java.math.BigDecimal pricePaid;
+
+    public java.math.BigDecimal getPricePaid() {
+        return pricePaid;
+    }
+
+    public void setPricePaid(java.math.BigDecimal pricePaid) {
+        this.pricePaid = pricePaid;
+    }
+
     public LocalDateTime getExpiresAt() {
         return expiresAt;
     }

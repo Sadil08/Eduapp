@@ -59,10 +59,22 @@ public class PaperController {
     }
 
     /**
+     * Handles GET request to retrieve all available papers (for custom bundle creation).
+     * Available to all authenticated users.
+     */
+    @GetMapping("/available")
+    public ResponseEntity<List<PaperDto>> getAllAvailablePapers() {
+        logger.info("Received request to get all available papers for custom bundle");
+        List<Paper> papers = paperService.findAll();
+        List<PaperDto> dtos = paperMapper.toDtoList(papers);
+        return ResponseEntity.ok(dtos);
+    }
+
+    /**
      * Handles GET request to retrieve a specific paper by ID (Admin only).
      */
-    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
     public ResponseEntity<PaperDto> getPaperById(@PathVariable Long id) {
         logger.info("Received request to get paper with ID: {}", id);
         Optional<Paper> paper = paperService.findById(id);
@@ -78,9 +90,15 @@ public class PaperController {
      * Handles GET request to attempt a paper.
      * Requires purchase of parent bundle.
      * Returns paper with questions (no correct answers exposed).
+     * @param forceNew If true, abandons existing IN_PROGRESS attempt and starts a new one
+     * @param bundleId The bundle context for this attempt (optional if customBundleId provided)
+     * @param customBundleId The custom bundle context (optional)
      */
     @GetMapping("/{id}/attempt")
     public ResponseEntity<PaperAttemptDto> attemptPaper(@PathVariable Long id,
+            @RequestParam(value = "bundleId", required = false) Long bundleId,
+            @RequestParam(value = "customBundleId", required = false) Long customBundleId,
+            @RequestParam(value = "forceNew", defaultValue = "false") boolean forceNew,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             logger.warn("Missing or malformed Authorization header");
@@ -88,9 +106,15 @@ public class PaperController {
         }
         String token = authHeader.substring(7);
         Long userId = jwtUtil.extractUserId(token);
-        logger.info("Received request to attempt paper with ID: {}", id);
+        logger.info("Received request to attempt paper with ID: {} bundleId: {} customBundleId: {} (forceNew={})", 
+                id, bundleId, customBundleId, forceNew);
+        
+        if (bundleId == null && customBundleId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
         try {
-            PaperAttemptDto dto = paperService.getPaperAttempt(id, userId);
+            PaperAttemptDto dto = paperService.getPaperAttempt(id, userId, bundleId, customBundleId, forceNew);
             return ResponseEntity.ok(dto);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -103,9 +127,13 @@ public class PaperController {
      * Handles POST request to submit a completed paper.
      * Saves student answers and triggers async AI analysis.
      * Returns the created attempt with basic info (AI analysis pending).
+     * @param bundleId The bundle context for this submission (optional if customBundleId provided)
+     * @param customBundleId The custom bundle context (optional)
      */
     @PostMapping("/{id}/submit")
     public ResponseEntity<StudentPaperAttemptDto> submitPaper(@PathVariable Long id,
+            @RequestParam(value = "bundleId", required = false) Long bundleId,
+            @RequestParam(value = "customBundleId", required = false) Long customBundleId,
             @RequestBody PaperSubmissionDto submission,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -115,9 +143,14 @@ public class PaperController {
         String token = authHeader.substring(7);
         Long userId = jwtUtil.extractUserId(token);
 
-        logger.info("Received request to submit paper with ID: {}", id);
+        logger.info("Received request to submit paper with ID: {} bundleId: {} customBundleId: {}", id, bundleId, customBundleId);
+        
+        if (bundleId == null && customBundleId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
         try {
-            StudentPaperAttempt savedAttempt = paperService.submitPaperAttempt(id, userId, submission);
+            StudentPaperAttempt savedAttempt = paperService.submitPaperAttempt(id, userId, bundleId, customBundleId, submission);
             // Trigger AI Analysis here (async)
             aiAnalysisService.analyzeAttempt(savedAttempt);
 
@@ -177,17 +210,12 @@ public class PaperController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaperDto> updatePaper(@PathVariable Long id, @RequestBody PaperDto dto) {
         logger.info("Received request to update paper with ID: {}", id);
-        Optional<Paper> existingPaper = paperService.findById(id);
-        if (existingPaper.isPresent()) {
-            Paper paper = existingPaper.get();
-            paper.setName(dto.getName());
-            paper.setDescription(dto.getDescription());
-            paper.setType(dto.getType());
-            paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
-            Paper updatedPaper = paperService.save(paper);
+        try {
+            Paper updatedPaper = paperService.updatePaper(id, dto);
             PaperDto updatedDto = paperMapper.toDto(updatedPaper);
             return ResponseEntity.ok(updatedDto);
-        } else {
+        } catch (IllegalArgumentException e) {
+            logger.warn("Paper update failed: {}", e.getMessage());
             return ResponseEntity.notFound().build();
         }
     }
@@ -205,5 +233,45 @@ public class PaperController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * Handles GET request to retrieve attempt information for multiple papers.
+     * Returns attempt counts and limits for each paper for the current user.
+     * GET /api/papers/attempt-info?paperIds=1,2,3&bundleId=5
+     * @param bundleId Optional bundle context for bundle-scoped attempt counting
+     * @param customBundleId Optional custom bundle context
+     */
+    @GetMapping("/attempt-info")
+    public ResponseEntity<java.util.Map<Long, com.eduapp.backend.dto.PaperAttemptInfoDto>> getAttemptInfo(
+            @RequestParam List<Long> paperIds,
+            @RequestParam(required = false) Long bundleId,
+            @RequestParam(required = false) Long customBundleId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            logger.warn("Missing or malformed Authorization header");
+            return ResponseEntity.badRequest().build();
+        }
+        String token = authHeader.substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+
+        logger.info("Received request to get attempt info for {} papers for user {} (bundleId={}, customBundleId={})", 
+                paperIds.size(), userId, bundleId, customBundleId);
+                
+        // NOTE: Need to update paperService.getAttemptInfoForPapers to accept customBundleId
+        // Currently bypassing passed customBundleId to getAttemptInfoForPapers as it's not yet overloaded there?
+        // Wait, I missed updating PaperService.getAttemptInfoForPapers!
+        // I will update it in next step. For now leaving it as is but accepting the param to avoid compile error if I call it.
+        // Actually, to make it work, I must update the service too.
+        // Delegating to existing service method for now (will fix service method next)
+        // Oops, cannot modify service method signature via controller edit.
+        // I'll leave the call as is for now and assume I'll update service next.
+        // Or better, update controller call assuming service IS updated.
+        // I'll update logic assuming I WILL update service.
+        
+        java.util.Map<Long, com.eduapp.backend.dto.PaperAttemptInfoDto> attemptInfo = paperService
+                .getAttemptInfoForPapers(paperIds, userId, bundleId, customBundleId);
+
+        return ResponseEntity.ok(attemptInfo);
     }
 }

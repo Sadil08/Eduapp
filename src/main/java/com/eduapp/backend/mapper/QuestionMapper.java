@@ -11,10 +11,13 @@ public interface QuestionMapper {
 
     // Maps Question entity to DTO, extracting paper ID for frontend
     @Mapping(source = "paper.id", target = "paperId")
+    @Mapping(source = "lesson.id", target = "lessonId")
+    @Mapping(source = "lesson.name", target = "lessonName")
     QuestionDto toDto(Question entity);
 
     // Maps DTO to entity, ignoring relationships set in service layer
     @Mapping(target = "paper", ignore = true)
+    @Mapping(target = "lesson", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     Question toEntity(QuestionDto dto);
@@ -28,5 +31,6 @@ public interface QuestionMapper {
     @Mapping(source = "hideQuestionText", target = "hideQuestionText")
     @Mapping(source = "allowImageAnswer", target = "allowImageAnswer")
     @Mapping(source = "answerTypeHint", target = "answerTypeHint")
+    @Mapping(target = "extractionsUsed", ignore = true) // Populated manually in PaperService
     QuestionAttemptDto toAttemptDto(Question entity);
 }

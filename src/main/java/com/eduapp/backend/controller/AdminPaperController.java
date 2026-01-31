@@ -1,6 +1,7 @@
 package com.eduapp.backend.controller;
 
 import com.eduapp.backend.dto.*;
+import com.eduapp.backend.mapper.QuestionMapper;
 import com.eduapp.backend.model.Paper;
 import com.eduapp.backend.model.Question;
 import com.eduapp.backend.security.JwtUtil;
@@ -28,10 +29,12 @@ public class AdminPaperController {
 
     private final AdminPaperService adminPaperService;
     private final JwtUtil jwtUtil;
+    private final QuestionMapper questionMapper;
 
-    public AdminPaperController(AdminPaperService adminPaperService, JwtUtil jwtUtil) {
+    public AdminPaperController(AdminPaperService adminPaperService, JwtUtil jwtUtil, QuestionMapper questionMapper) {
         this.adminPaperService = adminPaperService;
         this.jwtUtil = jwtUtil;
+        this.questionMapper = questionMapper;
     }
 
     /**
@@ -137,7 +140,7 @@ public class AdminPaperController {
      * POST /api/admin/papers/{id}/questions
      */
     @PostMapping("/{id}/questions")
-    public ResponseEntity<Question> addQuestion(
+    public ResponseEntity<QuestionDto> addQuestion(
             @PathVariable Long id,
             @RequestBody QuestionCreateDto dto) {
 
@@ -145,7 +148,7 @@ public class AdminPaperController {
 
         try {
             Question created = adminPaperService.addQuestion(id, dto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(questionMapper.toDto(created));
         } catch (IllegalArgumentException e) {
             logger.warn("Paper not found: {}", id);
             return ResponseEntity.notFound().build();
@@ -160,7 +163,7 @@ public class AdminPaperController {
      * PUT /api/admin/papers/{paperId}/questions/{questionId}
      */
     @PutMapping("/{paperId}/questions/{questionId}")
-    public ResponseEntity<Question> updateQuestion(
+    public ResponseEntity<QuestionDto> updateQuestion(
             @PathVariable Long paperId,
             @PathVariable Long questionId,
             @RequestBody QuestionCreateDto dto) {
@@ -169,7 +172,7 @@ public class AdminPaperController {
 
         try {
             Question updated = adminPaperService.updateQuestion(paperId, questionId, dto);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(questionMapper.toDto(updated));
         } catch (IllegalArgumentException e) {
             logger.warn("Question or paper not found: paper={}, question={}", paperId, questionId);
             return ResponseEntity.notFound().build();

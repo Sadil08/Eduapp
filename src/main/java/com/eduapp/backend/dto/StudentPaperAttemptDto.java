@@ -20,6 +20,12 @@ public class StudentPaperAttemptDto {
     private String overallFeedback; // AI-generated overall feedback
     private Integer totalMarks; // Total marks awarded by AI
     private Integer paperTotalMarks; // Total marks allocated for the paper
+    private String videoUrl; // YouTube video URL from the paper
+
+    private String analysisError;
+    private Boolean analysisCompleted;
+    private Integer submissionCount;
+    private Long originBundleId;
 
     public StudentPaperAttemptDto() {
     }
@@ -132,5 +138,55 @@ public class StudentPaperAttemptDto {
 
     public void setPaperTotalMarks(Integer paperTotalMarks) {
         this.paperTotalMarks = paperTotalMarks;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
+    }
+
+    public String getAnalysisError() {
+        return analysisError;
+    }
+
+    public void setAnalysisError(String analysisError) {
+        this.analysisError = analysisError;
+    }
+
+    public Boolean getAnalysisCompleted() {
+        return analysisCompleted;
+    }
+
+    public void setAnalysisCompleted(Boolean analysisCompleted) {
+        this.analysisCompleted = analysisCompleted;
+    }
+
+    public Integer getSubmissionCount() {
+        return submissionCount;
+    }
+
+    public void setSubmissionCount(Integer submissionCount) {
+        this.submissionCount = submissionCount;
+    }
+
+    public Long getOriginBundleId() {
+        return originBundleId;
+    }
+
+    public void setOriginBundleId(Long originBundleId) {
+        this.originBundleId = originBundleId;
+    }
+
+    private Long originCustomBundleId;
+
+    public Long getOriginCustomBundleId() {
+        return originCustomBundleId;
+    }
+
+    public void setOriginCustomBundleId(Long originCustomBundleId) {
+        this.originCustomBundleId = originCustomBundleId;
     }
 }

@@ -44,24 +44,49 @@ public class AdminUserService {
     /**
      * Get all users with statistics
      */
-    public List<AdminUserDto> getAllUsers() {
-        logger.info("Fetching all users with statistics");
+    public org.springframework.data.domain.Page<AdminUserDto> getAllUsers(String search, org.springframework.data.domain.Pageable pageable) {
+        logger.info("Fetching all users with statistics (search={}, page={}, size={})", 
+            search, pageable.getPageNumber(), pageable.getPageSize());
 
-        List<User> users = userRepository.findAll();
+        // Use the optimized analytics query which already joins all tables and handles search/pagination
+        String searchPattern = null;
+        if (search != null && !search.trim().isEmpty()) {
+            searchPattern = "%" + search.trim().toLowerCase() + "%";
+        }
+        
+        org.springframework.data.domain.Page<com.eduapp.backend.dto.analytics.UserAnalyticsDto> analyticsPage = 
+            userRepository.findUserAnalyticsOptimized(null, searchPattern, pageable);
+            
+        // Convert to AdminUserDto
+        return analyticsPage.map(analytics -> new AdminUserDto(
+            analytics.getUserId(),
+            analytics.getUsername(),
+            analytics.getEmail(),
+            analytics.getRole() != null ? analytics.getRole().name() : null,
+            analytics.getRegistrationDate(),
+            analytics.getTotalBundlesPurchased().intValue(),
+            analytics.getTotalPaperAttempts().intValue()
+        ));
+    }
+    
+    // Kept for backward compatibility if needed, but Controller now calls the paginated one.
+    // We can remove or deprecate. Let's replace the old method with the new one.
+    
+    /**
+     * Helper to map User to AdminUserDto with stats (N+1 issue but safe fallback)
+     */
+    private AdminUserDto mapToAdminDto(User user) {
+        int bundleCount = accessRepository.findByStudentId(user.getId()).size();
+        int attemptCount = (int) attemptRepository.countByStudentId(user.getId());
 
-        return users.stream().map(user -> {
-            int bundleCount = accessRepository.findByStudentId(user.getId()).size();
-            int attemptCount = (int) attemptRepository.countByStudentId(user.getId());
-
-            return new AdminUserDto(
-                    user.getId(),
-                    user.getUsername(),
-                    user.getEmail(),
-                    user.getRole() != null ? user.getRole().name() : null,
-                    user.getCreatedAt(),
-                    bundleCount,
-                    attemptCount);
-        }).collect(Collectors.toList());
+        return new AdminUserDto(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getRole() != null ? user.getRole().name() : null,
+                user.getCreatedAt(),
+                bundleCount,
+                attemptCount);
     }
 
     /**
@@ -165,18 +190,19 @@ public class AdminUserService {
         List<StudentBundleAccess> accesses = accessRepository.findByStudentId(userId);
 
         return accesses.stream()
-                .flatMap(access -> access.getBundle().getPapers().stream())
-                .map(paper -> {
-                    int attemptsMade = attemptRepository.countByStudentIdAndPaperId(userId, paper.getId());
-                    int maxAttempts = paper.getMaxFreeAttempts() != null ? paper.getMaxFreeAttempts() : 0;
+                .flatMap(access -> access.getBundle().getPapers().stream()
+                        .map(paper -> {
+                            int attemptsMade = attemptRepository.countByStudentIdAndPaperIdAndOriginBundleId(
+                                    userId, paper.getId(), access.getBundle().getId());
+                            int maxAttempts = paper.getMaxFreeAttempts() != null ? paper.getMaxFreeAttempts() : 0;
 
-                    return new UserAttemptInfoDto(
-                            userId,
-                            paper.getId(),
-                            paper.getName(),
-                            attemptsMade,
-                            maxAttempts);
-                })
+                            return new UserAttemptInfoDto(
+                                    userId,
+                                    paper.getId(),
+                                    paper.getName(),
+                                    attemptsMade,
+                                    maxAttempts);
+                        }))
                 .collect(Collectors.toList());
     }
 

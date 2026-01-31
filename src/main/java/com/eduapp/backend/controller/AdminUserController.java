@@ -38,9 +38,12 @@ public class AdminUserController {
      * GET /api/admin/users
      */
     @GetMapping
-    public ResponseEntity<List<AdminUserDto>> getAllUsers() {
-        logger.info("Admin requested all users");
-        List<AdminUserDto> users = adminUserService.getAllUsers();
+    public ResponseEntity<org.springframework.data.domain.Page<AdminUserDto>> getAllUsers(
+            @RequestParam(required = false) String search,
+            org.springframework.data.domain.Pageable pageable) {
+        logger.info("Admin requested all users (search={}, page={}, size={})", 
+            search, pageable.getPageNumber(), pageable.getPageSize());
+        org.springframework.data.domain.Page<AdminUserDto> users = adminUserService.getAllUsers(search, pageable);
         return ResponseEntity.ok(users);
     }
 

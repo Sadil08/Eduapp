@@ -37,6 +37,9 @@ public class CartControllerTest {
     @MockBean
     private com.eduapp.backend.repository.UserRepository userRepository;
 
+    @MockBean
+    private com.eduapp.backend.repository.PaperBundleRepository paperBundleRepository;
+
     @Test
     void getAll_ReturnsOk() throws Exception {
         // Arrange

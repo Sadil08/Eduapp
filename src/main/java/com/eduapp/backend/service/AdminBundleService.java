@@ -28,19 +28,26 @@ public class AdminBundleService {
     private final StudentPaperAttemptRepository attemptRepository;
     private final QuestionRepository questionRepository;
     private final UserRepository userRepository;
+    private final ExamTypeRepository examTypeRepository;
+    private final CustomBundleRepository customBundleRepository;
 
     public AdminBundleService(PaperBundleRepository bundleRepository,
             PaperRepository paperRepository,
             StudentBundleAccessRepository accessRepository,
             StudentPaperAttemptRepository attemptRepository,
             QuestionRepository questionRepository,
-            UserRepository userRepository) {
+
+            UserRepository userRepository,
+            ExamTypeRepository examTypeRepository,
+            CustomBundleRepository customBundleRepository) {
         this.bundleRepository = bundleRepository;
         this.paperRepository = paperRepository;
         this.accessRepository = accessRepository;
         this.attemptRepository = attemptRepository;
         this.questionRepository = questionRepository;
         this.userRepository = userRepository;
+        this.examTypeRepository = examTypeRepository;
+        this.customBundleRepository = customBundleRepository;
     }
 
     /**
@@ -56,10 +63,19 @@ public class AdminBundleService {
         int totalAttempts = (int) attemptRepository.count();
 
         // Calculate total revenue from all bundle purchases
-        BigDecimal totalRevenue = accessRepository.findAll().stream()
-                .filter(access -> !Boolean.TRUE.equals(access.getGrantedByAdmin()))
-                .map(access -> access.getBundle().getPrice())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Calculate total revenue from all bundle purchases
+        // Calculate total revenue from all bundle purchases (Standard + Custom)
+        BigDecimal standardRevenue = accessRepository.sumPricePaid();
+        if (standardRevenue == null) {
+            standardRevenue = BigDecimal.ZERO;
+        }
+        
+        BigDecimal customRevenue = customBundleRepository.sumTotalRevenue();
+        if (customRevenue == null) {
+            customRevenue = BigDecimal.ZERO;
+        }
+        
+        BigDecimal totalRevenue = standardRevenue.add(customRevenue);
 
         SystemStatsDto stats = new SystemStatsDto(
                 totalBundles, totalPapers, totalQuestions,
@@ -89,10 +105,8 @@ public class AdminBundleService {
 
         int totalStudentsWithAccess = accessRepository.countByBundleId(bundleId);
 
-        // Count total attempts across all papers in bundle
-        int totalAttempts = bundle.getPapers() != null ? bundle.getPapers().stream()
-                .mapToInt(paper -> (int) attemptRepository.countByPaperId(paper.getId()))
-                .sum() : 0;
+        // Count total attempts made within this bundle context
+        int totalAttempts = (int) attemptRepository.countByOriginBundleId(bundleId);
 
         BundleStatsDto stats = new BundleStatsDto(
                 bundleId, bundle.getName(), totalPapers, totalQuestions,
@@ -120,7 +134,8 @@ public class AdminBundleService {
             dto.setDescription(bundle.getDescription());
             dto.setPrice(bundle.getPrice());
             dto.setType(bundle.getType());
-            dto.setExamType(bundle.getExamType());
+            dto.setExamTypeId(bundle.getExamType() != null ? bundle.getExamType().getId() : null);
+            dto.setExamTypeName(bundle.getExamType() != null ? bundle.getExamType().getName() : null);
             dto.setSubjectId(bundle.getSubject() != null ? bundle.getSubject().getId() : null);
             dto.setLessonId(bundle.getLesson() != null ? bundle.getLesson().getId() : null);
             dto.setIsPastPaper(bundle.getIsPastPaper());
@@ -149,7 +164,15 @@ public class AdminBundleService {
         bundle.setDescription(dto.getDescription());
         bundle.setPrice(dto.getPrice());
         bundle.setType(dto.getType());
-        bundle.setExamType(dto.getExamType());
+
+        bundle.setType(dto.getType());
+
+        if (dto.getExamTypeId() != null) {
+            com.eduapp.backend.model.ExamType examType = examTypeRepository.findById(dto.getExamTypeId())
+                    .orElseThrow(() -> new IllegalArgumentException("Exam Type not found"));
+            bundle.setExamType(examType);
+        }
+
         bundle.setIsPastPaper(dto.getIsPastPaper());
         // Set createdBy only if adminId is provided
         if (adminId != null) {
@@ -176,7 +199,15 @@ public class AdminBundleService {
         bundle.setDescription(dto.getDescription());
         bundle.setPrice(dto.getPrice());
         bundle.setType(dto.getType());
-        bundle.setExamType(dto.getExamType());
+
+        if (dto.getExamTypeId() != null) {
+            com.eduapp.backend.model.ExamType examType = examTypeRepository.findById(dto.getExamTypeId())
+                    .orElseThrow(() -> new IllegalArgumentException("Exam Type not found"));
+            bundle.setExamType(examType);
+        } else {
+            bundle.setExamType(null);
+        }
+
         bundle.setIsPastPaper(dto.getIsPastPaper());
 
         PaperBundle updated = bundleRepository.save(bundle);
@@ -213,7 +244,13 @@ public class AdminBundleService {
         Paper paper = paperRepository.findById(paperId)
                 .orElseThrow(() -> new IllegalArgumentException("Paper not found"));
 
-        paper.setBundle(bundle);
+        // Check if paper is already in the bundle
+        if (paper.getBundles().contains(bundle)) {
+             logger.warn("Paper {} is already in bundle {}", paper.getName(), bundle.getName());
+             return;
+        }
+
+        paper.getBundles().add(bundle);
         paperRepository.save(paper);
 
         logger.info("Paper {} added to bundle {}", paper.getName(), bundle.getName());
@@ -229,11 +266,19 @@ public class AdminBundleService {
         Paper paper = paperRepository.findById(paperId)
                 .orElseThrow(() -> new IllegalArgumentException("Paper not found"));
 
-        if (paper.getBundle() == null || !paper.getBundle().getId().equals(bundleId)) {
+        // Check if paper is in this bundle (using ID comparison for safety)
+        boolean isInBundle = paper.getBundles() != null && paper.getBundles().stream()
+                .anyMatch(b -> b.getId().equals(bundleId));
+
+        if (!isInBundle) {
             throw new IllegalArgumentException("Paper is not in this bundle");
         }
 
-        paper.setBundle(null);
+        // Remove the bundle from the paper's bundle list
+        if (paper.getBundles() != null) {
+            paper.getBundles().removeIf(b -> b.getId().equals(bundleId));
+        }
+        
         paperRepository.save(paper);
 
         logger.info("Paper {} removed from bundle", paper.getName());

@@ -1,5 +1,6 @@
 package com.eduapp.backend.controller;
 
+import com.eduapp.backend.dto.CartDto;
 import com.eduapp.backend.model.Cart;
 import com.eduapp.backend.service.CartService;
 import org.slf4j.Logger;
@@ -18,8 +19,14 @@ public class CartController {
 
     private final CartService cartService;
 
-    public CartController(CartService cartService) {
+    private final com.eduapp.backend.security.JwtUtil jwtUtil;
+    private final com.eduapp.backend.repository.PaperBundleRepository bundleRepo;
+
+    public CartController(CartService cartService, com.eduapp.backend.security.JwtUtil jwtUtil,
+            com.eduapp.backend.repository.PaperBundleRepository bundleRepo) {
         this.cartService = cartService;
+        this.jwtUtil = jwtUtil;
+        this.bundleRepo = bundleRepo;
     }
 
     @GetMapping
@@ -62,5 +69,28 @@ public class CartController {
         }
         cartService.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/my-cart")
+    public ResponseEntity<CartDto> getMyCart(@RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+        return ResponseEntity.ok(cartService.getMyCart(userId));
+    }
+
+    @PostMapping("/my-cart/items/{bundleId}")
+    public ResponseEntity<CartDto> addToCart(@RequestHeader("Authorization") String authHeader,
+            @PathVariable Long bundleId) {
+        String token = authHeader.substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+        return ResponseEntity.ok(cartService.addToCart(userId, bundleId, bundleRepo));
+    }
+
+    @DeleteMapping("/my-cart/items/{bundleId}")
+    public ResponseEntity<CartDto> removeFromCart(@RequestHeader("Authorization") String authHeader,
+            @PathVariable Long bundleId) {
+        String token = authHeader.substring(7);
+        Long userId = jwtUtil.extractUserId(token);
+        return ResponseEntity.ok(cartService.removeFromCart(userId, bundleId));
     }
 }

@@ -71,7 +71,8 @@ public class StudentBundleAccessService {
                             bundle.getDescription(),
                             bundle.getPrice(),
                             bundle.getType(),
-                            bundle.getExamType(),
+                            bundle.getExamType() != null ? bundle.getExamType().getId() : null,
+                            bundle.getExamType() != null ? bundle.getExamType().getName() : null,
                             bundle.getIsPastPaper(),
                             bundle.getSubject() != null ? bundle.getSubject().getName() : null,
                             bundle.getLesson() != null ? bundle.getLesson().getName() : null,
@@ -79,5 +80,10 @@ public class StudentBundleAccessService {
                             bundle.getPapers() != null ? bundle.getPapers().size() : 0);
                 })
                 .collect(Collectors.toList());
+    }
+
+    public java.math.BigDecimal calculateTotalRevenue() {
+        java.math.BigDecimal total = studentBundleAccessRepository.sumPricePaid();
+        return total != null ? total : java.math.BigDecimal.ZERO;
     }
 }

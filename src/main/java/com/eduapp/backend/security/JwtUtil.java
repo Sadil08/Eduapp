@@ -21,10 +21,11 @@ public class JwtUtil {
 
     private static final long EXPIRATION_MS = 1000L * 60 * 60 * 10; // 10 hours
 
-    public String generateToken(String email, Role role, Long userId ) {
+    public String generateToken(String email, Role role, Long userId, String referralCode) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
         claims.put("id", userId);
+        claims.put("referralCode", referralCode);
         return createToken(claims, email);
     }
 
@@ -42,11 +43,11 @@ public class JwtUtil {
         return extractClaim(token, Claims::getSubject);
     }
 
-    public Long extractUserId(String token){
+    public Long extractUserId(String token) {
         return extractClaim(token, claims -> claims.get("id", Long.class));
     }
 
-    public Role extractRole(String token){
+    public Role extractRole(String token) {
         String roleString = extractClaim(token, claims -> claims.get("role", String.class));
         return Role.valueOf(roleString);
     }
@@ -58,7 +59,7 @@ public class JwtUtil {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .verifyWith(key)  // This is correct!
+                .verifyWith(key) // This is correct!
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

@@ -2,6 +2,7 @@ package com.eduapp.backend.service;
 
 import com.eduapp.backend.dto.CustomBundleDto;
 import com.eduapp.backend.dto.PaperDto;
+import com.eduapp.backend.dto.PaymentResult;
 import com.eduapp.backend.mapper.PaperMapper;
 import com.eduapp.backend.model.*;
 import com.eduapp.backend.repository.*;
@@ -31,20 +32,22 @@ public class CustomBundleService {
     private final UserRepository userRepository;
     private final SystemConfigRepository systemConfigRepository;
 
-    private final WalletService walletService;
+    // WALLET_DISABLED: WalletService replaced with PaymentService
+    // private final WalletService walletService;
+    private final PaymentService paymentService;
     private final PaperMapper paperMapper;
 
     public CustomBundleService(CustomBundleRepository customBundleRepository,
-                                PaperRepository paperRepository,
-                                UserRepository userRepository,
-                                SystemConfigRepository systemConfigRepository,
-                                WalletService walletService,
-                                PaperMapper paperMapper) {
+            PaperRepository paperRepository,
+            UserRepository userRepository,
+            SystemConfigRepository systemConfigRepository,
+            PaymentService paymentService,
+            PaperMapper paperMapper) {
         this.customBundleRepository = customBundleRepository;
         this.paperRepository = paperRepository;
         this.userRepository = userRepository;
         this.systemConfigRepository = systemConfigRepository;
-        this.walletService = walletService;
+        this.paymentService = paymentService;
         this.paperMapper = paperMapper;
     }
 
@@ -63,7 +66,7 @@ public class CustomBundleService {
     public List<CustomBundleDto> getMyBundles(Long userId) {
         return customBundleRepository.findByCreatorIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .filter(bundle -> bundle.getStatus() == CustomBundleStatus.PURCHASED 
+                .filter(bundle -> bundle.getStatus() == CustomBundleStatus.PURCHASED
                         || bundle.getStatus() == CustomBundleStatus.APPROVED)
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -104,7 +107,7 @@ public class CustomBundleService {
 
         CustomBundle bundle = new CustomBundle(creator, name, description);
         CustomBundle saved = customBundleRepository.save(bundle);
-        
+
         logger.info("User {} created custom bundle: {}", userId, saved.getId());
         return toDto(saved);
     }
@@ -116,7 +119,8 @@ public class CustomBundleService {
         CustomBundle bundle = getEditableBundle(bundleId, userId);
 
         if (bundle.getPapers().size() >= MAX_PAPERS_PER_BUNDLE) {
-            throw new IllegalStateException("Cannot add more than " + MAX_PAPERS_PER_BUNDLE + " papers to a custom bundle");
+            throw new IllegalStateException(
+                    "Cannot add more than " + MAX_PAPERS_PER_BUNDLE + " papers to a custom bundle");
         }
 
         Paper paper = paperRepository.findById(paperId)
@@ -143,7 +147,7 @@ public class CustomBundleService {
 
         bundle.getPapers().remove(paper);
         CustomBundle saved = customBundleRepository.save(bundle);
-        
+
         logger.info("Removed paper {} from custom bundle {}", paperId, bundleId);
         return toDto(saved);
     }
@@ -160,8 +164,11 @@ public class CustomBundleService {
     /**
      * Purchase a custom bundle.
      * Bundle becomes immediately usable after purchase.
+     *
+     * WALLET_DISABLED: Previously used walletService.debit().
+     * Now verifies payment via PayHere gateway.
      */
-    public CustomBundleDto purchaseBundle(Long bundleId, Long userId) {
+    public CustomBundleDto purchaseBundle(Long bundleId, Long userId, String paymentReference) {
         CustomBundle bundle = getEditableBundle(bundleId, userId);
 
         if (bundle.getPapers().isEmpty()) {
@@ -172,11 +179,17 @@ public class CustomBundleService {
         BigDecimal pricePerPaper = getPricePerPaper();
         BigDecimal totalPrice = pricePerPaper.multiply(new BigDecimal(bundle.getPapers().size()));
 
-        // Debit wallet
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        // WALLET_DISABLED: Previously debited wallet
+        // User user = userRepository.findById(userId)
+        // .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        // walletService.debit(user, totalPrice, "Purchase of custom bundle: " +
+        // bundle.getName());
 
-        walletService.debit(user, totalPrice, "Purchase of custom bundle: " + bundle.getName());
+        // Verify payment via PayHere gateway
+        PaymentResult paymentResult = paymentService.verifyPayment(paymentReference, totalPrice);
+        if (paymentResult.getStatus() != PaymentResult.PaymentStatus.SUCCESS) {
+            throw new RuntimeException("Payment verification failed: " + paymentResult.getMessage());
+        }
 
         // Update bundle status
         bundle.setTotalPrice(totalPrice);
@@ -185,7 +198,7 @@ public class CustomBundleService {
 
         CustomBundle saved = customBundleRepository.save(bundle);
         logger.info("User {} purchased custom bundle {} for ${}", userId, bundleId, totalPrice);
-        
+
         return toDto(saved);
     }
 
@@ -230,7 +243,7 @@ public class CustomBundleService {
 
         CustomBundle saved = customBundleRepository.save(bundle);
         logger.info("Admin {} approved custom bundle {}", adminId, bundleId);
-        
+
         return toDto(saved);
     }
 
@@ -248,9 +261,9 @@ public class CustomBundleService {
      */
     public void updatePricePerPaper(BigDecimal newPrice) {
         SystemConfig config = systemConfigRepository.findByKey(PRICE_CONFIG_KEY)
-                .orElse(new SystemConfig(PRICE_CONFIG_KEY, newPrice.toString(), 
+                .orElse(new SystemConfig(PRICE_CONFIG_KEY, newPrice.toString(),
                         "Price per paper when creating custom bundles"));
-        
+
         config.setValue(newPrice.toString());
         systemConfigRepository.save(config);
         logger.info("Updated custom bundle paper price to ${}", newPrice);
@@ -291,12 +304,12 @@ public class CustomBundleService {
         dto.setCreatedAt(bundle.getCreatedAt());
         dto.setPurchasedAt(bundle.getPurchasedAt());
         dto.setApprovedAt(bundle.getApprovedAt());
-        
+
         if (bundle.getApprovedBy() != null) {
             dto.setApprovedById(bundle.getApprovedBy().getId());
             dto.setApprovedByName(bundle.getApprovedBy().getName());
         }
-        
+
         return dto;
     }
 }

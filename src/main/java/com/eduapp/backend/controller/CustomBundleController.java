@@ -33,11 +33,11 @@ public class CustomBundleController {
     public ResponseEntity<CustomBundleDto> getMyDraft(@RequestHeader("Authorization") String authHeader) {
         Long userId = extractUserId(authHeader);
         CustomBundleDto draft = customBundleService.getMyDraft(userId);
-        
+
         if (draft == null) {
             return ResponseEntity.noContent().build();
         }
-        
+
         return ResponseEntity.ok(draft);
     }
 
@@ -60,7 +60,7 @@ public class CustomBundleController {
     public ResponseEntity<CustomBundleDto> getBundleById(
             @PathVariable Long id,
             @RequestHeader("Authorization") String authHeader) {
-        
+
         Long userId = extractUserId(authHeader);
         try {
             CustomBundleDto bundle = customBundleService.getBundleById(id, userId);
@@ -90,7 +90,7 @@ public class CustomBundleController {
     public ResponseEntity<CustomBundleDto> createBundle(
             @RequestBody CreateBundleRequest request,
             @RequestHeader("Authorization") String authHeader) {
-        
+
         Long userId = extractUserId(authHeader);
         CustomBundleDto bundle = customBundleService.createBundle(userId, request.getName(), request.getDescription());
         return ResponseEntity.status(HttpStatus.CREATED).body(bundle);
@@ -105,7 +105,7 @@ public class CustomBundleController {
             @PathVariable Long id,
             @PathVariable Long paperId,
             @RequestHeader("Authorization") String authHeader) {
-        
+
         Long userId = extractUserId(authHeader);
         CustomBundleDto updated = customBundleService.addPaper(id, paperId, userId);
         return ResponseEntity.ok(updated);
@@ -120,7 +120,7 @@ public class CustomBundleController {
             @PathVariable Long id,
             @PathVariable Long paperId,
             @RequestHeader("Authorization") String authHeader) {
-        
+
         Long userId = extractUserId(authHeader);
         CustomBundleDto updated = customBundleService.removePaper(id, paperId, userId);
         return ResponseEntity.ok(updated);
@@ -134,7 +134,7 @@ public class CustomBundleController {
     public ResponseEntity<Void> deleteBundle(
             @PathVariable Long id,
             @RequestHeader("Authorization") String authHeader) {
-        
+
         Long userId = extractUserId(authHeader);
         customBundleService.deleteBundle(id, userId);
         return ResponseEntity.noContent().build();
@@ -147,10 +147,12 @@ public class CustomBundleController {
     @PostMapping("/{id}/purchase")
     public ResponseEntity<CustomBundleDto> purchaseBundle(
             @PathVariable Long id,
+            @RequestBody com.eduapp.backend.dto.PaymentRequest paymentRequest,
             @RequestHeader("Authorization") String authHeader) {
-        
+
         Long userId = extractUserId(authHeader);
-        CustomBundleDto purchased = customBundleService.purchaseBundle(id, userId);
+        CustomBundleDto purchased = customBundleService.purchaseBundle(id, userId,
+                paymentRequest.getPaymentReference());
         return ResponseEntity.ok(purchased);
     }
 

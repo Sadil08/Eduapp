@@ -1,16 +1,25 @@
 package com.eduapp.backend.controller;
 
-import com.eduapp.backend.model.WalletTransaction;
 import com.eduapp.backend.security.JwtUtil;
 import com.eduapp.backend.service.WalletService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 
+/**
+ * WALLET_DISABLED: All wallet endpoints are disabled.
+ * 
+ * When re-enabling the wallet feature:
+ * 1. Restore the original endpoint implementations (see git history)
+ * 2. Remove the 501 responses
+ * 3. Re-enable wallet debit in PurchaseService, ExtraAttemptController,
+ * CustomBundleService
+ * 4. Re-enable wallet UI in frontend (Header, cart page, wallet page, referral
+ * section)
+ */
 @RestController
 @RequestMapping("/api/wallet")
 public class WalletController {
@@ -23,46 +32,43 @@ public class WalletController {
         this.jwtUtil = jwtUtil;
     }
 
+    // WALLET_DISABLED: Returns zero balance for backward compatibility
     @GetMapping("/balance")
     public ResponseEntity<BigDecimal> getBalance(@RequestHeader("Authorization") String authHeader) {
-        Long userId = extractUserId(authHeader);
-        return ResponseEntity.ok(walletService.getBalance(userId));
+        return ResponseEntity.ok(BigDecimal.ZERO);
     }
 
+    // WALLET_DISABLED: Transactions endpoint disabled
     @GetMapping("/transactions")
-    public ResponseEntity<org.springframework.data.domain.Page<WalletTransaction>> getTransactions(
+    public ResponseEntity<Map<String, String>> getTransactions(
             @RequestHeader("Authorization") String authHeader,
             org.springframework.data.domain.Pageable pageable) {
-        Long userId = extractUserId(authHeader);
-        return ResponseEntity.ok(walletService.getTransactions(userId, pageable));
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(Map.of("message",
+                        "Wallet feature is currently unavailable. Payments are processed via PayHere."));
     }
 
+    // WALLET_DISABLED: Top-up endpoint disabled
     @PostMapping("/topup")
-    public ResponseEntity<Void> topUp(@RequestHeader("Authorization") String authHeader,
+    public ResponseEntity<Map<String, String>> topUp(@RequestHeader("Authorization") String authHeader,
             @RequestBody Map<String, BigDecimal> request) {
-        Long userId = extractUserId(authHeader);
-        BigDecimal amount = request.get("amount");
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            return ResponseEntity.badRequest().build();
-        }
-        walletService.topUp(userId, amount);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(Map.of("message",
+                        "Wallet top-up is currently unavailable. Payments are processed directly via PayHere."));
     }
 
+    // WALLET_DISABLED: Referral percentage getter disabled
     @GetMapping("/referral-percentage")
-    public ResponseEntity<BigDecimal> getReferralPercentage() {
-        return ResponseEntity.ok(walletService.getReferralPercentage());
+    public ResponseEntity<Map<String, String>> getReferralPercentage() {
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(Map.of("message", "Referral system is currently disabled."));
     }
 
+    // WALLET_DISABLED: Referral percentage setter disabled
     @PostMapping("/referral-percentage")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> setReferralPercentage(@RequestBody Map<String, BigDecimal> request) {
-        BigDecimal percentage = request.get("percentage");
-        if (percentage == null || percentage.compareTo(BigDecimal.ZERO) < 0) {
-            return ResponseEntity.badRequest().build();
-        }
-        walletService.setReferralPercentage(percentage);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Map<String, String>> setReferralPercentage(@RequestBody Map<String, BigDecimal> request) {
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(Map.of("message", "Referral system is currently disabled."));
     }
 
     private Long extractUserId(String authHeader) {

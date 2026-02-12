@@ -4,7 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-
+.env
 
 BACKEND_LEARNING_GUIDE.md
 

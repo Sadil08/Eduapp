@@ -1,5 +1,6 @@
 package com.eduapp.backend.service;
 
+import com.eduapp.backend.dto.PaymentResult;
 import com.eduapp.backend.model.Cart;
 import com.eduapp.backend.model.PaperBundle;
 import com.eduapp.backend.model.StudentBundleAccess;
@@ -12,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class PurchaseService {
@@ -21,19 +21,23 @@ public class PurchaseService {
 
     private final CartService cartService;
     private final StudentBundleAccessRepository studentBundleAccessRepository;
-    private final WalletService walletService;
+    private final PaymentService paymentService;
     private final com.eduapp.backend.repository.UserRepository userRepository;
 
+    // WALLET_DISABLED: WalletService dependency removed from constructor.
+    // Re-add WalletService here when wallet is re-enabled.
+    // private final WalletService walletService;
+
     public PurchaseService(CartService cartService, StudentBundleAccessRepository studentBundleAccessRepository,
-            WalletService walletService, com.eduapp.backend.repository.UserRepository userRepository) {
+            PaymentService paymentService, com.eduapp.backend.repository.UserRepository userRepository) {
         this.cartService = cartService;
         this.studentBundleAccessRepository = studentBundleAccessRepository;
-        this.walletService = walletService;
+        this.paymentService = paymentService;
         this.userRepository = userRepository;
     }
 
     @Transactional
-    public void checkout(User user) {
+    public void checkout(User user, String paymentReference) {
 
         try {
             logger.info("Processing checkout for user: {}", user.getId());
@@ -54,10 +58,20 @@ public class PurchaseService {
 
             logger.info("Total checkout amount: {}", totalAmount);
 
-            // Debit wallet
-            walletService.debit(user, totalAmount, "Purchase of " + bundles.size() + " bundles");
+            // WALLET_DISABLED: Previously used walletService.debit(user, totalAmount,
+            // description)
+            // When re-enabling wallet, uncomment the line below and remove the PayHere
+            // verification:
+            // walletService.debit(user, totalAmount, "Purchase of " + bundles.size() + "
+            // bundles");
 
-            String paymentId = "WALLET-" + UUID.randomUUID().toString();
+            // Verify payment via PayHere gateway
+            PaymentResult paymentResult = paymentService.verifyPayment(paymentReference, totalAmount);
+            if (paymentResult.getStatus() != PaymentResult.PaymentStatus.SUCCESS) {
+                throw new RuntimeException("Payment verification failed: " + paymentResult.getMessage());
+            }
+
+            String paymentId = paymentResult.getPaymentId();
 
             for (PaperBundle bundle : bundles) {
                 logger.info("Processing bundle: {} (ID: {}) for user: {}", bundle.getName(), bundle.getId(),

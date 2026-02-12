@@ -1,5 +1,6 @@
 package com.eduapp.backend.controller;
 
+import com.eduapp.backend.dto.PaymentResult;
 import com.eduapp.backend.model.ExtraAttemptPurchase;
 import com.eduapp.backend.model.Paper;
 import com.eduapp.backend.model.PaperBundle;
@@ -9,15 +10,17 @@ import com.eduapp.backend.repository.PaperBundleRepository;
 import com.eduapp.backend.repository.PaperRepository;
 import com.eduapp.backend.repository.UserRepository;
 import com.eduapp.backend.security.JwtUtil;
+import com.eduapp.backend.service.PaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.eduapp.backend.service.WalletService;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 /**
- * Controller for managing extra attempt purchases
+ * Controller for managing extra attempt purchases.
+ * 
+ * WALLET_DISABLED: Previously used WalletService.debit() for payments.
+ * Now uses PaymentService (PayHere mock) for card-based payments.
  */
 @RestController
 @RequestMapping("/api/papers/{paperId}/extra-attempts")
@@ -28,20 +31,23 @@ public class ExtraAttemptController {
     private final PaperBundleRepository paperBundleRepository;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
-    private final WalletService walletService;
+    private final PaymentService paymentService;
+
+    // WALLET_DISABLED: WalletService replaced with PaymentService
+    // private final WalletService walletService;
 
     public ExtraAttemptController(ExtraAttemptPurchaseRepository extraAttemptPurchaseRepository,
             PaperRepository paperRepository,
             PaperBundleRepository paperBundleRepository,
             UserRepository userRepository,
             JwtUtil jwtUtil,
-            WalletService walletService) {
+            PaymentService paymentService) {
         this.extraAttemptPurchaseRepository = extraAttemptPurchaseRepository;
         this.paperRepository = paperRepository;
         this.paperBundleRepository = paperBundleRepository;
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
-        this.walletService = walletService;
+        this.paymentService = paymentService;
     }
 
     /**
@@ -67,13 +73,22 @@ public class ExtraAttemptController {
         PaperBundle bundle = paperBundleRepository.findById(bundleId)
                 .orElseThrow(() -> new IllegalArgumentException("Bundle not found"));
 
-        // Mock payment - in real implementation, integrate with PayHere
-        String paymentId = "MOCK-EXTRA-" + UUID.randomUUID().toString();
-        BigDecimal pricePerAttempt = new BigDecimal("5.00"); // Mock price
+        BigDecimal pricePerAttempt = new BigDecimal("5.00");
         BigDecimal totalPrice = pricePerAttempt.multiply(new BigDecimal(request.getAttemptsCount()));
 
-        // Debit wallet
-        walletService.debit(user, totalPrice, "Purchase of " + request.getAttemptsCount() + " extra attempts for paper: " + paper.getName() + " in bundle: " + bundle.getName());
+        // WALLET_DISABLED: Previously used walletService.debit()
+        // walletService.debit(user, totalPrice, "Purchase of " +
+        // request.getAttemptsCount() + " extra attempts for paper: " + paper.getName()
+        // + " in bundle: " + bundle.getName());
+
+        // Verify payment via PayHere gateway
+        PaymentResult paymentResult = paymentService.verifyPayment(
+                request.getPaymentReference(), totalPrice);
+        if (paymentResult.getStatus() != PaymentResult.PaymentStatus.SUCCESS) {
+            throw new RuntimeException("Payment verification failed: " + paymentResult.getMessage());
+        }
+
+        String paymentId = paymentResult.getPaymentId();
 
         ExtraAttemptPurchase purchase = new ExtraAttemptPurchase(
                 user,
@@ -109,7 +124,8 @@ public class ExtraAttemptController {
 
         Integer extraAttempts;
         if (bundleId != null) {
-            extraAttempts = extraAttemptPurchaseRepository.sumExtraAttemptsByUserAndPaperAndBundle(userId, paperId, bundleId);
+            extraAttempts = extraAttemptPurchaseRepository.sumExtraAttemptsByUserAndPaperAndBundle(userId, paperId,
+                    bundleId);
         } else {
             extraAttempts = extraAttemptPurchaseRepository.sumExtraAttemptsByUserAndPaper(userId, paperId);
         }
@@ -121,6 +137,7 @@ public class ExtraAttemptController {
     // DTOs
     public static class PurchaseExtraAttemptsRequest {
         private Integer attemptsCount;
+        private String paymentReference;
 
         public Integer getAttemptsCount() {
             return attemptsCount;
@@ -128,6 +145,14 @@ public class ExtraAttemptController {
 
         public void setAttemptsCount(Integer attemptsCount) {
             this.attemptsCount = attemptsCount;
+        }
+
+        public String getPaymentReference() {
+            return paymentReference;
+        }
+
+        public void setPaymentReference(String paymentReference) {
+            this.paymentReference = paymentReference;
         }
     }
 

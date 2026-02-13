@@ -60,6 +60,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll() // open endpoints
+                        .requestMatchers("/api/auth/forgot-password").permitAll()
+                        .requestMatchers("/api/auth/reset-password").permitAll()
                         .requestMatchers("/api/files/**").permitAll() // serve uploaded files without auth
                         .requestMatchers(HttpMethod.GET, "/api/paper-bundles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/paper-bundles/**").permitAll()

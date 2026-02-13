@@ -1,17 +1,23 @@
 package com.eduapp.backend.service;
 
 import com.eduapp.backend.dto.*;
+import com.eduapp.backend.model.PasswordResetToken;
 import com.eduapp.backend.model.Role;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.repository.*;
 import com.eduapp.backend.security.JwtUtil;
+import com.eduapp.backend.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.eduapp.backend.mapper.*;
@@ -29,8 +35,10 @@ public class UserService implements UserDetailsService {
         private final ProgressRepository progressRepository;
         private final LeaderboardEntryRepository leaderboardEntryRepository;
         private final AIAnalysisRepository aiAnalysisRepository;
+        private final PasswordResetTokenRepository passwordResetTokenRepository;
         private final PasswordEncoder passwordEncoder;
         private final JwtUtil jwtUtil;
+        private final EmailService emailService;
 
         private final PaperBundleMapper paperBundleMapper;
         private final StudentPaperAttemptMapper studentPaperAttemptMapper;
@@ -45,8 +53,10 @@ public class UserService implements UserDetailsService {
                         ProgressRepository progressRepository,
                         LeaderboardEntryRepository leaderboardEntryRepository,
                         AIAnalysisRepository aiAnalysisRepository,
+                        PasswordResetTokenRepository passwordResetTokenRepository,
                         PasswordEncoder passwordEncoder,
                         JwtUtil jwtUtil,
+                        EmailService emailService,
                         PaperBundleMapper paperBundleMapper,
                         StudentPaperAttemptMapper studentPaperAttemptMapper,
                         ProgressMapper progressMapper,
@@ -59,8 +69,10 @@ public class UserService implements UserDetailsService {
                 this.progressRepository = progressRepository;
                 this.leaderboardEntryRepository = leaderboardEntryRepository;
                 this.aiAnalysisRepository = aiAnalysisRepository;
+                this.passwordResetTokenRepository = passwordResetTokenRepository;
                 this.passwordEncoder = passwordEncoder;
                 this.jwtUtil = jwtUtil;
+                this.emailService = emailService;
                 this.paperBundleMapper = paperBundleMapper;
                 this.studentPaperAttemptMapper = studentPaperAttemptMapper;
                 this.progressMapper = progressMapper;
@@ -222,6 +234,75 @@ public class UserService implements UserDetailsService {
                                 .password(user.getPassword())
                                 .authorities("ROLE_" + user.getRole().name())
                                 .build();
+        }
+
+        // --- Forgot Password ---
+        @Transactional
+        public void forgotPassword(String email) {
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+                // Check for existing token and rate limit
+                Optional<PasswordResetToken> existingToken = passwordResetTokenRepository.findByUser(user);
+
+                String otp = generateOTP();
+
+                if (existingToken.isPresent()) {
+                        PasswordResetToken token = existingToken.get();
+
+                        // Check 1 minute cooldown
+                        if (token.getLastRequestTime().plusMinutes(1).isAfter(LocalDateTime.now())) {
+                                throw new RuntimeException("Please wait 1 minute before requesting a new OTP");
+                        }
+
+                        token.updateToken(otp);
+                        passwordResetTokenRepository.save(token);
+                } else {
+                        PasswordResetToken newToken = new PasswordResetToken(otp, user);
+                        passwordResetTokenRepository.save(newToken);
+                }
+
+                // Send email
+                emailService.sendPasswordResetEmail(user.getEmail(), otp);
+        }
+
+        @Transactional
+        public void resetPassword(String email, String otp, String newPassword) {
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+                // Check 1-day password change limit
+                if (user.getLastPasswordChangeDate() != null &&
+                                user.getLastPasswordChangeDate().plusHours(24).isAfter(LocalDateTime.now())) {
+                        throw new RuntimeException("You can only change your password once every 24 hours");
+                }
+
+                PasswordResetToken token = passwordResetTokenRepository.findByUser(user)
+                                .orElseThrow(() -> new RuntimeException("Invalid or expired OTP"));
+
+                // Validate OTP
+                if (!token.getToken().equals(otp)) {
+                        throw new RuntimeException("Invalid OTP");
+                }
+
+                // Validate Expiry
+                if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
+                        throw new RuntimeException("OTP has expired");
+                }
+
+                // Reset Password
+                user.setPassword(passwordEncoder.encode(newPassword));
+                user.setLastPasswordChangeDate(LocalDateTime.now());
+                userRepository.save(user);
+
+                // Delete used token
+                passwordResetTokenRepository.delete(token);
+        }
+
+        private String generateOTP() {
+                SecureRandom random = new SecureRandom();
+                int otp = 100000 + random.nextInt(900000);
+                return String.valueOf(otp);
         }
 
         private String generateUniqueReferralCode() {

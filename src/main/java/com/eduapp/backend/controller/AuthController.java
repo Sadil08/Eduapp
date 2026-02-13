@@ -4,6 +4,8 @@ import com.eduapp.backend.dto.JwtResponse;
 import com.eduapp.backend.dto.LoginRequest;
 import com.eduapp.backend.dto.RegisterRequest;
 import com.eduapp.backend.dto.UserResponse;
+import com.eduapp.backend.dto.ForgotPasswordRequest;
+import com.eduapp.backend.dto.ResetPasswordRequest;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +36,18 @@ public class AuthController {
         String ip = getClientIp(request);
         String token = userService.login(req.getEmail(), req.getPassword(), ip);
         return ResponseEntity.ok(new JwtResponse(token));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest req) {
+        userService.forgotPassword(req.getEmail());
+        return ResponseEntity.ok().body("{\"message\": \"OTP sent to email\"}");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
+        userService.resetPassword(req.getEmail(), req.getOtp(), req.getNewPassword());
+        return ResponseEntity.ok().body("{\"message\": \"Password reset successfully\"}");
     }
 
     private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {

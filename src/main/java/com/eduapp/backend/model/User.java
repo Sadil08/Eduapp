@@ -55,6 +55,9 @@ public class User {
     // Reserved for future auditing feature
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    @Column(name = "last_password_change_date")
+    private LocalDateTime lastPasswordChangeDate;
+
     // ---------- constructors ----------
     public User() {
     }
@@ -120,6 +123,14 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getLastPasswordChangeDate() {
+        return lastPasswordChangeDate;
+    }
+
+    public void setLastPasswordChangeDate(LocalDateTime lastPasswordChangeDate) {
+        this.lastPasswordChangeDate = lastPasswordChangeDate;
     }
 
     public java.math.BigDecimal getWalletBalance() {

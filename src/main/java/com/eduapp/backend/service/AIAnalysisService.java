@@ -20,7 +20,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.auth.oauth2.GoogleCredentials;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
@@ -32,14 +36,17 @@ public class AIAnalysisService {
 
     private static final Logger logger = LoggerFactory.getLogger(AIAnalysisService.class);
 
-    @Value("${gemini.api-key:YOUR_GEMINI_API_KEY}")
-    private String apiKey;
-
     @Value("${gemini.model:gemini-2.5-flash}")
     private String model;
 
-    @Value("${gemini.api-url:https://generativelanguage.googleapis.com/v1}")
-    private String apiUrl;
+    @Value("${gcp.project-id:}")
+    private String gcpProjectId;
+
+    @Value("${gcp.location:asia-south1}")
+    private String gcpLocation;
+
+    @Value("${gcp.credentials-path:}")
+    private String gcpCredentialsPath;
 
     private final OverallPaperAnalysisRepository analysisRepository;
     private final AIAnalysisRepository aiAnalysisRepository;
@@ -66,11 +73,12 @@ public class AIAnalysisService {
         logger.info("Starting AI analysis for attempt ID: {}", attempt.getId());
 
         // Re-fetch the attempt to ensure we have the latest state (especially answers)
-        // and that we're working        // IMPORTANT: Use findByIdWithAnswers to eagerly load all answers
+        // and that we're working // IMPORTANT: Use findByIdWithAnswers to eagerly load
+        // all answers
         // This ensures the AI analysis sees ALL questions, including for custom bundles
         StudentPaperAttempt freshAttempt = studentPaperAttemptRepository.findByIdWithAnswers(attempt.getId())
                 .orElse(attempt);
-        
+
         logger.info("AI analysis: freshAttempt has {} answers loaded", freshAttempt.getAnswers().size());
 
         try {
@@ -87,18 +95,19 @@ public class AIAnalysisService {
 
             // Update Overall Analysis
             OverallPaperAnalysis analysis = new OverallPaperAnalysis();
-            analysis.setAttempt(attempt);
+            analysis.setAttempt(freshAttempt);
             if (rootNode.has("overallFeedback")) {
                 analysis.setOverallFeedback(rootNode.get("overallFeedback").asText());
             }
             // Update Student Answers with marks and feedback
             int totalObtainedMarks = 0;
-            
+
             // IMPORTANT: Calculate total allocated marks from ALL questions in the attempt,
-            // not just the ones the AI returns. This ensures correct percentage calculation.
+            // not just the ones the AI returns. This ensures correct percentage
+            // calculation.
             int totalAllocatedMarks = freshAttempt.getAnswers().stream()
-                .mapToInt(a -> a.getQuestion().getMarks() != null ? a.getQuestion().getMarks() : 0)
-                .sum();
+                    .mapToInt(a -> a.getQuestion().getMarks() != null ? a.getQuestion().getMarks() : 0)
+                    .sum();
 
             if (rootNode.has("questions")) {
                 for (JsonNode qNode : rootNode.get("questions")) {
@@ -124,10 +133,10 @@ public class AIAnalysisService {
             }
 
             // Calculate Final Weighted Score using correct totals
-            Integer paperTotalMarks = attempt.getPaper().getTotalMarks();
-            logger.info("Marks calculation: obtained={}, allocated={}, paperTotal={}", 
-                totalObtainedMarks, totalAllocatedMarks, paperTotalMarks);
-            
+            Integer paperTotalMarks = freshAttempt.getPaper().getTotalMarks();
+            logger.info("Marks calculation: obtained={}, allocated={}, paperTotal={}",
+                    totalObtainedMarks, totalAllocatedMarks, paperTotalMarks);
+
             if (paperTotalMarks != null && totalAllocatedMarks > 0) {
                 // Formula: (Obtained / Allocated) * PaperTotal
                 double fraction = (double) totalObtainedMarks / totalAllocatedMarks;
@@ -145,18 +154,19 @@ public class AIAnalysisService {
 
         } catch (Exception e) {
             logger.error("Error during AI analysis for attempt ID: {}", attempt.getId(), e);
-            
-            // IMPORTANT: Update attempt with error state so frontend knows to show retry button
+
+            // IMPORTANT: Update attempt with error state so frontend knows to show retry
+            // button
             try {
                 // Fetch fresh to avoid detached entity issues
                 StudentPaperAttempt errorAttempt = studentPaperAttemptRepository.findById(attempt.getId())
                         .orElse(attempt);
-                
+
                 String errorMessage = e.getMessage();
                 if (e instanceof org.springframework.web.client.HttpClientErrorException.TooManyRequests) {
                     errorMessage = "AI Service busy (Rate Limit Exceeded). Please retry in a few moments.";
                 }
-                
+
                 errorAttempt.setAnalysisError(errorMessage);
                 errorAttempt.setAnalysisAttempted(true);
                 errorAttempt.setAnalysisCompleted(false);
@@ -228,9 +238,9 @@ public class AIAnalysisService {
 
                         **OUTPUT FORMAT:**
                         Respond ONLY with valid JSON (no markdown code blocks). The JSON must have:
-                        
+
                         **CRITICAL: You MUST return an entry for EVERY question in the paper. Do NOT skip any questions.**
-                        
+
                         - 'questions': Array of {questionId, marksAwarded, feedback}
                           - **MUST include ALL questions from the paper - answered, partially answered, AND unanswered**
                           - marksAwarded: integer between 0 and the maximum marks for that question
@@ -254,14 +264,15 @@ public class AIAnalysisService {
                         **PAPER TO MARK:**
 
                         """);
-        
+
         // Add explicit question count so AI knows how many to return
         int questionCount = attempt.getAnswers().size();
         sb.append("Paper: ").append(attempt.getPaper().getName()).append("\n");
         sb.append("Description: ").append(attempt.getPaper().getDescription()).append("\n");
         sb.append("\n**IMPORTANT: This paper contains exactly ").append(questionCount)
-          .append(" questions. You MUST return feedback for all ").append(questionCount).append(" questions.**\n\n");
-        
+                .append(" questions. You MUST return feedback for all ").append(questionCount)
+                .append(" questions.**\n\n");
+
         logger.info("Building AI prompt for attempt {} with {} questions", attempt.getId(), questionCount);
 
         for (StudentAnswer answer : attempt.getAnswers()) {
@@ -273,7 +284,9 @@ public class AIAnalysisService {
                             ? answer.getQuestion().getExtractedText()
                             : answer.getQuestion().getText();
             sb.append("Question: ").append(qText).append("\n");
-            sb.append("Maximum Marks: ").append(answer.getQuestion().getMarks() != null ? answer.getQuestion().getMarks() : "N/A").append("\n");
+            sb.append("Maximum Marks: ")
+                    .append(answer.getQuestion().getMarks() != null ? answer.getQuestion().getMarks() : "N/A")
+                    .append("\n");
             sb.append("Correct Answer / Marking Scheme:\n").append(answer.getQuestion().getCorrectAnswerText())
                     .append("\n\n");
 
@@ -304,17 +317,42 @@ public class AIAnalysisService {
         return sb.toString();
     }
 
+    /**
+     * Get an OAuth2 access token from the service account credentials.
+     * Vertex AI requires Bearer token auth instead of API key.
+     */
+    private String getAccessToken() throws IOException {
+        GoogleCredentials credentials;
+        if (gcpCredentialsPath != null && !gcpCredentialsPath.isEmpty()
+                && !gcpCredentialsPath.equals("/path/to/your/service-account-key.json")) {
+            credentials = GoogleCredentials.fromStream(new FileInputStream(gcpCredentialsPath))
+                    .createScoped(Collections.singletonList("https://www.googleapis.com/auth/cloud-platform"));
+        } else {
+            // Fall back to Application Default Credentials (ADC)
+            // Works when running on GCP or when GOOGLE_APPLICATION_CREDENTIALS env var is
+            // set
+            credentials = GoogleCredentials.getApplicationDefault()
+                    .createScoped(Collections.singletonList("https://www.googleapis.com/auth/cloud-platform"));
+        }
+        credentials.refreshIfExpired();
+        return credentials.getAccessToken().getTokenValue();
+    }
+
     private String callGeminiApi(String prompt) throws Exception {
-        if (apiKey == null || apiKey.equals("YOUR_GEMINI_API_KEY")) {
-            logger.warn("Gemini API key is not configured. Skipping actual API call.");
-            throw new IllegalStateException("AI Analysis failed: API Key not configured.");
+        if (gcpProjectId == null || gcpProjectId.isEmpty() || gcpProjectId.equals("YOUR_GCP_PROJECT_ID")) {
+            logger.warn("GCP Project ID is not configured. Skipping actual API call.");
+            throw new IllegalStateException("AI Analysis failed: GCP Project ID not configured.");
         }
 
-        String url = String.format("%s/models/%s:generateContent?key=%s", apiUrl, model, apiKey);
-        logger.info("Calling Gemini API with model: {}", model);
+        // Vertex AI endpoint format
+        String url = String.format(
+                "https://%s-aiplatform.googleapis.com/v1/projects/%s/locations/%s/publishers/google/models/%s:generateContent",
+                gcpLocation, gcpProjectId, gcpLocation, model);
+        logger.info("Calling Vertex AI with model: {} in {}", model, gcpLocation);
 
-        // Construct Request Body
+        // Construct Request Body (same format as AI Studio)
         Map<String, Object> content = new HashMap<>();
+        content.put("role", "user");
         Map<String, Object> part = new HashMap<>();
         part.put("text", prompt);
         content.put("parts", List.of(part));
@@ -322,15 +360,17 @@ public class AIAnalysisService {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("contents", List.of(content));
 
+        // Use OAuth2 Bearer token instead of API key
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(getAccessToken());
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
         if (response.getStatusCode().is2xxSuccessful()) {
-            logger.info("Gemini API call successful");
+            logger.info("Vertex AI call successful");
             JsonNode root = objectMapper.readTree(response.getBody());
 
             // Log token usage for cost tracking
@@ -363,8 +403,8 @@ public class AIAnalysisService {
             logger.debug("Cleaned AI Response: {}", aiResponse);
             return aiResponse;
         } else {
-            logger.error("Gemini API call failed with status: {}", response.getStatusCode());
-            throw new RuntimeException("Gemini API call failed with status: " + response.getStatusCode());
+            logger.error("Vertex AI call failed with status: {}", response.getStatusCode());
+            throw new RuntimeException("Vertex AI call failed with status: " + response.getStatusCode());
         }
     }
 
@@ -396,16 +436,18 @@ public class AIAnalysisService {
      * This method escapes backslashes that are part of LaTeX commands.
      */
     private String sanitizeJsonForLatex(String json) {
-        if (json == null) return null;
-        
+        if (json == null)
+            return null;
+
         StringBuilder result = new StringBuilder();
         int i = 0;
         while (i < json.length()) {
             char c = json.charAt(i);
             if (c == '\\' && i + 1 < json.length()) {
                 char next = json.charAt(i + 1);
-                
-                // Check for definitely valid JSON escapes (standalone, not followed by more letters)
+
+                // Check for definitely valid JSON escapes (standalone, not followed by more
+                // letters)
                 if (next == '"' || next == '\\' || next == '/') {
                     // These are always valid JSON escapes
                     result.append(c);
@@ -421,7 +463,7 @@ public class AIAnalysisService {
                         continue;
                     }
                 }
-                
+
                 // For n, r, t, b, f - these COULD be valid JSON escapes OR LaTeX commands
                 // If followed by more letters, it's likely LaTeX (e.g., \frac, \nabla, \begin)
                 if (next == 'n' || next == 'r' || next == 't' || next == 'b' || next == 'f') {
@@ -439,14 +481,14 @@ public class AIAnalysisService {
                         continue;
                     }
                 }
-                
+
                 // Any other letter after backslash - definitely needs escaping
                 if (Character.isLetter(next)) {
                     result.append("\\\\");
                     i++;
                     continue;
                 }
-                
+
                 // Non-letter after backslash - keep as is
                 result.append(c);
                 i++;
@@ -455,11 +497,11 @@ public class AIAnalysisService {
                 i++;
             }
         }
-        
+
         String sanitized = result.toString();
         if (!sanitized.equals(json)) {
-            logger.info("Sanitized JSON: escaped LaTeX-style backslashes ({} chars added)", 
-                (sanitized.length() - json.length()));
+            logger.info("Sanitized JSON: escaped LaTeX-style backslashes ({} chars added)",
+                    (sanitized.length() - json.length()));
         }
         return sanitized;
     }

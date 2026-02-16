@@ -130,10 +130,16 @@
 			<artifactId>spring-boot-starter-cache</artifactId>
 		</dependency>
 
-		<!-- Jackson Hibernate6 Module for proper lazy-loading serialization -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-hibernate6</artifactId>
+		</dependency>
+
+		<!-- Google Auth Library for Vertex AI OAuth2 -->
+		<dependency>
+			<groupId>com.google.auth</groupId>
+			<artifactId>google-auth-library-oauth2-http</artifactId>
+			<version>1.23.0</version>
 		</dependency>
 	</dependencies>
 

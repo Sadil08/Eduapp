@@ -51,7 +51,7 @@ public class PaperBundle {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 
-    @OneToMany(mappedBy = "bundle", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ManyToMany(mappedBy = "bundles")
     private List<Paper> papers = new ArrayList<>();
 
     public PaperBundle() {

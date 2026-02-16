@@ -82,21 +82,20 @@ public class AdminPaperService {
     public Paper createPaper(PaperDto dto, Long adminId) {
         logger.info("Creating new paper: {} by admin ID: {}", dto.getName(), adminId);
 
-        // Fetch the PaperBundle entity if bundleId is provided
-        PaperBundle bundle = null;
-        if (dto.getBundleId() != null) {
-            bundle = paperBundleRepository.findById(dto.getBundleId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Paper bundle not found with ID: " + dto.getBundleId()));
-        }
-
         Paper paper = new Paper();
         paper.setName(dto.getName());
         paper.setDescription(dto.getDescription());
         paper.setType(dto.getType());
         paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
         paper.setTotalMarks(dto.getTotalMarks());
-        paper.setBundle(bundle);
+        paper.setVideoUrl(dto.getVideoUrl());
+        
+        // Fetch and set bundles if bundleIds are provided
+        if (dto.getBundleIds() != null && !dto.getBundleIds().isEmpty()) {
+            List<PaperBundle> bundles = paperBundleRepository.findAllById(dto.getBundleIds());
+            paper.setBundles(bundles);
+        }
+        
         // Set subject if provided
         if (dto.getSubjectId() != null) {
             subjectRepository.findById(dto.getSubjectId()).ifPresent(paper::setSubject);
@@ -127,6 +126,14 @@ public class AdminPaperService {
         paper.setType(dto.getType());
         paper.setMaxFreeAttempts(dto.getMaxFreeAttempts());
         paper.setTotalMarks(dto.getTotalMarks());
+        paper.setVideoUrl(dto.getVideoUrl());
+        
+        // Update bundles if provided
+        if (dto.getBundleIds() != null) {
+            List<PaperBundle> bundles = paperBundleRepository.findAllById(dto.getBundleIds());
+            paper.setBundles(bundles);
+        }
+        
         // Update subject if provided
         if (dto.getSubjectId() != null) {
             subjectRepository.findById(dto.getSubjectId()).ifPresent(paper::setSubject);
@@ -306,9 +313,10 @@ public class AdminPaperService {
         dto.setName(paper.getName());
         dto.setDescription(paper.getDescription());
         dto.setType(paper.getType());
-        dto.setBundleId(paper.getBundle() != null ? paper.getBundle().getId() : null);
+        dto.setBundleIds(paper.getBundles().stream().map(PaperBundle::getId).collect(java.util.stream.Collectors.toList()));
         dto.setMaxFreeAttempts(paper.getMaxFreeAttempts());
         dto.setTotalMarks(paper.getTotalMarks());
+        dto.setVideoUrl(paper.getVideoUrl());
 
         // Admin fields
         dto.setCreatedAt(paper.getCreatedAt());

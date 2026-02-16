@@ -30,9 +30,27 @@ public interface PaperBundleRepository extends JpaRepository<PaperBundle, Long> 
         long countBySubjectId(Long subjectId);
 
         long countByLessonId(Long lessonId);
-
-        // Combined filter method with all criteria
+        /**
+         * Search bundles by name or description with pagination
+         */
         @Query("SELECT pb FROM PaperBundle pb WHERE " +
+               "LOWER(pb.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+               "LOWER(pb.description) LIKE LOWER(CONCAT('%', :search, '%'))")
+        org.springframework.data.domain.Page<PaperBundle> searchBundles(
+                @Param("search") String search, 
+                org.springframework.data.domain.Pageable pageable);
+
+        // Combined filter method with all criteria AND pagination
+        @Query(value = "SELECT pb FROM PaperBundle pb WHERE " +
+                        "(:type IS NULL OR pb.type = :type) AND " +
+                        "(:examTypeId IS NULL OR pb.examType.id = :examTypeId) AND " +
+                        "(:subjectId IS NULL OR pb.subject.id = :subjectId) AND " +
+                        "(:lessonId IS NULL OR pb.lesson.id = :lessonId) AND " +
+                        "(:isPastPaper IS NULL OR pb.isPastPaper = :isPastPaper) AND " +
+                        "(:minPrice IS NULL OR pb.price >= :minPrice) AND " +
+                        "(:maxPrice IS NULL OR pb.price <= :maxPrice) AND " +
+                        "(:name IS NULL OR LOWER(pb.name) LIKE :name)",
+               countQuery = "SELECT count(pb) FROM PaperBundle pb WHERE " +
                         "(:type IS NULL OR pb.type = :type) AND " +
                         "(:examTypeId IS NULL OR pb.examType.id = :examTypeId) AND " +
                         "(:subjectId IS NULL OR pb.subject.id = :subjectId) AND " +
@@ -41,7 +59,7 @@ public interface PaperBundleRepository extends JpaRepository<PaperBundle, Long> 
                         "(:minPrice IS NULL OR pb.price >= :minPrice) AND " +
                         "(:maxPrice IS NULL OR pb.price <= :maxPrice) AND " +
                         "(:name IS NULL OR LOWER(pb.name) LIKE :name)")
-        List<PaperBundle> findByFilters(
+        org.springframework.data.domain.Page<PaperBundle> findByFiltersPaginated(
                         @Param("type") PaperType type,
                         @Param("examTypeId") Long examTypeId,
                         @Param("subjectId") Long subjectId,
@@ -49,5 +67,6 @@ public interface PaperBundleRepository extends JpaRepository<PaperBundle, Long> 
                         @Param("isPastPaper") Boolean isPastPaper,
                         @Param("minPrice") BigDecimal minPrice,
                         @Param("maxPrice") BigDecimal maxPrice,
-                        @Param("name") String name);
+                        @Param("name") String name,
+                        org.springframework.data.domain.Pageable pageable);
 }

@@ -1,7 +1,6 @@
 package com.eduapp.backend.service;
 
-import com.eduapp.backend.model.Question;
-import com.eduapp.backend.model.StudentAnswer;
+// Imports removed
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -86,8 +85,8 @@ public class AIService {
             }
             return "";
         } catch (Exception e) {
-            logger.error("Failed to extract text from image: {}", e.getMessage());
-            return ""; // Fallback or throw
+            logger.error("Failed to extract text from image: {}", e.getMessage(), e);
+            throw new RuntimeException("AI extraction failed: " + e.getMessage(), e);
         }
     }
 

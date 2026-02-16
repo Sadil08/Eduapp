@@ -26,6 +26,14 @@ public class StudentPaperAttempt {
     @Column
     private Integer attemptNumber;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "origin_bundle_id")
+    private PaperBundle originBundle;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "origin_custom_bundle_id")
+    private CustomBundle originCustomBundle;
+
     @Column
     private LocalDateTime startedAt;
 
@@ -41,8 +49,33 @@ public class StudentPaperAttempt {
     @Column
     private Boolean optedIn = false;
 
+    // --- New fields for extraction tracking and analysis resubmission ---
+
+    @Column(name = "elapsed_time_seconds")
+    private Integer elapsedTimeSeconds;
+
+    @Column(name = "analysis_completed", nullable = false)
+    private Boolean analysisCompleted = false;
+
+    @Column(name = "analysis_attempted", nullable = false)
+    private Boolean analysisAttempted = false;
+
+    @Column(name = "analysis_error", length = 1000)
+    private String analysisError;
+
+    @Column(name = "submission_count", nullable = false)
+    private Integer submissionCount = 0;
+
+    @Column(name = "last_submission_time")
+    private LocalDateTime lastSubmissionTime;
+
+    // Relationship to answers (existing)
     @OneToMany(mappedBy = "attempt", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StudentAnswer> answers = new ArrayList<>();
+
+    // Relationship to extraction tracking
+    @OneToMany(mappedBy = "studentPaperAttempt", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<QuestionExtractionTracking> extractionTrackings = new ArrayList<>();
 
     public StudentPaperAttempt() {
     }
@@ -134,5 +167,77 @@ public class StudentPaperAttempt {
 
     public void setAnswers(List<StudentAnswer> answers) {
         this.answers = answers;
+    }
+
+    public Integer getElapsedTimeSeconds() {
+        return elapsedTimeSeconds;
+    }
+
+    public void setElapsedTimeSeconds(Integer elapsedTimeSeconds) {
+        this.elapsedTimeSeconds = elapsedTimeSeconds;
+    }
+
+    public Boolean getAnalysisCompleted() {
+        return analysisCompleted;
+    }
+
+    public void setAnalysisCompleted(Boolean analysisCompleted) {
+        this.analysisCompleted = analysisCompleted;
+    }
+
+    public Boolean getAnalysisAttempted() {
+        return analysisAttempted;
+    }
+
+    public void setAnalysisAttempted(Boolean analysisAttempted) {
+        this.analysisAttempted = analysisAttempted;
+    }
+
+    public String getAnalysisError() {
+        return analysisError;
+    }
+
+    public void setAnalysisError(String analysisError) {
+        this.analysisError = analysisError;
+    }
+
+    public Integer getSubmissionCount() {
+        return submissionCount;
+    }
+
+    public void setSubmissionCount(Integer submissionCount) {
+        this.submissionCount = submissionCount;
+    }
+
+    public LocalDateTime getLastSubmissionTime() {
+        return lastSubmissionTime;
+    }
+
+    public void setLastSubmissionTime(LocalDateTime lastSubmissionTime) {
+        this.lastSubmissionTime = lastSubmissionTime;
+    }
+
+    public List<QuestionExtractionTracking> getExtractionTrackings() {
+        return extractionTrackings;
+    }
+
+    public void setExtractionTrackings(List<QuestionExtractionTracking> extractionTrackings) {
+        this.extractionTrackings = extractionTrackings;
+    }
+
+    public PaperBundle getOriginBundle() {
+        return originBundle;
+    }
+
+    public void setOriginBundle(PaperBundle originBundle) {
+        this.originBundle = originBundle;
+    }
+
+    public CustomBundle getOriginCustomBundle() {
+        return originCustomBundle;
+    }
+
+    public void setOriginCustomBundle(CustomBundle originCustomBundle) {
+        this.originCustomBundle = originCustomBundle;
     }
 }

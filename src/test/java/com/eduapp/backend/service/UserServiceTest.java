@@ -33,6 +33,9 @@ public class UserServiceTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private GeoLocationService geoLocationService;
+
     @InjectMocks
     private UserService userService;
 
@@ -42,20 +45,27 @@ public class UserServiceTest {
         RegisterRequest req = new RegisterRequest("test@example.com", "password", "Test User", null);
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
+        // Mock GeoLocationService
+        when(geoLocationService.getCountryFromIp(any())).thenReturn("Test Country");
+
         User savedUser = new User();
         savedUser.setId(1L);
         savedUser.setEmail("test@example.com");
         savedUser.setPassword("encodedPassword");
         savedUser.setUsername("Test User");
         savedUser.setRole(Role.STUDENT);
+        savedUser.setCountry("Test Country");
+        savedUser.setRegistrationIp("127.0.0.1");
+
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
         // Act
-        User result = userService.register(req);
+        User result = userService.register(req, "127.0.0.1");
 
         // Assert
         assertThat(result.getPassword()).isEqualTo("encodedPassword");
         assertThat(result.getRole()).isEqualTo(Role.STUDENT);
+        assertThat(result.getCountry()).isEqualTo("Test Country");
         verify(userRepository).save(any(User.class));
     }
 
@@ -66,7 +76,7 @@ public class UserServiceTest {
         when(userRepository.findByEmail("existing@example.com")).thenReturn(Optional.of(new User()));
 
         // Act & Assert
-        assertThatThrownBy(() -> userService.register(req))
+        assertThatThrownBy(() -> userService.register(req, "127.0.0.1"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Email already exists");
     }
@@ -84,10 +94,12 @@ public class UserServiceTest {
         when(jwtUtil.generateToken("test@example.com", Role.STUDENT, 1L, null)).thenReturn("jwtToken");
 
         // Act
-        String result = userService.login("test@example.com", "password");
+        String result = userService.login("test@example.com", "password", "127.0.0.1");
 
         // Assert
         assertThat(result).isEqualTo("jwtToken");
+        // Verify user was saved (login stats update)
+        verify(userRepository).save(user);
     }
 
     @Test
@@ -100,7 +112,7 @@ public class UserServiceTest {
         when(passwordEncoder.matches("wrong", "encoded")).thenReturn(false);
 
         // Act & Assert
-        assertThatThrownBy(() -> userService.login("test@example.com", "wrong"))
+        assertThatThrownBy(() -> userService.login("test@example.com", "wrong", "127.0.0.1"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid password");
     }

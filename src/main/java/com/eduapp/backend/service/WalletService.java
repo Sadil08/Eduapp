@@ -37,6 +37,10 @@ public class WalletService {
     public List<WalletTransaction> getTransactions(Long userId) {
         return walletTransactionRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
+    
+    public org.springframework.data.domain.Page<WalletTransaction> getTransactions(Long userId, org.springframework.data.domain.Pageable pageable) {
+        return walletTransactionRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+    }
 
     @Transactional
     public void topUp(Long userId, BigDecimal amount) {

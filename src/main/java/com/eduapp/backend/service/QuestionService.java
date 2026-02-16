@@ -143,12 +143,17 @@ public class QuestionService {
 
         if (paperOpt.isPresent()) {
             Paper paper = paperOpt.get();
-            if (paper.getBundle() != null) {
-                if (paper.getBundle().getSubject() != null) {
-                    context.put("subject", paper.getBundle().getSubject().getName());
+            // Use paper's direct subject if available
+            if (paper.getSubject() != null) {
+                context.put("subject", paper.getSubject().getName());
+            } else if (paper.getBundles() != null && !paper.getBundles().isEmpty()) {
+                // Fallback to first bundle's subject
+                var firstBundle = paper.getBundles().get(0);
+                if (firstBundle.getSubject() != null) {
+                    context.put("subject", firstBundle.getSubject().getName());
                 }
-                if (paper.getBundle().getLesson() != null) {
-                    context.put("lesson", paper.getBundle().getLesson().getName());
+                if (firstBundle.getLesson() != null) {
+                    context.put("lesson", firstBundle.getLesson().getName());
                 }
             }
         }
@@ -187,11 +192,11 @@ public class QuestionService {
                     context.put("subject", paper.getSubject().getName());
                     logger.warn("[CONTEXT DEBUG] Found subject from paper for question {}: {}", questionId,
                             paper.getSubject().getName());
-                } else if (paper.getBundle() != null && paper.getBundle().getSubject() != null) {
-                    // Fallback to bundle subject
-                    context.put("subject", paper.getBundle().getSubject().getName());
+                } else if (paper.getBundles() != null && !paper.getBundles().isEmpty() && paper.getBundles().get(0).getSubject() != null) {
+                    // Fallback to first bundle's subject
+                    context.put("subject", paper.getBundles().get(0).getSubject().getName());
                     logger.warn("[CONTEXT DEBUG] Found subject from bundle for question {}: {}", questionId,
-                            paper.getBundle().getSubject().getName());
+                            paper.getBundles().get(0).getSubject().getName());
                 } else {
                     logger.warn("[CONTEXT DEBUG] No subject found for question {}", questionId);
                 }

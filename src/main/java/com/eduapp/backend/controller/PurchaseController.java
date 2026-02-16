@@ -1,11 +1,13 @@
 package com.eduapp.backend.controller;
 
+import com.eduapp.backend.dto.PaymentRequest;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.security.JwtUtil;
 import com.eduapp.backend.service.PurchaseService;
 import com.eduapp.backend.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,13 +27,14 @@ public class PurchaseController {
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<Void> checkout(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Void> checkout(@RequestHeader("Authorization") String authHeader,
+            @RequestBody PaymentRequest paymentRequest) {
         String token = authHeader.substring(7);
         Long userId = jwtUtil.extractUserId(token);
         User user = userService.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        purchaseService.checkout(user);
+        purchaseService.checkout(user, paymentRequest.getPaymentReference());
         return ResponseEntity.ok().build();
     }
 }

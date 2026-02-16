@@ -10,8 +10,14 @@ import org.springframework.stereotype.Repository;
 public interface ExtraAttemptPurchaseRepository extends JpaRepository<ExtraAttemptPurchase, Long> {
 
     /**
-     * Sum all extra attempts granted to a user for a specific paper
+     * Sum all extra attempts granted to a user for a specific paper (legacy, no bundle scoping)
      */
     @Query("SELECT COALESCE(SUM(e.attemptsGranted), 0) FROM ExtraAttemptPurchase e WHERE e.user.id = :userId AND e.paper.id = :paperId")
     Integer sumExtraAttemptsByUserAndPaper(@Param("userId") Long userId, @Param("paperId") Long paperId);
+
+    /**
+     * Sum extra attempts granted to a user for a specific paper within a specific bundle context.
+     */
+    @Query("SELECT COALESCE(SUM(e.attemptsGranted), 0) FROM ExtraAttemptPurchase e WHERE e.user.id = :userId AND e.paper.id = :paperId AND e.originBundle.id = :bundleId")
+    Integer sumExtraAttemptsByUserAndPaperAndBundle(@Param("userId") Long userId, @Param("paperId") Long paperId, @Param("bundleId") Long bundleId);
 }

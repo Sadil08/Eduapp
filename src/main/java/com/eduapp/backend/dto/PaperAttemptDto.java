@@ -8,9 +8,37 @@ public class PaperAttemptDto extends PaperSummaryDto {
     private Integer maxAttempts;
     private Integer remainingAttempts;
     private Boolean canAttempt;
+    private Long attemptId;
+    private Long originBundleId;
 
     public PaperAttemptDto() {
         super();
+    }
+
+    public Long getAttemptId() {
+        return attemptId;
+    }
+
+    public void setAttemptId(Long attemptId) {
+        this.attemptId = attemptId;
+    }
+
+    public Long getOriginBundleId() {
+        return originBundleId;
+    }
+
+    public void setOriginBundleId(Long originBundleId) {
+        this.originBundleId = originBundleId;
+    }
+
+    private Long originCustomBundleId;
+
+    public Long getOriginCustomBundleId() {
+        return originCustomBundleId;
+    }
+
+    public void setOriginCustomBundleId(Long originCustomBundleId) {
+        this.originCustomBundleId = originCustomBundleId;
     }
 
     public List<QuestionAttemptDto> getQuestions() {

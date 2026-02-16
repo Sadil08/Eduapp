@@ -24,6 +24,10 @@ public class ExtraAttemptPurchase {
     @JoinColumn(name = "paper_id", nullable = false)
     private Paper paper;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "origin_bundle_id")
+    private PaperBundle originBundle;
+
     @Column(nullable = false)
     private Integer attemptsGranted;
 
@@ -40,10 +44,11 @@ public class ExtraAttemptPurchase {
     public ExtraAttemptPurchase() {
     }
 
-    public ExtraAttemptPurchase(User user, Paper paper, Integer attemptsGranted, BigDecimal pricePaid,
-            String paymentId) {
+    public ExtraAttemptPurchase(User user, Paper paper, PaperBundle originBundle, Integer attemptsGranted, 
+            BigDecimal pricePaid, String paymentId) {
         this.user = user;
         this.paper = paper;
+        this.originBundle = originBundle;
         this.attemptsGranted = attemptsGranted;
         this.pricePaid = pricePaid;
         this.paymentId = paymentId;
@@ -73,6 +78,14 @@ public class ExtraAttemptPurchase {
 
     public void setPaper(Paper paper) {
         this.paper = paper;
+    }
+
+    public PaperBundle getOriginBundle() {
+        return originBundle;
+    }
+
+    public void setOriginBundle(PaperBundle originBundle) {
+        this.originBundle = originBundle;
     }
 
     public Integer getAttemptsGranted() {

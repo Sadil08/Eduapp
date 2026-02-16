@@ -10,17 +10,24 @@ public class PaperAttemptInfoDto {
     private Integer maxAttempts;
     private Integer remainingAttempts;
     private Boolean canAttempt;
+    private Long inProgressAttemptId;
 
     public PaperAttemptInfoDto() {
     }
 
     public PaperAttemptInfoDto(Long paperId, Integer attemptsMade, Integer maxAttempts,
             Integer remainingAttempts, Boolean canAttempt) {
+        this(paperId, attemptsMade, maxAttempts, remainingAttempts, canAttempt, null);
+    }
+
+    public PaperAttemptInfoDto(Long paperId, Integer attemptsMade, Integer maxAttempts,
+            Integer remainingAttempts, Boolean canAttempt, Long inProgressAttemptId) {
         this.paperId = paperId;
         this.attemptsMade = attemptsMade;
         this.maxAttempts = maxAttempts;
         this.remainingAttempts = remainingAttempts;
         this.canAttempt = canAttempt;
+        this.inProgressAttemptId = inProgressAttemptId;
     }
 
     public Long getPaperId() {
@@ -61,5 +68,13 @@ public class PaperAttemptInfoDto {
 
     public void setCanAttempt(Boolean canAttempt) {
         this.canAttempt = canAttempt;
+    }
+    
+    public Long getInProgressAttemptId() {
+        return inProgressAttemptId;
+    }
+
+    public void setInProgressAttemptId(Long inProgressAttemptId) {
+        this.inProgressAttemptId = inProgressAttemptId;
     }
 }

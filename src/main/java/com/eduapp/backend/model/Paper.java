@@ -20,10 +20,14 @@ public class Paper {
     @Column(length = 1000)
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bundle_id", nullable = false)
+    @ManyToMany
+    @JoinTable(
+        name = "paper_bundles_papers",
+        joinColumns = @JoinColumn(name = "paper_id"),
+        inverseJoinColumns = @JoinColumn(name = "paper_bundle_id")
+    )
     @JsonIgnore
-    private PaperBundle bundle;
+    private List<PaperBundle> bundles = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.EAGER) // Eagerly load subject for context
     @JoinColumn(name = "subject_id")
@@ -38,6 +42,9 @@ public class Paper {
 
     @Column
     private Integer totalMarks;
+
+    @Column(name = "video_url", length = 500)
+    private String videoUrl;
 
     @ManyToOne
     @JoinColumn(name = "created_by")
@@ -58,12 +65,12 @@ public class Paper {
     public Paper() {
     }
 
-    public Paper(String name, String description, PaperType type, PaperBundle bundle, Integer maxFreeAttempts,
+    public Paper(String name, String description, PaperType type, List<PaperBundle> bundles, Integer maxFreeAttempts,
             Integer totalMarks) {
         this.name = name;
         this.description = description;
         this.type = type;
-        this.bundle = bundle;
+        this.bundles = bundles != null ? bundles : new ArrayList<>();
         this.maxFreeAttempts = maxFreeAttempts != null ? maxFreeAttempts : 2;
         this.totalMarks = totalMarks;
     }
@@ -93,12 +100,12 @@ public class Paper {
         this.description = description;
     }
 
-    public PaperBundle getBundle() {
-        return bundle;
+    public List<PaperBundle> getBundles() {
+        return bundles;
     }
 
-    public void setBundle(PaperBundle bundle) {
-        this.bundle = bundle;
+    public void setBundles(List<PaperBundle> bundles) {
+        this.bundles = bundles;
     }
 
     public Subject getSubject() {
@@ -131,6 +138,14 @@ public class Paper {
 
     public void setTotalMarks(Integer totalMarks) {
         this.totalMarks = totalMarks;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
     public User getCreatedBy() {

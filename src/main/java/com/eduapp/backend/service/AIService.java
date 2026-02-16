@@ -84,8 +84,8 @@ public class AIService {
             }
             return "";
         } catch (Exception e) {
-            logger.error("Failed to extract text from image: {}", e.getMessage());
-            return ""; // Fallback or throw
+            logger.error("Failed to extract text from image: {}", e.getMessage(), e);
+            throw new RuntimeException("AI extraction failed: " + e.getMessage(), e);
         }
     }
 

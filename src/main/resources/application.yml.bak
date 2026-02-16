@@ -27,6 +27,10 @@ jwt:
   expiration: 86400000
 
 gemini:
-  api-key: AIzaSyDPesGAM5mcODnX3OdrIETgUuRiiHrppAY
   model: gemini-2.5-flash
-  api-url: https://generativelanguage.googleapis.com/v1beta
+
+gcp:
+  project-id: markit-test-487317
+  location: asia-south1
+  credentials-path: c:/Users/Asus/OneDrive/Desktop/Eduapp/Eduapp/service-account-key.json
+

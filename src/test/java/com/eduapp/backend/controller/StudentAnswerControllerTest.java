@@ -45,6 +45,30 @@ public class StudentAnswerControllerTest {
     @MockBean
     private com.eduapp.backend.repository.UserRepository userRepository;
 
+    @MockBean
+    private com.eduapp.backend.service.AIService aiService;
+
+    @MockBean
+    private com.eduapp.backend.service.AIAnalysisService aiAnalysisService;
+
+    @MockBean
+    private com.eduapp.backend.service.QuestionService questionService;
+
+    @MockBean
+    private com.eduapp.backend.service.FileStorageService fileStorageService;
+
+    @MockBean
+    private com.eduapp.backend.service.ExtractionTrackingService extractionTrackingService;
+
+    @MockBean
+    private com.eduapp.backend.repository.StudentPaperAttemptRepository attemptRepository;
+
+    @MockBean
+    private com.eduapp.backend.repository.StudentAnswerRepository studentAnswerRepository;
+
+    @MockBean
+    private software.amazon.awssdk.services.s3.S3Client s3Client;
+
     @Test
     void getAllStudentAnswers_ReturnsOk() throws Exception {
         List<StudentAnswer> answers = List.of(new StudentAnswer());

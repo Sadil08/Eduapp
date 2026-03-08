@@ -15,13 +15,13 @@ public class QuestionModelAnswer {
     @JoinColumn(name = "question_id", nullable = false)
     private Question question;
 
-    @Column(length = 4000)
+    @Column(columnDefinition = "TEXT")
     private String answerText;
 
-    @Column(length = 500)
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
-    @Column(length = 4000)
+    @Column(columnDefinition = "TEXT")
     private String extractedText;
 
     @Column(name = "created_at")
@@ -31,7 +31,8 @@ public class QuestionModelAnswer {
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     // Constructors
-    public QuestionModelAnswer() {}
+    public QuestionModelAnswer() {
+    }
 
     public QuestionModelAnswer(Question question, String answerText) {
         this.question = question;

@@ -7,7 +7,7 @@ target/
 .env
 
 BACKEND_LEARNING_GUIDE.md
-
+.env
 ### STS ###
 .apt_generated
 .classpath

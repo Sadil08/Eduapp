@@ -23,10 +23,10 @@ public class StudentAnswer {
     @Column(length = 4000)
     private String answerText;
 
-    @Column(length = 4000)
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
-    @Column(length = 4000)
+    @Column(columnDefinition = "TEXT")
     private String extractedText;
 
     @Column(name = "extraction_confidence")
@@ -42,14 +42,14 @@ public class StudentAnswer {
     @Column
     private Integer marksAwarded;
 
-    @Column(length = 4000)
+    @Column(columnDefinition = "TEXT")
     private String aiFeedback;
 
     @Column(name = "upload_count")
     private Integer uploadCount = 0;
 
     @Column(name = "is_draft", nullable = false)
-    private Boolean isDraft = true;  // true for drafts, false for final submission
+    private Boolean isDraft = true; // true for drafts, false for final submission
 
     public static final int MAX_UPLOADS_PER_QUESTION = 2;
 

@@ -2,57 +2,38 @@ package com.eduapp.backend.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.net.URI;
 
 /**
- * Controller for serving uploaded files
+ * Backward-compatibility controller for legacy /api/files/ URLs.
+ * Redirects to the corresponding Supabase Storage public URL.
+ * 
+ * New uploads store full Supabase URLs directly, so this controller
+ * is only needed for old database records that reference /api/files/... paths.
  */
 @RestController
 @RequestMapping("/api/files")
 public class FileController {
 
     private static final Logger logger = LoggerFactory.getLogger(FileController.class);
-    private static final String UPLOAD_DIR = "uploads/";
+
+    @Value("${supabase.storage.public-url}")
+    private String publicUrl;
 
     @GetMapping("/{category}/{filename:.+}")
-    public ResponseEntity<Resource> serveFile(
-        @PathVariable String category,
-        @PathVariable String filename
-    ) {
-        try {
-            Path filePath = Paths.get(UPLOAD_DIR + category + "/" + filename);
-            Resource resource = new UrlResource(filePath.toUri());
+    public ResponseEntity<Void> serveFile(
+            @PathVariable String category,
+            @PathVariable String filename) {
+        String redirectUrl = publicUrl + "/" + category + "/" + filename;
+        logger.info("Redirecting legacy file request to Supabase: {}", redirectUrl);
 
-            if (resource.exists() && resource.isReadable()) {
-                // Determine content type
-                String contentType = "application/octet-stream";
-                if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) {
-                    contentType = "image/jpeg";
-                } else if (filename.endsWith(".png")) {
-                    contentType = "image/png";
-                } else if (filename.endsWith(".heic")) {
-                    contentType = "image/heic";
-                }
-
-                return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
-                    .body(resource);
-            } else {
-                logger.warn("File not found or not readable: {}", filePath);
-                return ResponseEntity.notFound().build();
-            }
-        } catch (Exception e) {
-            logger.error("Error serving file: {}", e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(redirectUrl))
+                .build();
     }
 }

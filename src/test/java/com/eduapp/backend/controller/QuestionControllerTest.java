@@ -45,6 +45,18 @@ public class QuestionControllerTest {
     @MockBean
     private com.eduapp.backend.repository.UserRepository userRepository;
 
+    @MockBean
+    private com.eduapp.backend.service.AIService aiService;
+
+    @MockBean
+    private com.eduapp.backend.service.FileStorageService fileStorageService;
+
+    @MockBean
+    private com.eduapp.backend.service.QuestionModelAnswerService modelAnswerService;
+
+    @MockBean
+    private software.amazon.awssdk.services.s3.S3Client s3Client;
+
     @Test
     void getAllQuestions_ReturnsOk() throws Exception {
         List<Question> questions = List.of(new Question());

@@ -19,16 +19,16 @@ public class Question {
     @JsonIgnore
     private Paper paper;
 
-    @Column(length = 4000, nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
 
-    @Column(length = 4000)
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
-    @Column(name = "model_answer_image_url", length = 4000)
+    @Column(name = "model_answer_image_url", columnDefinition = "TEXT")
     private String modelAnswerImageUrl;
 
-    @Column(length = 4000)
+    @Column(columnDefinition = "TEXT")
     private String extractedText;
 
     @Column(name = "requires_image_display")
@@ -50,7 +50,7 @@ public class Question {
     @Column(nullable = false)
     private QuestionType type;
 
-    @Column(length = 4000)
+    @Column(columnDefinition = "TEXT")
     private String correctAnswerText;
 
     @Column

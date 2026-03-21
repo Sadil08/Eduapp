@@ -85,6 +85,9 @@ public class AIAnalysisService {
             String prompt = buildPrompt(freshAttempt);
             String analysisResultJson = callGeminiApi(prompt);
 
+            // Sanitize raw control characters (e.g., unescaped newlines inside strings)
+            analysisResultJson = sanitizeControlCharacters(analysisResultJson);
+
             // Sanitize the JSON response to handle LaTeX backslashes
             // The AI sometimes uses LaTeX like \frac, \left, etc. which break JSON parsing
             // because \f, \l, etc. are invalid escape sequences
@@ -244,21 +247,24 @@ public class AIAnalysisService {
                         - 'questions': Array of {questionId, marksAwarded, feedback}
                           - **MUST include ALL questions from the paper - answered, partially answered, AND unanswered**
                           - marksAwarded: integer between 0 and the maximum marks for that question
-                          - feedback: DETAILED teacher-like explanation that includes:
-                            * Marks breakdown referencing the marking scheme
-                            * For correct answers: Acknowledge the good work and reinforce the concepts
-                            * For incorrect/partial answers: Clear explanation of mistakes, what was missing, and the correct approach
-                            * **For unanswered questions (MANDATORY): Provide a COMPLETE step-by-step solution showing HOW to solve the question using the marking scheme. This is educational - teach the student as if you are their tutor.**
-                            * Even for 0-mark answers, provide educational value
+                          - feedback: A clear, well-structured explanation (4-8 sentences) that includes:
+                            * Marks breakdown referencing the marking scheme criteria
+                            * For correct answers: Acknowledge the good work briefly
+                            * For incorrect/partial answers: Explain what was wrong, what was missing, and the correct approach
+                            * For unanswered questions: Provide a brief step-by-step outline of HOW to solve it (key steps, not full working)
                             * Encouraging but honest tone
-                            **IMPORTANT: Write feedback in PLAIN TEXT only. Do NOT use LaTeX syntax.
-                            Instead of LaTeX like backslash-frac, backslash-cosh, use readable text like "3/4", "cosh(1)", "x^2", etc.**
-                        - 'overallFeedback': string with:
-                          * Summary of performance (mention how many questions were attempted vs total)
-                          * Key areas where the student needs to improve
-                          * Specific study recommendations
-                          * Encouraging closing message
-                          (in plain text, no LaTeX)
+                            **FORMATTING RULES for feedback strings:**
+                            - Use markdown formatting: **bold** for key terms, bullet points with - for lists
+                            - For math expressions, use backtick notation: `x^2 + y^2 = 17`, `z = 1 - 4i`, `(x-5)^2`
+                            - Use fractions as `a/b`, exponents as `x^n`, square roots as `sqrt(x)`
+                            - Do NOT use LaTeX syntax (no backslash-frac, backslash-left, etc.)
+                            - Use `\n` for line breaks between sections
+                        - 'overallFeedback': string (4-6 sentences) with:
+                          * Summary of performance (questions attempted vs total)
+                          * Key areas needing improvement
+                          * One specific study recommendation
+                          * Encouraging closing sentence
+                          (Use markdown formatting, no LaTeX)
                         - 'totalMarks': integer (sum of all marksAwarded across ALL questions)
 
                         **PAPER TO MARK:**
@@ -489,9 +495,11 @@ public class AIAnalysisService {
                     continue;
                 }
 
-                // Non-letter after backslash - keep as is
-                result.append(c);
-                i++;
+                // Any other non-letter character after backslash (e.g. \*, \{, \}, \(, \+)
+                // These are not valid JSON escapes - escape the backslash itself
+                result.append("\\\\");
+                result.append(next);
+                i += 2;
             } else {
                 result.append(c);
                 i++;
@@ -501,6 +509,71 @@ public class AIAnalysisService {
         String sanitized = result.toString();
         if (!sanitized.equals(json)) {
             logger.info("Sanitized JSON: escaped LaTeX-style backslashes ({} chars added)",
+                    (sanitized.length() - json.length()));
+        }
+        return sanitized;
+    }
+
+    /**
+     * Sanitize raw control characters in JSON string values.
+     * The AI sometimes returns raw newlines (code 10), tabs, etc. inside JSON
+     * string values
+     * which are illegal in JSON (must be escaped as \n, \t, etc.).
+     * This method replaces raw control chars with their escaped equivalents.
+     */
+    private String sanitizeControlCharacters(String json) {
+        if (json == null)
+            return null;
+
+        StringBuilder result = new StringBuilder();
+        boolean insideString = false;
+        boolean escaped = false;
+
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+
+            if (escaped) {
+                result.append(c);
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\' && insideString) {
+                result.append(c);
+                escaped = true;
+                continue;
+            }
+
+            if (c == '"') {
+                insideString = !insideString;
+                result.append(c);
+                continue;
+            }
+
+            // Only sanitize control chars inside JSON string values
+            if (insideString && c < 0x20) {
+                switch (c) {
+                    case '\n':
+                        result.append("\\n");
+                        break;
+                    case '\r':
+                        result.append("\\r");
+                        break;
+                    case '\t':
+                        result.append("\\t");
+                        break;
+                    default:
+                        result.append(" ");
+                        break; // Replace other control chars with space
+                }
+            } else {
+                result.append(c);
+            }
+        }
+
+        String sanitized = result.toString();
+        if (!sanitized.equals(json)) {
+            logger.info("Sanitized JSON: escaped {} raw control characters",
                     (sanitized.length() - json.length()));
         }
         return sanitized;

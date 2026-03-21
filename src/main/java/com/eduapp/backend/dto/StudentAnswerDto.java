@@ -28,6 +28,7 @@ public class StudentAnswerDto {
     private String correctAnswerText; // Correct answer for essay/text questions
     private Long correctOptionId; // ID of correct option for MCQ questions
     private String correctOptionText; // Text of correct option for MCQ questions
+    private String correctAnswerImageUrl; // Image URL for the model answer
 
     public StudentAnswerDto() {
     }
@@ -194,6 +195,14 @@ public class StudentAnswerDto {
 
     public void setExtractionConfidence(Float extractionConfidence) {
         this.extractionConfidence = extractionConfidence;
+    }
+
+    public String getCorrectAnswerImageUrl() {
+        return correctAnswerImageUrl;
+    }
+
+    public void setCorrectAnswerImageUrl(String correctAnswerImageUrl) {
+        this.correctAnswerImageUrl = correctAnswerImageUrl;
     }
 
 }

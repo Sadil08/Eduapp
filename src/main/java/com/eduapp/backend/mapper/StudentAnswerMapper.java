@@ -21,6 +21,7 @@ public interface StudentAnswerMapper {
     @Mapping(source = "selectedOption.id", target = "selectedOptionId")
     @Mapping(source = "selectedOption.text", target = "selectedOptionText")
     @Mapping(source = "question.correctAnswerText", target = "correctAnswerText")
+    @Mapping(source = "question.modelAnswerImageUrl", target = "correctAnswerImageUrl")
     @Mapping(source = "imageUrl", target = "imageUrl")
     @Mapping(source = "extractedText", target = "extractedText")
     @Mapping(source = "extractionConfidence", target = "extractionConfidence")

@@ -57,7 +57,7 @@ public class ExtraAttemptController {
     @PostMapping("/purchase")
     public ResponseEntity<ExtraAttemptPurchaseDto> purchaseExtraAttempts(
             @PathVariable Long paperId,
-            @RequestParam Long bundleId,
+            @RequestParam(required = false) Long bundleId,
             @RequestBody PurchaseExtraAttemptsRequest request,
             @RequestHeader("Authorization") String authHeader) {
 
@@ -70,8 +70,11 @@ public class ExtraAttemptController {
         Paper paper = paperRepository.findById(paperId)
                 .orElseThrow(() -> new IllegalArgumentException("Paper not found"));
 
-        PaperBundle bundle = paperBundleRepository.findById(bundleId)
-                .orElseThrow(() -> new IllegalArgumentException("Bundle not found"));
+        PaperBundle bundle = null;
+        if (bundleId != null) {
+            bundle = paperBundleRepository.findById(bundleId)
+                    .orElseThrow(() -> new IllegalArgumentException("Bundle not found"));
+        }
 
         BigDecimal pricePerAttempt = new BigDecimal("5.00");
         BigDecimal totalPrice = pricePerAttempt.multiply(new BigDecimal(request.getAttemptsCount()));

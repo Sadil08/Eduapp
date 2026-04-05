@@ -83,6 +83,42 @@ public class FileStorageService {
     }
 
     /**
+     * Store raw bytes (e.g., decoded base64 images) to Supabase Storage.
+     *
+     * @param bytes       The raw bytes to store
+     * @param contentType MIME type (e.g., "image/png")
+     * @param category    Category folder: 'questions', 'model-answers', etc.
+     * @return The full public URL to access the stored file
+     */
+    public String storeBytes(byte[] bytes, String contentType, String category) {
+        if (bytes == null || bytes.length == 0) {
+            throw new IllegalArgumentException("Cannot store empty bytes");
+        }
+
+        String extension = ".png";
+        if ("image/jpeg".equals(contentType))
+            extension = ".jpg";
+        else if ("image/webp".equals(contentType))
+            extension = ".webp";
+
+        String filename = UUID.randomUUID().toString() + extension;
+        String objectKey = category + "/" + filename;
+
+        PutObjectRequest putRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(objectKey)
+                .contentType(contentType)
+                .build();
+
+        s3Client.putObject(putRequest, RequestBody.fromBytes(bytes));
+
+        String fileUrl = publicUrl + "/" + objectKey;
+        logger.info("Successfully stored bytes to Supabase: {} ({} bytes)", fileUrl, bytes.length);
+
+        return fileUrl;
+    }
+
+    /**
      * Delete a file from Supabase Storage given its URL.
      */
     public void deleteFile(String fileUrl) {

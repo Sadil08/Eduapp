@@ -26,7 +26,7 @@ import java.util.Collections;
 public class AIService {
 
     private static final Logger logger = LoggerFactory.getLogger(AIService.class);
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @org.springframework.beans.factory.annotation.Value("${ai.service.url:http://localhost:8000}")
     private String aiServiceUrl;
@@ -174,10 +174,96 @@ public class AIService {
         }
     }
 
+    /**
+     * Import questions from PDF files by sending them to the AI extraction service.
+     * Supports a question paper PDF and an optional answer/mark scheme PDF.
+     *
+     * @param questionPaper The question paper PDF file
+     * @param answerPaper   Optional answer/mark scheme PDF file
+     * @param subject       Optional subject name for context
+     * @param lesson        Optional lesson name for context
+     * @param paperType     Paper type: MCQ, ESSAY, or MIXED
+     * @param defaultMarks  Default marks per question if not detected
+     * @return Raw response map from the AI service containing parsed questions
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> importFromPdf(
+            MultipartFile questionPaper,
+            MultipartFile answerPaper,
+            String subject,
+            String lesson,
+            String paperType,
+            Integer defaultMarks) {
+
+        try {
+            logger.info("Sending PDF(s) to AI service for paper extraction (subject: {}, paperType: {})",
+                    subject, paperType);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+
+            // Add question paper
+            body.add("questionPaper", new ByteArrayResource(questionPaper.getBytes()) {
+                @Override
+                public String getFilename() {
+                    return questionPaper.getOriginalFilename();
+                }
+            });
+
+            // Add answer paper if provided
+            if (answerPaper != null && !answerPaper.isEmpty()) {
+                body.add("answerPaper", new ByteArrayResource(answerPaper.getBytes()) {
+                    @Override
+                    public String getFilename() {
+                        return answerPaper.getOriginalFilename();
+                    }
+                });
+            }
+
+            // Add optional parameters
+            if (subject != null && !subject.isEmpty()) {
+                body.add("subject", subject);
+            }
+            if (lesson != null && !lesson.isEmpty()) {
+                body.add("lesson", lesson);
+            }
+            if (paperType != null && !paperType.isEmpty()) {
+                body.add("paperType", paperType);
+            }
+            if (defaultMarks != null) {
+                body.add("defaultMarks", defaultMarks.toString());
+            }
+
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    aiServiceUrl + "/extract-paper",
+                    requestEntity,
+                    Map.class);
+
+            if (response.getBody() != null) {
+                logger.info("Paper extraction completed successfully");
+                return (Map<String, Object>) response.getBody();
+            }
+
+            return Map.of("questions", Collections.emptyList(), "totalQuestions", 0);
+        } catch (Exception e) {
+            logger.error("Failed to import from PDF: {}", e.getMessage(), e);
+            throw new RuntimeException("PDF import failed: " + e.getMessage(), e);
+        }
+    }
+
     private final QuestionModelAnswerService modelAnswerService;
 
     public AIService(QuestionModelAnswerService modelAnswerService) {
         this.modelAnswerService = modelAnswerService;
+        // Configure RestTemplate for large responses (base64 images can be 20-30MB)
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(java.time.Duration.ofMinutes(5));
+        factory.setReadTimeout(java.time.Duration.ofMinutes(5));
+        this.restTemplate = new RestTemplate(factory);
     }
 
     public Map<String, Object> analyzeAnswer(StudentAnswer answer) {

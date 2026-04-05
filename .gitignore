@@ -16,7 +16,7 @@ BACKEND_LEARNING_GUIDE.md
 .settings
 .springBeans
 .sts4-cache
-
+db_dump.txt
 ### IntelliJ IDEA ###
 .idea
 *.iws

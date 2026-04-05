@@ -141,6 +141,62 @@ public class QuestionController {
         }
     }
 
+    /**
+     * Import questions from PDF files.
+     * Sends the PDF(s) to AI for structured extraction, stores page images,
+     * and returns parsed questions with image URLs for admin review.
+     * Does NOT save questions - returns data for admin review first.
+     */
+    @PostMapping("/import-from-pdf")
+    public ResponseEntity<java.util.Map<String, Object>> importFromPdf(
+            @RequestParam("questionPaper") org.springframework.web.multipart.MultipartFile questionPaper,
+            @RequestParam(value = "answerPaper", required = false) org.springframework.web.multipart.MultipartFile answerPaper,
+            @RequestParam(value = "subject", required = false) String subject,
+            @RequestParam(value = "lesson", required = false) String lesson,
+            @RequestParam(value = "paperType", required = false, defaultValue = "MIXED") String paperType,
+            @RequestParam(value = "defaultMarks", required = false, defaultValue = "1") Integer defaultMarks) {
+        try {
+            logger.info("Received PDF import request (subject: {}, paperType: {}, hasAnswerPaper: {})",
+                    subject, paperType, answerPaper != null && !answerPaper.isEmpty());
+
+            java.util.Map<String, Object> result = aiService.importFromPdf(
+                    questionPaper, answerPaper, subject, lesson, paperType, defaultMarks);
+
+            logger.info("AI response keys: {}", result.keySet());
+            logger.info("questionImages present: {}, type: {}",
+                    result.get("questionImages") != null,
+                    result.get("questionImages") != null ? result.get("questionImages").getClass().getName() : "null");
+
+            // Store question images (1:1 with questions - already stitched by AI service)
+            @SuppressWarnings("unchecked")
+            java.util.List<String> questionImagesB64 = (java.util.List<String>) result.get("questionImages");
+            if (questionImagesB64 != null && !questionImagesB64.isEmpty()) {
+                java.util.List<String> questionImageUrls = new java.util.ArrayList<>();
+                for (int i = 0; i < questionImagesB64.size(); i++) {
+                    try {
+                        byte[] imageBytes = java.util.Base64.getDecoder().decode(questionImagesB64.get(i));
+                        String url = fileStorageService.storeBytes(imageBytes, "image/png", "questions");
+                        questionImageUrls.add(url);
+                        logger.info("Stored Q{} image: {}", i + 1, url);
+                    } catch (Exception e) {
+                        logger.error("Failed to store Q{} image: {}", i + 1, e.getMessage());
+                        questionImageUrls.add(null);
+                    }
+                }
+                // Replace base64 with URLs in the result
+                java.util.Map<String, Object> mutableResult = new java.util.HashMap<>(result);
+                mutableResult.put("questionImages", questionImageUrls);
+                return ResponseEntity.ok(mutableResult);
+            }
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Failed to import from PDF: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping
     public ResponseEntity<List<QuestionDto>> getAllQuestions() {
         logger.info("Received request to get all questions");

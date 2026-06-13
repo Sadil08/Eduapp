@@ -11,6 +11,7 @@ import java.util.Optional;
  * query is filtered by the current tenant. (ArchUnit rule in WP-4.4 forbids raw
  * {@code findAll()} on tenant-scoped repositories.)
  */
+@TenantScoped
 public interface SchoolClassRepository extends JpaRepository<SchoolClass, Long> {
 
     List<SchoolClass> findBySchoolId(Long schoolId);

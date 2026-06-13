@@ -14,9 +14,9 @@
 
 - [x] 0.1 Confirm clean baseline: `./mvnw -o compile` succeeds. **Test:** compile green. ✅ 2026-06-13
 - [x] 0.3 (partial) Test harness boots: added `src/test/resources/application.properties` (FRONTEND_URL, JWT_SECRET, hermetic slice config); repaired the 2 pre-existing `@WebMvcTest` characterization tests (were failing at baseline) via `@Import(RateLimitConfig)`. **Test:** `./mvnw clean test` → 20/20 green. ✅ 2026-06-13
-- [ ] 0.2 Add Testcontainers (PostgreSQL) + WireMock to `pom.xml` (test scope). **Test:** `./mvnw -o dependency:resolve` ok.
-- [ ] 0.3 Create `AbstractIntegrationTest` base (`@SpringBootTest` + Testcontainers Postgres, Flyway on). **Test:** an empty integration test boots the context green.
-- [ ] 0.4 Write characterization tests for consumer happy path (register→login→bundle→attempt→submit, AI mocked via WireMock). **Test:** suite green; documents current behaviour.
+- [~] 0.2 (adapted) No Docker in this env → Testcontainers not usable. Instead: scratch `eduapp_test` DB on local Postgres + `maven-failsafe-plugin` wired so `mvn verify` runs `*IT`. WireMock for AI still TODO. ✅ 2026-06-13
+- [x] 0.3 Create `AbstractIntegrationTest` base (`@SpringBootTest`, real Postgres `eduapp_test`, real Redis; DB name forced + creds read from `.env`). **Test:** `ContextLoadsIT` boots full context green. ✅ 2026-06-13
+- [~] 0.4 (partial) Characterization/security ITs: `AuthSecurityIT` (register-role-downgrade over HTTP, anonymous admin/ai endpoints 403, no password leak) ✅. Full consumer happy-path (bundle→attempt→submit, AI via WireMock) still TODO.
 - [ ] 0.5 Add GitHub Actions CI running `./mvnw verify`. **Test:** workflow green on push; a temp deliberate failure turns it red, then revert.
 
 ## WP-1 — 🚨 Security Hardening (do before privileged roles)
@@ -121,4 +121,5 @@
 - 2026-06-13 — WP-3.1 Role enum extended (SCHOOL_ADMIN, TEACHER, SCHOOL_STUDENT); WP-3.2 `UserDetailsAuthorityTest` (5).
 - 2026-06-13 — WP-S.1 removed duplicate @EnableAsync; S.2 async pool resized (20/100/500 + CallerRunsPolicy); S.3 verified AsyncUncaughtExceptionHandler.
 - 2026-06-13 — Test harness: `src/test/resources/application.properties` + repaired 2 pre-existing broken @WebMvcTest classes. **Full suite: 25/25 green.**
-- ⏭ NEXT (needs running Postgres + Redis): WP-2 Flyway cutover → WP-4 tenant core → WP-5+ school features.
+- 2026-06-13 — Integration harness: scratch `eduapp_test` DB + `AbstractIntegrationTest` + failsafe; `AuthSecurityIT` proves register-role-downgrade over real HTTP + anonymous admin/ai endpoints rejected + no password leak. **`mvn verify` = 30/30 green (25 surefire + 5 failsafe).**
+- ⏭ NEXT: WP-2 Flyway cutover (needs schema baseline from `eduapp_db` via pg_dump) → WP-4 tenant core → WP-5+ school features.

@@ -191,6 +191,20 @@
 					</annotationProcessorPaths>
 				</configuration>
 				</plugin>
+			<!-- Failsafe runs *IT integration tests in the verify phase (against the
+			     eduapp_test scratch DB). `mvn verify` = unit/slice (surefire) + IT (failsafe). -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 

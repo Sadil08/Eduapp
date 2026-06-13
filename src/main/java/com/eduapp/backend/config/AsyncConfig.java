@@ -20,10 +20,15 @@ public class AsyncConfig implements AsyncConfigurer {
     @Override
     public Executor getAsyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(5);
-        executor.setQueueCapacity(100);
+        // Sized for I/O-bound AI calls (slow, hundreds of ms to seconds). The previous
+        // core=2/max=5/queue=100 saturated at ~5 concurrent users and rejected past 105
+        // in-flight tasks (specs/scalability.md CRITICAL). These are tunable via env.
+        executor.setCorePoolSize(20);
+        executor.setMaxPoolSize(100);
+        executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("async-ai-");
+        // Backpressure instead of silent drops: run on the caller thread when saturated.
+        executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
     }

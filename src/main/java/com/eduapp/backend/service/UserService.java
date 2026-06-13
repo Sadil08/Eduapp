@@ -97,11 +97,11 @@ public class UserService implements UserDetailsService {
                 user.setPassword(passwordEncoder.encode(req.getPassword()));
                 user.setUsername(req.getName());
 
-                if (req.getRole() != null) {
-                        user.setRole(req.getRole());
-                } else {
-                        user.setRole(Role.STUDENT);
-                }
+                // SECURITY: public self-registration must NEVER honour a client-supplied role.
+                // Privileged roles (ADMIN, SCHOOL_ADMIN, TEACHER) are created only via
+                // authenticated, role-gated admin/invite flows. Any role in the request body
+                // is ignored here — a public registrant is always a STUDENT.
+                user.setRole(Role.STUDENT);
 
                 // Handle Lifetime Attribution at Signup
                 String referralCode = req.getReferralCode();

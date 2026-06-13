@@ -5,6 +5,7 @@ import com.eduapp.backend.service.AIAnalysisService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +13,9 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/ai-analyses")
+// SECURITY: this endpoint is NOT under /api/admin/** so it would otherwise be
+// reachable by ANY authenticated user. Listing all analyses is admin-only.
+@PreAuthorize("hasRole('ADMIN')")
 public class AIAnalysisController {
 
     private static final Logger logger = LoggerFactory.getLogger(AIAnalysisController.class);

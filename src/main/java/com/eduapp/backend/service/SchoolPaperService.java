@@ -117,6 +117,14 @@ public class SchoolPaperService {
         return paperRepository.save(paper);
     }
 
+    /** Teacher releases results so students can see their marks (WP-7). */
+    @Transactional
+    public SchoolPaper releaseResults(Long paperId) {
+        SchoolPaper paper = requireOwnedPaper(paperId);
+        paper.setResultsReleased(true);
+        return paperRepository.save(paper);
+    }
+
     /** Papers a student in {@code classId} may see: ASSIGNED only (drafts/approved are hidden). */
     @Transactional(readOnly = true)
     public List<SchoolPaper> listAssignedForClass(Long classId) {

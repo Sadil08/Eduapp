@@ -69,4 +69,9 @@ public class SchoolPaperController {
         return ResponseEntity.ok(SchoolPaperDto.from(paperService.assignToClass(
                 id, req.getClassId(), req.getExamWindowStart(), req.getExamWindowEnd(), req.getTimeLimitMinutes())));
     }
+
+    @PostMapping("/{id}/release-results")
+    public ResponseEntity<SchoolPaperDto> releaseResults(@PathVariable Long id) {
+        return ResponseEntity.ok(SchoolPaperDto.from(paperService.releaseResults(id)));
+    }
 }

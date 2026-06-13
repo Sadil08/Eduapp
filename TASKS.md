@@ -28,7 +28,7 @@
 - [x] 1.5 Guard `AIAnalysisController` — ADMIN or per-owner check `(SEC-3)`. **Test:** anonymous → 403; non-owner student → 403.
 - [x] 1.6 `AdminController.createAdmin` returns DTO, never raw `User`; add `@JsonIgnore` to `User.password` `(SEC-AdminController)`. **Test:** response body contains no `password` field across endpoints.
 - [ ] 1.7 Wire/verify rate limiting on `/api/auth/**` via `RateLimitConfig` `(SEC-ratelimit)`. **Test:** 11th login/min → 429.
-- [~] 1.8 Set `server.error.include-stacktrace=never` (DONE) + global `@RestControllerAdvice` returning sanitized errors (PENDING — defer until integration tests exist so we don't change error contracts blind) `(SEC-stacktrace, NFR)`. **Test:** forced error returns no stack trace/internal path.
+- [~] 1.8 `server.error.include-stacktrace=never` (DONE) + `GlobalExceptionHandler` now maps `AccessDeniedException`→403 and `AuthenticationException`→401 (DONE — fixed a real bug where method `@PreAuthorize` denials returned 400). Remaining: stop leaking `ex.getMessage()` in the generic 400 handler. `(SEC-stacktrace, NFR)`. **Test:** `SchoolInviteAndEnrolmentIT` teacher→403.
 - [ ] 1.9 Bean-validation (`jakarta.validation`) on all auth/request DTOs + `@Valid` `(SEC-NFR input validation)`. **Test:** malformed register payload → 400 with field errors.
 
 ## WP-2 — Migration Discipline (Flyway cutover)
@@ -48,21 +48,21 @@
 - [x] 3.1 Extend `Role` enum → add `SCHOOL_ADMIN, TEACHER, SCHOOL_STUDENT`. **Test:** persistence round-trip per role.
 - [x] 3.2 Verify `UserDetailsService` maps all five roles → `ROLE_*` authorities. **Test:** parameterised authority test per role. ✅ `UserDetailsAuthorityTest` (5/5)
 - [x] 3.3 `SecurityConfig`: add `/api/school/**`, `/api/teacher/**`, `/api/analytics/global/**` rules above `anyRequest`. **Test:** `TenantIsolationIT` global student → 403 on /api/school/**. ✅ 2026-06-13
-- [ ] 3.4 Invite/`SchoolInvite` token model + accept flow; privileged users only via authenticated invite/admin. **Test:** no public path mints SCHOOL_ADMIN/TEACHER.
+- [x] 3.4 `SchoolInvite` token model + accept flow; TEACHER minted only via single-use/expiring invite (SCHOOL_ADMIN creates, token-gated public accept). **Test:** `SchoolInviteAndEnrolmentIT` accept→TEACHER; teacher can't create invites (403); public register still STUDENT. ✅ 2026-06-13
 
 ## WP-4 — Tenant Core & Automatic Isolation
 
 - [x] 4.1 `School` entity (+ `SchoolPlanTier`/`SchoolStatus`); nullable `school_id` FK on `users` (created via ddl-auto for now; Flyway migration is part of deferred WP-2 cutover). **Test:** `ContextLoadsIT` + isolation IT seed schools. ✅ 2026-06-13
 - [x] 4.2 `TenantContext` (ThreadLocal) + `TenantFilter` (after JWT filter, resolves school from DB), clears in `finally`. **Test:** isolation IT relies on per-request tenant resolution. ✅ 2026-06-13
 - [~] 4.3 Isolation enforced: `SchoolClass` is tenant-scoped; service derives `school_id` from `TenantContext` (never client-supplied); `@FilterDef`/`@Filter` declared on the entity (auto-enable wiring is a follow-up). **Test:** `TenantIsolationIT` — A can't list/fetch B's classes (HTTP). ✅ 2026-06-13
-- [ ] 4.4 ArchUnit test banning raw `findAll()` on tenant-scoped repos (needs ArchUnit dep). **Test:** ArchUnit green; violation fails build.
+- [x] 4.4 ArchUnit rule bans no-arg `findAll()` on `@TenantScoped` repos (`TenantArchitectureTest`). **Test:** passes clean; verified it FAILS on an injected `findAll()` call. ✅ 2026-06-13
 - [~] 4.5 Thread-leak guard: `TenantFilter` clears context in `finally`; interleaved IT requests pass. Dedicated concurrency stress test still TODO. 
 
 ## WP-5 — Class Management & Enrolment
 
-- [~] 5.1 `SchoolClass` entity done (tenant-scoped, unique class_code). `SchoolEnrolment` + Flyway migration TODO. **Test:** isolation IT. ✅(partial) 2026-06-13
-- [~] 5.2 `/api/school/classes` GET list / GET {id} / POST create done, scoped by `TenantContext`, `@PreAuthorize` SCHOOL_ADMIN/TEACHER. Teacher invite TODO. **Test:** `TenantIsolationIT`. ✅(partial) 2026-06-13
-- [ ] 5.3 Class-code self-enrolment mints `SCHOOL_STUDENT`. **Test:** cross-school class code rejected.
+- [x] 5.1 `SchoolClass` + `SchoolEnrolment` entities (tenant-scoped, unique class_code, unique class+student). Flyway migration deferred to WP-2 cutover. **Test:** isolation + enrolment ITs. ✅ 2026-06-13
+- [x] 5.2 `/api/school/classes` (list/get/create) + `/api/school/invites` (create/list, SCHOOL_ADMIN) + `/api/school/classes/{id}/roster` (teacher), all tenant-scoped. **Test:** `TenantIsolationIT`, `SchoolInviteAndEnrolmentIT`. ✅ 2026-06-13
+- [x] 5.3 Class-code self-enrolment (`/api/enrolments/join`) mints `SCHOOL_STUDENT` + binds to school. **Test:** global student → SCHOOL_STUDENT; student of A rejected from B's code. ✅ 2026-06-13
 
 ## WP-6 — School Papers (reuse extraction + marking)
 
@@ -129,4 +129,6 @@
 - 2026-06-13 — Integration harness: scratch `eduapp_test` DB + `AbstractIntegrationTest` + failsafe; `AuthSecurityIT` proves register-role-downgrade over real HTTP + anonymous admin/ai endpoints rejected + no password leak. **`mvn verify` = 30/30 green (25 surefire + 5 failsafe).**
 - 2026-06-13 — WP-2.0 fixed Flyway repo/DB drift: recovered V6–V16 scripts (were deleted in `95def15`) so repo matches `eduapp_db`. `mvn verify` 30/30 green.
 - 2026-06-13 — WP-3.3 + WP-4 tenant core: `School`/`SchoolClass` entities, `users.school_id`, `TenantContext`+`TenantFilter`, `/api/school/classes` (tenant-scoped), SecurityConfig school routes. `TenantIsolationIT` proves school A can't see school B (list + by-id) and global student blocked. **`mvn verify` = 33/33 green (25 + 8 IT).**
-- ⏭ NEXT (needs review — affects real-DB migration strategy): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate (HIGH RISK, validate on scratch DB first) → WP-4 tenant core → WP-5+ school features.
+- 2026-06-13 — WP-4.4 ArchUnit: added `archunit-junit5`; `@TenantScoped` marker + rule banning no-arg `findAll()` on tenant repos; verified it fails on an injected violation.
+- 2026-06-13 — WP-5: `SchoolEnrolment` + `SchoolInvite` entities; teacher invites (create/accept), class-code self-enrolment (mints SCHOOL_STUDENT, cross-school rejected), roster endpoint. Fixed real bug: `GlobalExceptionHandler` was turning `@PreAuthorize` denials into 400 → now 403/401. **`mvn verify` = 39/39 green (26 + 13 IT).**
+- ⏭ NEXT: WP-6 school papers (reuse extraction+marking) → WP-7 attempts+override → WP-8 analytics → WP-9 consent. Deferred (needs review): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate.

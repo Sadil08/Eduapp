@@ -72,9 +72,9 @@
 
 ## WP-7 — School Attempts & Teacher Override
 
-- [ ] 7.1 `SchoolPaperAttempt` entity + Flyway `V11`. **Test:** tenant-scoped.
-- [ ] 7.2 Student sit within exam window (reuse `StudentAnswer` + AI marking). **Test:** early/late submit rejected; AI mark recorded.
-- [ ] 7.3 Teacher override (mark + mandatory note + `teacher_reviewed_at`). **Test:** override persists, audited, supersedes AI in gradebook; results hidden until `results_released`.
+- [x] 7.1 `SchoolPaperAttempt` + `SchoolStudentAnswer` entities (tenant-scoped; one attempt per student/paper). Flyway deferred to WP-2. **Test:** `SchoolAttemptIT`. ✅ 2026-06-13
+- [x] 7.2 Student sits within exam window; rule-based MCQ marking (deterministic) records `aiMark` (extended answers → AI pipeline). **Test:** start before window / after close both rejected; correct MCQ → aiMark=5. ✅ 2026-06-13
+- [x] 7.3 Teacher override (mark + MANDATORY note + `teacher_reviewed_at`); `getEffectiveMark()` = override else AI; results hidden until `results_released` (teacher `release-results`). **Test:** empty note → 400; override supersedes AI (effective=8); result hidden pre-release then visible; teacher of B can't override A's attempt. ✅ 2026-06-13
 
 ## WP-8 — Cohort Analytics (school-scoped)
 
@@ -132,4 +132,5 @@
 - 2026-06-13 — WP-4.4 ArchUnit: added `archunit-junit5`; `@TenantScoped` marker + rule banning no-arg `findAll()` on tenant repos; verified it fails on an injected violation.
 - 2026-06-13 — WP-5: `SchoolEnrolment` + `SchoolInvite` entities; teacher invites (create/accept), class-code self-enrolment (mints SCHOOL_STUDENT, cross-school rejected), roster endpoint. Fixed real bug: `GlobalExceptionHandler` was turning `@PreAuthorize` denials into 400 → now 403/401. **`mvn verify` = 39/39 green (26 + 13 IT).**
 - 2026-06-13 — WP-6 school papers: `SchoolPaper` (DRAFT→APPROVED→ASSIGNED), `Question.paper` made optional + `school_paper_id` so school questions reuse the marking pipeline; lifecycle endpoints + student-visibility (ASSIGNED only) + exam window. **`mvn verify` = 44/44 green (26 + 18 IT).**
-- ⏭ NEXT: WP-7 attempts + teacher override → WP-8 analytics → WP-9 consent. Deferred (needs review): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate.
+- 2026-06-13 — WP-7 attempts + override: `SchoolPaperAttempt`/`SchoolStudentAnswer`; exam-window enforcement, deterministic MCQ marking (aiMark), teacher override w/ mandatory note (supersedes AI), results gated by `results_released`. **`mvn verify` = 49/49 green (26 + 23 IT).**
+- ⏭ NEXT: WP-8 analytics (cohort, tenant-scoped, cached) → WP-9 consent + Cambridge aggregate API (50-cohort floor). Deferred (needs review): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate.

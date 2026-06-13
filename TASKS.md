@@ -84,10 +84,10 @@
 
 ## WP-9 — Consent & Cambridge Aggregate API
 
-- [ ] 9.1 `StudentConsentRecord` entity + Flyway `V12`; layered consent at registration (req/optional/age gate). **Test:** consent persisted; age <16 requires parental consent.
-- [ ] 9.2 `/api/analytics/global/**` (ADMIN) returns aggregated anonymised JSON only, filtered on `analytics_sharing_consented`. **Test:** non-consented excluded; no PII/raw rows.
-- [ ] 9.3 Hard minimum cohort size 50 guard. **Test:** boundary 49 suppressed / 50 allowed / 51 allowed.
-- [ ] 9.4 School-tier data never present in global export. **Test:** explicit exclusion assertion.
+- [x] 9.1 `StudentConsentRecord` entity (layered: analytics/leaderboard/research + age gate); `/api/consent` records choices; under-16 requires parental consent. Flyway deferred to WP-2. **Test:** consent persisted; under-16 w/o parental → rejected, with → accepted. ✅ 2026-06-13
+- [x] 9.2 `/api/analytics/global/**` (ADMIN) returns aggregate-only DTO, filtered on `analytics_sharing_consented` (subquery). **Test:** non-consenting excluded (cohort/avg unaffected); only aggregate numbers returned. ✅ 2026-06-13
+- [x] 9.3 Hard minimum cohort size 50 guard (`GlobalAnalyticsService.MINIMUM_COHORT_SIZE`). **Test:** 49 → suppressed (stats null); 50 → released with correct avg. ✅ 2026-06-13
+- [x] 9.4 School-tier data never in global export (`school IS NULL` in the source query). **Test:** consenting school-tier student with a score is excluded from the cohort. ✅ 2026-06-13
 
 ## WP-S — Spec-Debt Cleanup (closes ALL remaining flagged items)
 
@@ -134,4 +134,6 @@
 - 2026-06-13 — WP-6 school papers: `SchoolPaper` (DRAFT→APPROVED→ASSIGNED), `Question.paper` made optional + `school_paper_id` so school questions reuse the marking pipeline; lifecycle endpoints + student-visibility (ASSIGNED only) + exam window. **`mvn verify` = 44/44 green (26 + 18 IT).**
 - 2026-06-13 — WP-7 attempts + override: `SchoolPaperAttempt`/`SchoolStudentAnswer`; exam-window enforcement, deterministic MCQ marking (aiMark), teacher override w/ mandatory note (supersedes AI), results gated by `results_released`. **`mvn verify` = 49/49 green (26 + 23 IT).**
 - 2026-06-13 — WP-8 cohort analytics: `/api/school/analytics` paper summary (effective-mark avg/high/low + distribution) + per-question analysis; tenant-scoped, bounded, `@Cacheable` tenant-keyed. **`mvn verify` = 52/52 green (26 + 26 IT).**
-- ⏭ NEXT: WP-9 consent + Cambridge aggregate API (50-cohort floor). Deferred (needs review): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate.
+- 2026-06-13 — WP-9 consent + Cambridge aggregate API: `StudentConsentRecord` + `/api/consent` (age gate); `/api/analytics/global` (ADMIN) consent-filtered, GLOBAL-tier-only, hard 50-cohort floor; aggregate-only output. **`mvn verify` = 58/58 green (26 + 32 IT).**
+- ✅ ALL FEATURE PACKAGES (WP-0,1,3,4,5,6,7,8,9,S + WP-2.0) COMPLETE & TESTED.
+- ⏭ REMAINING: WP-10 (load test, E2E, security re-scan, pilot sign-off) + deferred WP-2.1/2.4 (Flyway baseline + ddl-auto→validate — needs review, run on scratch DB first).

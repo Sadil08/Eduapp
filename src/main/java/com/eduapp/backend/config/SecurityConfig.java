@@ -1,6 +1,7 @@
 package com.eduapp.backend.config;
 
 import com.eduapp.backend.security.JwtAuthenticationFilter;
+import com.eduapp.backend.security.TenantFilter;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -22,12 +23,14 @@ import org.springframework.http.HttpMethod;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
+    private final TenantFilter tenantFilter;
 
     @Value("${FRONTEND_URL}")
     private String frontendUrl;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtFilter, TenantFilter tenantFilter) {
         this.jwtFilter = jwtFilter;
+        this.tenantFilter = tenantFilter;
     }
 
     @jakarta.annotation.PostConstruct
@@ -70,9 +73,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/reviews/public").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/exam-types").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // School-tier namespaces (PRODUCT_BUSINESS_PLAN.md §9.3). Per-endpoint
+                        // rules are refined with @PreAuthorize on the controllers.
+                        .requestMatchers("/api/school/**").hasAnyRole("SCHOOL_ADMIN", "TEACHER")
+                        .requestMatchers("/api/teacher/**").hasAnyRole("TEACHER", "SCHOOL_ADMIN")
+                        .requestMatchers("/api/analytics/global/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                // TenantFilter runs AFTER JwtAuthenticationFilter so the authenticated
+                // principal is available when resolving the tenant.
+                .addFilterAfter(tenantFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

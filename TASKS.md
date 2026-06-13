@@ -33,10 +33,15 @@
 
 ## WP-2 — Migration Discipline (Flyway cutover)
 
-- [ ] 2.1 Snapshot current schema as Flyway baseline `V5` (already `baseline-version=5`). **Test:** documented baseline matches a fresh-DB Hibernate build.
-- [ ] 2.2 Create `db/migration/V6__textify_columns.sql` from `DatabaseMigrationRunner` DDL (idempotent) `(SCALE-1, SEC-5, AMB-runner)`. **Test:** Flyway applies V6 once on fresh DB.
+> **DISCOVERY 2026-06-13:** `eduapp_db` already runs Flyway (baseline V0 + V6–V16 applied, 30 tables),
+> but the V6–V16 scripts were **deleted from the repo** (commit `95def15`) → repo/DB drift. Hibernate
+> `ddl-auto=update` + `DatabaseMigrationRunner` have been the de-facto mechanism since. Plan adjusted below.
+
+- [x] 2.0 **Fix repo/DB drift:** recover V6–V16 scripts from git (`dfb0c56`) into `db/migration/` so the repo matches `eduapp_db`. **Test:** `mvn verify` 30/30 green; scripts match applied history. ✅ 2026-06-13
+- [ ] 2.1 Fresh-DB baseline: generate `V5__baseline_full_schema.sql` via `pg_dump --schema-only eduapp_db`; archive V6–V16 as historical. Fresh DB builds from V5; `eduapp_db` ignores V5 (out-of-order, validate off). **Test (on scratch eduapp_test):** drop→recreate→Flyway builds 30 tables. ⚠️ NEEDS REVIEW — changes migration strategy on the real DB.
+- [ ] 2.2 Convert `DatabaseMigrationRunner` textify DDL → `V18__textify_columns.sql` (idempotent) `(SCALE-1, SEC-5, AMB-runner)`. **Test:** Flyway applies once; columns TEXT.
 - [ ] 2.3 **Delete `DatabaseMigrationRunner.java`** `(SCALE-1)`. **Test:** second boot performs zero DDL.
-- [ ] 2.4 `ddl-auto=update` → `validate`; turn `flyway.validate-on-migrate=true` once clean. **Test:** integration boot passes with `validate` (no entity/schema drift).
+- [ ] 2.4 `ddl-auto=update` → `validate`; `flyway.validate-on-migrate=true` once clean. ⚠️ HIGH RISK on `eduapp_db` (37 entities vs mixed-origin schema) — validate against scratch DB first. **Test:** boot passes with `validate`.
 
 ## WP-3 — Roles, Authorities & Invite-Based Creation
 
@@ -122,4 +127,5 @@
 - 2026-06-13 — WP-S.1 removed duplicate @EnableAsync; S.2 async pool resized (20/100/500 + CallerRunsPolicy); S.3 verified AsyncUncaughtExceptionHandler.
 - 2026-06-13 — Test harness: `src/test/resources/application.properties` + repaired 2 pre-existing broken @WebMvcTest classes. **Full suite: 25/25 green.**
 - 2026-06-13 — Integration harness: scratch `eduapp_test` DB + `AbstractIntegrationTest` + failsafe; `AuthSecurityIT` proves register-role-downgrade over real HTTP + anonymous admin/ai endpoints rejected + no password leak. **`mvn verify` = 30/30 green (25 surefire + 5 failsafe).**
-- ⏭ NEXT: WP-2 Flyway cutover (needs schema baseline from `eduapp_db` via pg_dump) → WP-4 tenant core → WP-5+ school features.
+- 2026-06-13 — WP-2.0 fixed Flyway repo/DB drift: recovered V6–V16 scripts (were deleted in `95def15`) so repo matches `eduapp_db`. `mvn verify` 30/30 green.
+- ⏭ NEXT (needs review — affects real-DB migration strategy): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate (HIGH RISK, validate on scratch DB first) → WP-4 tenant core → WP-5+ school features.

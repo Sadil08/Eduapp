@@ -17,6 +17,7 @@ public class User {
     private String email;
 
     @Column(nullable = false)
+    @JsonIgnore // SECURITY: never serialize the BCrypt hash to any HTTP response
     private String password;
 
     @Column(nullable = false, unique = true)

@@ -19,9 +19,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
+// Import the dependency-free RateLimitConfig so the (real) RateLimitInterceptor wired by
+// WebConfig can be created in the slice. JwtUtil is mocked below.
 @WebMvcTest(QuestionController.class)
+@Import(com.eduapp.backend.config.RateLimitConfig.class)
 public class QuestionControllerTest {
 
     @Autowired

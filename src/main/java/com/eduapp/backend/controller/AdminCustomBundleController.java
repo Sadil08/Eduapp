@@ -4,6 +4,7 @@ import com.eduapp.backend.dto.CustomBundleDto;
 import com.eduapp.backend.security.JwtUtil;
 import com.eduapp.backend.service.CustomBundleService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/admin/custom-bundles")
+@PreAuthorize("hasRole('ADMIN')") // SECURITY: method-level guard in addition to URL rule (defense-in-depth)
 public class AdminCustomBundleController {
 
     private final CustomBundleService customBundleService;

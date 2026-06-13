@@ -3,10 +3,12 @@ package com.eduapp.backend.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import com.eduapp.backend.model.Role;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,9 +17,17 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // Must be at least 256 bits (32 bytes) for HS512
-    private final String SECRET_KEY = "mySuperSecretKey12345678901234567890";
-    private final SecretKey key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    // SECURITY: secret is externalised to the JWT_SECRET env var (no hardcoded key).
+    // The app fails fast at startup if it is missing or shorter than 32 bytes (HS512 needs >=256 bits).
+    private final SecretKey key;
+
+    public JwtUtil(@Value("${JWT_SECRET:}") String secret) {
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must be set and at least 32 bytes long. Configure it via environment variable.");
+        }
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
 
     private static final long EXPIRATION_MS = 1000L * 60 * 60 * 10; // 10 hours
 

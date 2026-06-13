@@ -14,10 +14,16 @@ public class Question {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "paper_id", nullable = false)
+    // A question belongs to EITHER a consumer Paper OR a school-tier SchoolPaper.
+    // paper_id is therefore nullable; school questions set school_paper_id instead.
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "paper_id", nullable = true)
     @JsonIgnore
     private Paper paper;
+
+    // Set when this question belongs to a school-tier paper (reuses the marking pipeline).
+    @Column(name = "school_paper_id")
+    private Long schoolPaperId;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String text;
@@ -95,6 +101,14 @@ public class Question {
 
     public void setPaper(Paper paper) {
         this.paper = paper;
+    }
+
+    public Long getSchoolPaperId() {
+        return schoolPaperId;
+    }
+
+    public void setSchoolPaperId(Long schoolPaperId) {
+        this.schoolPaperId = schoolPaperId;
     }
 
     public String getText() {

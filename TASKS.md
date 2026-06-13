@@ -66,9 +66,9 @@
 
 ## WP-6 — School Papers (reuse extraction + marking)
 
-- [ ] 6.1 `SchoolPaper` entity + nullable `school_paper_id` on `Question` + Flyway `V10`. **Test:** tenant-scoped.
-- [ ] 6.2 Upload→extract (reuse `AIService`)→teacher review/approve flow. **Test:** extraction reuses consumer path; unapproved hidden from students.
-- [ ] 6.3 Assign paper to class with exam window. **Test:** assignment scoped + visible only to enrolled students.
+- [x] 6.1 `SchoolPaper` entity (tenant-scoped, DRAFT→APPROVED→ASSIGNED) + nullable `school_paper_id` on `Question` (`Question.paper` made optional so a question belongs to a Paper OR a SchoolPaper). Flyway deferred to WP-2. **Test:** `SchoolPaperIT` tenant-scoped + cross-tenant denied. ✅ 2026-06-13
+- [~] 6.2 Lifecycle: create draft → add question (the teacher-review step; same `Question` shape the AI extractor produces, so `AIService` extraction reuses this path) → approve (blocked with 0 questions). Full PDF upload→`AIService.importQuestionsFromPdf` wiring is a follow-up. **Test:** `SchoolPaperIT` approve-with-no-questions fails; unapproved hidden from students. ✅ 2026-06-13
+- [x] 6.3 Assign paper to class with exam window (validates class belongs to tenant); `isOpenForAttempts(now)` window logic. **Test:** `SchoolPaperIT` student sees only ASSIGNED papers for an enrolled class; non-enrolled denied. ✅ 2026-06-13
 
 ## WP-7 — School Attempts & Teacher Override
 
@@ -131,4 +131,5 @@
 - 2026-06-13 — WP-3.3 + WP-4 tenant core: `School`/`SchoolClass` entities, `users.school_id`, `TenantContext`+`TenantFilter`, `/api/school/classes` (tenant-scoped), SecurityConfig school routes. `TenantIsolationIT` proves school A can't see school B (list + by-id) and global student blocked. **`mvn verify` = 33/33 green (25 + 8 IT).**
 - 2026-06-13 — WP-4.4 ArchUnit: added `archunit-junit5`; `@TenantScoped` marker + rule banning no-arg `findAll()` on tenant repos; verified it fails on an injected violation.
 - 2026-06-13 — WP-5: `SchoolEnrolment` + `SchoolInvite` entities; teacher invites (create/accept), class-code self-enrolment (mints SCHOOL_STUDENT, cross-school rejected), roster endpoint. Fixed real bug: `GlobalExceptionHandler` was turning `@PreAuthorize` denials into 400 → now 403/401. **`mvn verify` = 39/39 green (26 + 13 IT).**
-- ⏭ NEXT: WP-6 school papers (reuse extraction+marking) → WP-7 attempts+override → WP-8 analytics → WP-9 consent. Deferred (needs review): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate.
+- 2026-06-13 — WP-6 school papers: `SchoolPaper` (DRAFT→APPROVED→ASSIGNED), `Question.paper` made optional + `school_paper_id` so school questions reuse the marking pipeline; lifecycle endpoints + student-visibility (ASSIGNED only) + exam window. **`mvn verify` = 44/44 green (26 + 18 IT).**
+- ⏭ NEXT: WP-7 attempts + teacher override → WP-8 analytics → WP-9 consent. Deferred (needs review): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate.

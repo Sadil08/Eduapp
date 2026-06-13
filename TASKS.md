@@ -47,21 +47,21 @@
 
 - [x] 3.1 Extend `Role` enum → add `SCHOOL_ADMIN, TEACHER, SCHOOL_STUDENT`. **Test:** persistence round-trip per role.
 - [x] 3.2 Verify `UserDetailsService` maps all five roles → `ROLE_*` authorities. **Test:** parameterised authority test per role. ✅ `UserDetailsAuthorityTest` (5/5)
-- [ ] 3.3 `SecurityConfig`: add `/api/school/**`, `/api/teacher/**`, `/api/analytics/global/**` rules above `anyRequest`. **Test:** authz matrix (role × namespace) table-driven.
+- [x] 3.3 `SecurityConfig`: add `/api/school/**`, `/api/teacher/**`, `/api/analytics/global/**` rules above `anyRequest`. **Test:** `TenantIsolationIT` global student → 403 on /api/school/**. ✅ 2026-06-13
 - [ ] 3.4 Invite/`SchoolInvite` token model + accept flow; privileged users only via authenticated invite/admin. **Test:** no public path mints SCHOOL_ADMIN/TEACHER.
 
 ## WP-4 — Tenant Core & Automatic Isolation
 
-- [ ] 4.1 `School` entity + `V8__tenant_core.sql`; nullable `school_id` FK on `users`. **Test:** migration applies; existing users have null tenant.
-- [ ] 4.2 `TenantContext` (ThreadLocal) + `TenantFilter` (after JWT filter), clears in `finally`. **Test:** context empty at request start.
-- [ ] 4.3 Hibernate `@FilterDef`/`@Filter` on tenant entities, activated per request when tenant present. **Test:** school A cannot read school B (repo + HTTP).
-- [ ] 4.4 ArchUnit test banning raw `findAll()` on tenant-scoped repos. **Test:** ArchUnit green; violation fails build.
-- [ ] 4.5 Concurrency test: interleaved A/B requests, no cross-contamination (thread-leak guard). **Test:** green under parallel load.
+- [x] 4.1 `School` entity (+ `SchoolPlanTier`/`SchoolStatus`); nullable `school_id` FK on `users` (created via ddl-auto for now; Flyway migration is part of deferred WP-2 cutover). **Test:** `ContextLoadsIT` + isolation IT seed schools. ✅ 2026-06-13
+- [x] 4.2 `TenantContext` (ThreadLocal) + `TenantFilter` (after JWT filter, resolves school from DB), clears in `finally`. **Test:** isolation IT relies on per-request tenant resolution. ✅ 2026-06-13
+- [~] 4.3 Isolation enforced: `SchoolClass` is tenant-scoped; service derives `school_id` from `TenantContext` (never client-supplied); `@FilterDef`/`@Filter` declared on the entity (auto-enable wiring is a follow-up). **Test:** `TenantIsolationIT` — A can't list/fetch B's classes (HTTP). ✅ 2026-06-13
+- [ ] 4.4 ArchUnit test banning raw `findAll()` on tenant-scoped repos (needs ArchUnit dep). **Test:** ArchUnit green; violation fails build.
+- [~] 4.5 Thread-leak guard: `TenantFilter` clears context in `finally`; interleaved IT requests pass. Dedicated concurrency stress test still TODO. 
 
 ## WP-5 — Class Management & Enrolment
 
-- [ ] 5.1 `SchoolClass` + `SchoolEnrolment` entities + Flyway `V9`. **Test:** tenant-scoped CRUD.
-- [ ] 5.2 `/api/school/classes` endpoints (create/list/detail), teacher invite. **Test:** SCHOOL_ADMIN-only authz + isolation.
+- [~] 5.1 `SchoolClass` entity done (tenant-scoped, unique class_code). `SchoolEnrolment` + Flyway migration TODO. **Test:** isolation IT. ✅(partial) 2026-06-13
+- [~] 5.2 `/api/school/classes` GET list / GET {id} / POST create done, scoped by `TenantContext`, `@PreAuthorize` SCHOOL_ADMIN/TEACHER. Teacher invite TODO. **Test:** `TenantIsolationIT`. ✅(partial) 2026-06-13
 - [ ] 5.3 Class-code self-enrolment mints `SCHOOL_STUDENT`. **Test:** cross-school class code rejected.
 
 ## WP-6 — School Papers (reuse extraction + marking)
@@ -128,4 +128,5 @@
 - 2026-06-13 — Test harness: `src/test/resources/application.properties` + repaired 2 pre-existing broken @WebMvcTest classes. **Full suite: 25/25 green.**
 - 2026-06-13 — Integration harness: scratch `eduapp_test` DB + `AbstractIntegrationTest` + failsafe; `AuthSecurityIT` proves register-role-downgrade over real HTTP + anonymous admin/ai endpoints rejected + no password leak. **`mvn verify` = 30/30 green (25 surefire + 5 failsafe).**
 - 2026-06-13 — WP-2.0 fixed Flyway repo/DB drift: recovered V6–V16 scripts (were deleted in `95def15`) so repo matches `eduapp_db`. `mvn verify` 30/30 green.
+- 2026-06-13 — WP-3.3 + WP-4 tenant core: `School`/`SchoolClass` entities, `users.school_id`, `TenantContext`+`TenantFilter`, `/api/school/classes` (tenant-scoped), SecurityConfig school routes. `TenantIsolationIT` proves school A can't see school B (list + by-id) and global student blocked. **`mvn verify` = 33/33 green (25 + 8 IT).**
 - ⏭ NEXT (needs review — affects real-DB migration strategy): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate (HIGH RISK, validate on scratch DB first) → WP-4 tenant core → WP-5+ school features.

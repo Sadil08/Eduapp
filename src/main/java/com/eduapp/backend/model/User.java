@@ -51,6 +51,11 @@ public class User {
     @JsonIgnore
     private User referredBy;
 
+    // Multi-tenancy: the school this user belongs to. Null = global (consumer) tier user.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
+    private School school;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     // Reserved for future auditing feature
@@ -156,6 +161,18 @@ public class User {
 
     public void setReferredBy(User referredBy) {
         this.referredBy = referredBy;
+    }
+
+    public School getSchool() {
+        return school;
+    }
+
+    public void setSchool(School school) {
+        this.school = school;
+    }
+
+    public Long getSchoolId() {
+        return school != null ? school.getId() : null;
     }
 
     public String getCountry() {

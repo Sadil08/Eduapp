@@ -78,9 +78,9 @@
 
 ## WP-8 — Cohort Analytics (school-scoped)
 
-- [ ] 8.1 `/api/school/analytics/**` + teacher analytics: overview, topic heatmap, question-failure, grade distribution, misconception clustering. **Test:** A never sees B's data; numbers reconcile to fixtures.
-- [ ] 8.2 All aggregates paginated/GROUP BY, no unbounded `findAll` `(SCALE-3, SCALE-4)`. **Test:** large fixture stays bounded.
-- [ ] 8.3 `@Cacheable` + TTL on heavy aggregates (Redis) `(SCALE-5)`. **Test:** repeat call hits cache.
+- [~] 8.1 `/api/school/analytics/**`: paper cohort summary (count, avg/high/low of EFFECTIVE marks, grade distribution) + per-question analysis (avg marks, correct rate). Topic heatmap/misconception clustering need lesson tagging → follow-up. **Test:** `SchoolAnalyticsIT` numbers reconcile to fixtures; teacher of other school denied. ✅ 2026-06-13
+- [x] 8.2 Aggregates computed over tenant + single-paper-cohort scoped queries (bounded by class size); no unbounded `findAll` (ArchUnit-guarded) `(SCALE-3, SCALE-4)`. ✅ 2026-06-13
+- [x] 8.3 `@Cacheable("schoolPaperSummary")` with tenant-keyed key `schoolId:paperId` (cache hit can't cross tenants) `(SCALE-5)`. **Test:** cache entry populated after call (verified via CacheManager). TTL config = follow-up. ✅ 2026-06-13
 
 ## WP-9 — Consent & Cambridge Aggregate API
 
@@ -133,4 +133,5 @@
 - 2026-06-13 — WP-5: `SchoolEnrolment` + `SchoolInvite` entities; teacher invites (create/accept), class-code self-enrolment (mints SCHOOL_STUDENT, cross-school rejected), roster endpoint. Fixed real bug: `GlobalExceptionHandler` was turning `@PreAuthorize` denials into 400 → now 403/401. **`mvn verify` = 39/39 green (26 + 13 IT).**
 - 2026-06-13 — WP-6 school papers: `SchoolPaper` (DRAFT→APPROVED→ASSIGNED), `Question.paper` made optional + `school_paper_id` so school questions reuse the marking pipeline; lifecycle endpoints + student-visibility (ASSIGNED only) + exam window. **`mvn verify` = 44/44 green (26 + 18 IT).**
 - 2026-06-13 — WP-7 attempts + override: `SchoolPaperAttempt`/`SchoolStudentAnswer`; exam-window enforcement, deterministic MCQ marking (aiMark), teacher override w/ mandatory note (supersedes AI), results gated by `results_released`. **`mvn verify` = 49/49 green (26 + 23 IT).**
-- ⏭ NEXT: WP-8 analytics (cohort, tenant-scoped, cached) → WP-9 consent + Cambridge aggregate API (50-cohort floor). Deferred (needs review): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate.
+- 2026-06-13 — WP-8 cohort analytics: `/api/school/analytics` paper summary (effective-mark avg/high/low + distribution) + per-question analysis; tenant-scoped, bounded, `@Cacheable` tenant-keyed. **`mvn verify` = 52/52 green (26 + 26 IT).**
+- ⏭ NEXT: WP-9 consent + Cambridge aggregate API (50-cohort floor). Deferred (needs review): WP-2.1 fresh-DB baseline + WP-2.4 ddl-auto→validate.

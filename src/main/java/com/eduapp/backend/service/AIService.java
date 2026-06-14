@@ -259,10 +259,13 @@ public class AIService {
 
     public AIService(QuestionModelAnswerService modelAnswerService) {
         this.modelAnswerService = modelAnswerService;
-        // Configure RestTemplate for large responses (base64 images can be 20-30MB)
+        // WP-A0.6: bound AI calls so a slow/hung extraction service can't pile up and
+        // exhaust the thread pool. Connect is always fast; read is generous (large
+        // multi-page base64 payloads) but finite — far below the previous 5-minute value.
+        // (Proper fix for long extractions is the durable async queue, WP-A1.4.)
         org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(java.time.Duration.ofMinutes(5));
-        factory.setReadTimeout(java.time.Duration.ofMinutes(5));
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(10));
+        factory.setReadTimeout(java.time.Duration.ofSeconds(60));
         this.restTemplate = new RestTemplate(factory);
     }
 

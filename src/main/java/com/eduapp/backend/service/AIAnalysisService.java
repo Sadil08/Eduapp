@@ -63,7 +63,13 @@ public class AIAnalysisService {
         this.aiAnalysisRepository = aiAnalysisRepository;
         this.studentPaperAttemptRepository = studentPaperAttemptRepository;
         this.studentAnswerRepository = studentAnswerRepository;
-        this.restTemplate = new RestTemplate();
+        // WP-A0.6: the marking path previously used a no-timeout RestTemplate (infinite
+        // block on a hung Gemini call). Bound it so marking fails fast instead of holding
+        // threads forever.
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(10));
+        factory.setReadTimeout(java.time.Duration.ofSeconds(60));
+        this.restTemplate = new RestTemplate(factory);
         this.objectMapper = new ObjectMapper();
     }
 

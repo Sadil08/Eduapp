@@ -41,8 +41,14 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allow all origins for development to prevent CORS issues
-        config.setAllowedOriginPatterns(java.util.List.of("*"));
+        // SECURITY (WP-A0.4): wildcard origin + allowCredentials is unsafe (and invalid per
+        // spec). Allow only the explicitly configured frontend origin(s) from FRONTEND_URL
+        // (comma-separated). setAllowedOrigins requires exact origins — no wildcards.
+        java.util.List<String> origins = java.util.Arrays.stream(frontendUrl.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        config.setAllowedOrigins(origins);
 
         config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(

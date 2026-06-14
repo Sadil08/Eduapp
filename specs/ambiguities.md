@@ -1,4 +1,13 @@
 # Architectural ambiguities: backend
+
+> **RESOLUTION STATUS (2026-06-14, branch `feature/multi-tenancy-school-tier`):** Resolved —
+> `SecurityConfig` documents the filter chain + authorization rules; duplicate `@EnableAsync`
+> removed from `BackendApplication` (AsyncConfig is the sole owner); `AsyncUncaughtExceptionHandler`
+> is implemented; `AuthConfig` renamed to `PasswordEncoderConfig`; `RedisConfig` is the documented
+> cache home (provider/named caches/TTL); the `core` diagnostics moved to `scripts/` with a README;
+> `TestDB.java` (hardcoded creds) deleted; distributed rate-limit limitation documented in
+> `RateLimitConfig`. See `TASKS.md` (WP-S) for per-item mapping.
+
 ## Summary
 The backend service has several structural ambiguities that will slow onboarding and create fragility when adding features: the most critical are an effectively absent security model (only a PasswordEncoder bean exists with no chain or authorization rules), duplicate async configuration, and a core module whose name and contents are contradictory. Configuration discipline breaks down in at least one diagnostic file that hardcodes credentials, undermining the stated .env/env-var strategy.
 ## Ambiguities (11 found)

@@ -1,5 +1,12 @@
 # Scalability notes: backend
 **Score:** 0.22
+
+> **RESOLUTION STATUS (2026-06-14, branch `feature/multi-tenancy-school-tier`):** Addressed —
+> the per-boot `DatabaseMigrationRunner` DDL lock storm is gone (Flyway-only, WP-2.0); the async
+> pool is resized (20/100/500 + CallerRunsPolicy); `AIAnalysisController` is paginated; revenue is
+> `@Cacheable` (60s TTL); explicit HikariCP config added (max-pool 20, leak-detection 60s); S3 calls
+> have api-call timeouts (10s/30s); the Redis polymorphic validator is restricted to app packages.
+> `TestDB.java` removed. See `TASKS.md` (WP-S) for per-item mapping.
 ## Summary
 The service has a recognisable layered architecture with Redis caching and Spring Async wiring in place, but several concrete, load-bearing problems exist that will manifest under production traffic. The most severe are a DDL migration that runs on every startup (causing full-table ACCESS EXCLUSIVE locks in PostgreSQL), a grossly under-provisioned async executor (max 5 threads for what the architecture describes as AI workloads), and pervasive unbounded list endpoints that will OOM the JVM or time out as data grows. These are not theoretical risks — they are patterns that predictably fail once concurrent users and data volume increase beyond a trivial threshold.
 ## Concerns

@@ -419,6 +419,13 @@ public class AIAnalysisService {
         return aiAnalysisRepository.findAll();
     }
 
+    // SCALE-3: paginated access — the table grows with every analysis, so an unbounded
+    // findAll() would eventually OOM/timeout. Callers should use this.
+    public org.springframework.data.domain.Page<AIAnalysis> findAll(
+            org.springframework.data.domain.Pageable pageable) {
+        return aiAnalysisRepository.findAll(pageable);
+    }
+
     public Optional<AIAnalysis> findById(Long id) {
         return aiAnalysisRepository.findById(id);
     }

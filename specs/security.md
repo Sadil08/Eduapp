@@ -1,5 +1,14 @@
 # Security specification: backend
 **Risk level:** critical  **Score:** 0.15
+
+> **RESOLUTION STATUS (2026-06-14, branch `feature/multi-tenancy-school-tier`):** The findings
+> below are RESOLVED — unguarded admin controllers now carry `@PreAuthorize`; `AIAnalysisController`
+> is ADMIN-gated; `AdminController` returns a DTO (no password-hash leak) and `User.password` is
+> `@JsonIgnore`d; the hardcoded JWT secret is externalised to `JWT_SECRET` with fail-fast; rate
+> limiting is wired on `/api/auth/**`; `server.error.include-stacktrace=never`; and `TestDB.java`
+> (hardcoded creds) was deleted. Also fixed (not originally listed): a live privilege-escalation in
+> `UserService.register` (client-supplied role honoured) and `AccessDeniedException` being masked as
+> 400. See `TASKS.md` (WP-1, WP-S) for the per-item mapping and tests.
 ## Summary
 The backend service has multiple critical and high-severity vulnerabilities that would allow unauthenticated or unprivileged actors to access sensitive administrative data and operations. Two admin-path controllers (AdminCustomBundleController, AdminDashboardController) carry no Spring Security authorization annotations, meaning any unauthenticated HTTP caller can reach endpoints that read pending-approval bundle queues and total system revenue. A third controller (AIAnalysisController) is similarly unprotected. A hardcoded PostgreSQL password ('password') is committed inside TestDB.java, and the AdminController endpoint returns raw User entity objects that likely serialize password hashes to callers. These issues collectively represent broken access control (OWASP A01), sensitive data exposure (OWASP A02), and security misconfiguration (OWASP A05) at a severity level that makes the application critically unsafe to expose to the internet.
 ## Known vulnerabilities and required remediations

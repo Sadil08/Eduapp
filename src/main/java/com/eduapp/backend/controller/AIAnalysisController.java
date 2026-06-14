@@ -4,11 +4,13 @@ import com.eduapp.backend.model.AIAnalysis;
 import com.eduapp.backend.service.AIAnalysisService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -26,11 +28,17 @@ public class AIAnalysisController {
         this.aiAnalysisService = aiAnalysisService;
     }
 
+    private static final int MAX_PAGE_SIZE = 100;
+
+    // SCALE-3: paginated. Defaults to page 0, size 20; size is capped at 100 server-side.
     @GetMapping
-    public ResponseEntity<List<AIAnalysis>> getAll() {
-        logger.info("Fetching all AI analyses");
-        List<AIAnalysis> analyses = aiAnalysisService.findAll();
-        return ResponseEntity.ok(analyses);
+    public ResponseEntity<Page<AIAnalysis>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), safeSize);
+        logger.info("Fetching AI analyses page {} size {}", pageable.getPageNumber(), pageable.getPageSize());
+        return ResponseEntity.ok(aiAnalysisService.findAll(pageable));
     }
 
     @GetMapping("/{id}")

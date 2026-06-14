@@ -28,9 +28,13 @@ class PaperSearchIT extends AbstractIntegrationTest {
     @Autowired JwtUtil jwtUtil;
 
     private HttpHeaders authStudent() {
+        return authAs(Role.STUDENT);
+    }
+
+    private HttpHeaders authAs(Role role) {
         String u = UUID.randomUUID().toString().substring(0, 8);
-        User user = new User("stu-" + u + "@p.test", "x", "stu-" + u);
-        user.setRole(Role.STUDENT);
+        User user = new User(role + "-" + u + "@p.test", "x", role + "-" + u);
+        user.setRole(role);
         user.setReferralCode("R" + u);
         user = userRepository.save(user);
         HttpHeaders h = new HttpHeaders();
@@ -64,5 +68,23 @@ class PaperSearchIT extends AbstractIntegrationTest {
         ResponseEntity<Map> big = rest.exchange("/api/papers/search?q=" + tag + "&page=0&size=1000",
                 HttpMethod.GET, new HttpEntity<>(headers), Map.class);
         assertThat(((Number) big.getBody().get("size")).intValue()).isLessThanOrEqualTo(100);
+    }
+
+    @Test
+    void adminPapers_arePagedAndSearchable_adminOnly() {
+        String tag = "AD" + UUID.randomUUID().toString().substring(0, 4);
+        for (int i = 0; i < 15; i++) newPaper(tag + " Admin Paper " + i);
+
+        // Student cannot reach the admin endpoint.
+        ResponseEntity<String> denied = rest.exchange("/api/admin/papers?q=" + tag,
+                HttpMethod.GET, new HttpEntity<>(authStudent()), String.class);
+        assertThat(denied.getStatusCode().value()).isIn(401, 403);
+
+        // Admin gets a paged result filtered by name.
+        ResponseEntity<Map> ok = rest.exchange("/api/admin/papers?q=" + tag + "&page=0&size=10",
+                HttpMethod.GET, new HttpEntity<>(authAs(Role.ADMIN)), Map.class);
+        assertThat(ok.getStatusCode().value()).isEqualTo(200);
+        assertThat(((Number) ok.getBody().get("totalElements")).longValue()).isEqualTo(15);
+        assertThat(((java.util.List<?>) ok.getBody().get("content"))).hasSize(10);
     }
 }

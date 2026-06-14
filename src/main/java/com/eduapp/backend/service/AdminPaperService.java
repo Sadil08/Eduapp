@@ -63,6 +63,14 @@ public class AdminPaperService {
         return papers.stream().map(this::mapToAdminDto).collect(Collectors.toList());
     }
 
+    // SCALE-3: paginated + name-searched admin paper listing (the table no longer loads
+    // every paper as the catalogue grows).
+    public org.springframework.data.domain.Page<AdminPaperDto> searchPapers(String query,
+            org.springframework.data.domain.Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        return paperRepository.findByNameContainingIgnoreCase(q, pageable).map(this::mapToAdminDto);
+    }
+
     /**
      * Get paper details with questions
      */

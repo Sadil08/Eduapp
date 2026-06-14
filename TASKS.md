@@ -97,9 +97,9 @@
 - [~] S.4 Paginate `AIAnalysisController` + all admin list endpoints (`AdminUserController`, `AdminBundleController`, `AdminCustomBundleController`) + All public/student endpoints that return lists of entities/data(When user base grows to about 500000+ and number of paper also grow 1M+ getting paginated responses is a must(or any othe scalable technique))— `Pageable`, default size 20, max 100 `(SCALE-3, SCALE-4)`. **Test:** `?page&size` honoured; oversize clamped.
   - DONE: `AIAnalysisController.getAll()` paginated; `AdminUserController` + public `PaperBundleController` list were already paginated.
   - DONE (chosen long-term path = server-side search + pagination, frontend updated in lockstep): **paper picker** — new `GET /api/papers/search?q=&page=&size=` (`Page<PaperDto>`, name search, size capped 100); frontend `paperService.searchPapers` + `bundles/create-custom` page rewired from "load every paper + filter client-side" to debounced server-side search + paged results (selected-paper details tracked separately). Tested: `PaperSearchIT` (paged, capped, filtered); frontend `tsc --noEmit` clean. Pattern (Spring `Page<>` + `Page<T>` TS type) is now established for reuse.
+  - DONE 2026-06-14: `GET /api/admin/papers` → `Page<AdminPaperDto>` + `?q` search (size cap 100); admin papers page rewired to server-side search + a controlled `<Pagination>` (Table pagination disabled to avoid antd re-slicing), stat cards sourced from `getSystemStats` (cheap COUNTs) instead of client-side reduce over all papers. `ListTable` now respects an explicit `pagination` prop. Tested: `PaperSearchIT.adminPapers_arePagedAndSearchable_adminOnly`.
   - REMAINING ROLLOUT (apply the same pattern, each backend+frontend in lockstep, sequenced by risk/cardinality):
-    1. `GET /api/admin/papers` (AdminPaperController) + admin papers page table → server-side page+search.
-    2. `GET /api/reviews` (public, grows) + reviews list UI.
+    1. `GET /api/reviews` (public, grows) + reviews list UI.
     3. `GET /api/admin/feedback`, `/api/admin/bundles`, `/api/admin/custom-bundles` admin tables.
     4. Per-user attempt/answer history endpoints (StudentPaperAttempt/StudentAnswer) — grow per user.
     5. Leaderboards — cap + page (also a query-cost concern at scale).

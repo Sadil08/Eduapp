@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 /**
  * REST Controller for admin paper and question management.
@@ -41,11 +40,20 @@ public class AdminPaperController {
      * Get all papers with statistics
      * GET /api/admin/papers
      */
+    private static final int MAX_PAGE_SIZE = 100;
+
+    // SCALE-3: paginated + searchable. ?q= name filter, ?page/?size (size capped at 100).
     @GetMapping
-    public ResponseEntity<List<AdminPaperDto>> getAllPapers() {
-        logger.info("Admin requested all papers");
-        List<AdminPaperDto> papers = adminPaperService.getAllPapers();
-        return ResponseEntity.ok(papers);
+    public ResponseEntity<org.springframework.data.domain.Page<AdminPaperDto>> getAllPapers(
+            @RequestParam(name = "q", defaultValue = "") String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        logger.info("Admin requested papers page {} size {} q='{}'", page, size, query);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        var pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0), safeSize,
+                org.springframework.data.domain.Sort.by("name").ascending());
+        return ResponseEntity.ok(adminPaperService.searchPapers(query, pageable));
     }
 
     /**

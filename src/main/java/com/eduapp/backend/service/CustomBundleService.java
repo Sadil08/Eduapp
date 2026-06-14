@@ -222,6 +222,23 @@ public class CustomBundleService {
                 .collect(Collectors.toList());
     }
 
+    // SCALE-4: paginated admin queues (student-generated bundles grow unbounded).
+    public org.springframework.data.domain.Page<CustomBundleDto> getPendingApproval(
+            org.springframework.data.domain.Pageable pageable) {
+        return customBundleRepository
+                .findByStatusOrderByPurchasedAtAsc(CustomBundleStatus.PURCHASED, pageable)
+                .map(this::toDto);
+    }
+
+    public org.springframework.data.domain.Page<CustomBundleDto> getApprovedBundles(
+            org.springframework.data.domain.Pageable pageable) {
+        return customBundleRepository.findApprovedBundles(pageable).map(this::toDto);
+    }
+
+    public long countByStatus(CustomBundleStatus status) {
+        return customBundleRepository.countByStatus(status);
+    }
+
     /**
      * Approve a custom bundle (admin).
      * Makes it visible in the public bundles list.

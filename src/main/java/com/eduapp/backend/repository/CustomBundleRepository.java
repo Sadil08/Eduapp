@@ -2,6 +2,8 @@ package com.eduapp.backend.repository;
 
 import com.eduapp.backend.model.CustomBundle;
 import com.eduapp.backend.model.CustomBundleStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,6 +34,11 @@ public interface CustomBundleRepository extends JpaRepository<CustomBundle, Long
      */
     List<CustomBundle> findByStatusOrderByPurchasedAtAsc(CustomBundleStatus status);
 
+    // SCALE-4: paginated admin approval queue (student-generated bundles grow unbounded).
+    Page<CustomBundle> findByStatusOrderByPurchasedAtAsc(CustomBundleStatus status, Pageable pageable);
+
+    long countByStatus(CustomBundleStatus status);
+
     /**
      * Count how many bundles a user has in CREATED status.
      */
@@ -42,6 +49,10 @@ public interface CustomBundleRepository extends JpaRepository<CustomBundle, Long
      */
     @Query("SELECT cb FROM CustomBundle cb WHERE cb.status = 'APPROVED' ORDER BY cb.approvedAt DESC")
     List<CustomBundle> findApprovedBundles();
+
+    // SCALE-4: paginated approved listing.
+    @Query("SELECT cb FROM CustomBundle cb WHERE cb.status = 'APPROVED' ORDER BY cb.approvedAt DESC")
+    Page<CustomBundle> findApprovedBundles(Pageable pageable);
 
     // ========== Analytics Queries ==========
     // Note: Revenue is tracked when status is PURCHASED or APPROVED (both represent paid bundles)

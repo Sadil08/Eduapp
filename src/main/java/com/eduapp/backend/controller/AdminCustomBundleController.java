@@ -1,14 +1,18 @@
 package com.eduapp.backend.controller;
 
 import com.eduapp.backend.dto.CustomBundleDto;
+import com.eduapp.backend.model.CustomBundleStatus;
 import com.eduapp.backend.security.JwtUtil;
 import com.eduapp.backend.service.CustomBundleService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Map;
 
 /**
  * Admin controller for managing custom bundles.
@@ -26,24 +30,38 @@ public class AdminCustomBundleController {
         this.jwtUtil = jwtUtil;
     }
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     /**
-     * Get all bundles pending approval.
-     * GET /api/admin/custom-bundles/pending
+     * SCALE-4: paginated approval queue. GET /api/admin/custom-bundles/pending?page=&size=
      */
     @GetMapping("/pending")
-    public ResponseEntity<List<CustomBundleDto>> getPendingApproval() {
-        List<CustomBundleDto> bundles = customBundleService.getPendingApproval();
-        return ResponseEntity.ok(bundles);
+    public ResponseEntity<Page<CustomBundleDto>> getPendingApproval(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
+        return ResponseEntity.ok(customBundleService.getPendingApproval(pageable));
     }
 
     /**
-     * Get all approved bundles.
-     * GET /api/admin/custom-bundles/approved
+     * SCALE-4: paginated approved listing. GET /api/admin/custom-bundles/approved?page=&size=
      */
     @GetMapping("/approved")
-    public ResponseEntity<List<CustomBundleDto>> getApprovedBundles() {
-        List<CustomBundleDto> bundles = customBundleService.getApprovedBundles();
-        return ResponseEntity.ok(bundles);
+    public ResponseEntity<Page<CustomBundleDto>> getApprovedBundles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
+        return ResponseEntity.ok(customBundleService.getApprovedBundles(pageable));
+    }
+
+    /**
+     * Cheap COUNT totals for the admin custom-bundle queues.
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Long>> getStats() {
+        return ResponseEntity.ok(Map.of(
+                "pending", customBundleService.countByStatus(CustomBundleStatus.PURCHASED),
+                "approved", customBundleService.countByStatus(CustomBundleStatus.APPROVED)));
     }
 
     /**

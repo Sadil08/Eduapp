@@ -10,6 +10,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.net.URI;
 import java.time.Duration;
@@ -52,6 +53,21 @@ public class SupabaseStorageConfig {
                         .apiCallAttemptTimeout(Duration.ofSeconds(10))
                         .apiCallTimeout(Duration.ofSeconds(30))
                         .build())
+                .build();
+    }
+
+    /**
+     * WP-A0.3: presigner for short-lived signed GET URLs. Lets the bucket be made PRIVATE
+     * and files served via expiring signed links behind auth, instead of world-readable
+     * public URLs (the current student-PII exposure).
+     */
+    @Bean
+    public S3Presigner supabaseS3Presigner() {
+        return S3Presigner.builder()
+                .endpointOverride(URI.create(endpoint))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(accessKey, secretKey)))
+                .region(Region.of("auto"))
                 .build();
     }
 }

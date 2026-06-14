@@ -8,9 +8,13 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
 
 @Service
@@ -18,17 +22,56 @@ public class FileStorageService {
 
     private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
 
+    /** Default lifetime for signed media links (WP-A0.3). */
+    public static final Duration SIGNED_URL_TTL = Duration.ofMinutes(10);
+
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final String bucketName;
     private final String publicUrl;
 
     public FileStorageService(
             S3Client s3Client,
+            S3Presigner s3Presigner,
             @Value("${supabase.storage.bucket-name}") String bucketName,
             @Value("${supabase.storage.public-url}") String publicUrl) {
         this.s3Client = s3Client;
+        this.s3Presigner = s3Presigner;
         this.bucketName = bucketName;
         this.publicUrl = publicUrl;
+    }
+
+    /**
+     * WP-A0.3: short-lived signed GET URL for a stored object. Accepts either a raw object
+     * key ("category/file.png") or a full stored URL (legacy records hold the public URL).
+     * Enables a PRIVATE bucket served via expiring links behind auth.
+     */
+    public String generateSignedUrl(String keyOrUrl, Duration ttl) {
+        String objectKey = toObjectKey(keyOrUrl);
+        GetObjectRequest get = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(objectKey)
+                .build();
+        GetObjectPresignRequest presign = GetObjectPresignRequest.builder()
+                .signatureDuration(ttl != null ? ttl : SIGNED_URL_TTL)
+                .getObjectRequest(get)
+                .build();
+        return s3Presigner.presignGetObject(presign).url().toString();
+    }
+
+    /** Normalises a stored value (full public URL or bare key) to an S3 object key. */
+    public String toObjectKey(String keyOrUrl) {
+        if (keyOrUrl == null) {
+            return null;
+        }
+        if (keyOrUrl.startsWith(publicUrl)) {
+            return keyOrUrl.substring(publicUrl.length() + 1); // strip "publicUrl/"
+        }
+        // Legacy /api/files/<category>/<file> or already-bare key.
+        if (keyOrUrl.startsWith("/api/files/")) {
+            return keyOrUrl.substring("/api/files/".length());
+        }
+        return keyOrUrl;
     }
 
     /**

@@ -46,6 +46,12 @@ public class StudentAnswerService {
      * Retrieves all student answers from the database.
      * @return a list of all StudentAnswer entities
      */
+    // SCALE-4: paginated variant for the admin listing.
+    public org.springframework.data.domain.Page<StudentAnswer> findAll(
+            org.springframework.data.domain.Pageable pageable) {
+        return studentAnswerRepository.findAll(pageable);
+    }
+
     public List<StudentAnswer> findAll() {
         logger.info("Fetching all student answers");
         List<StudentAnswer> answers = studentAnswerRepository.findAll();

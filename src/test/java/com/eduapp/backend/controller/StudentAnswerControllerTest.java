@@ -75,14 +75,17 @@ public class StudentAnswerControllerTest {
 
     @Test
     void getAllStudentAnswers_ReturnsOk() throws Exception {
-        List<StudentAnswer> answers = List.of(new StudentAnswer());
-        List<StudentAnswerDto> dtos = List.of(new StudentAnswerDto());
-        when(studentAnswerService.findAll()).thenReturn(answers);
-        when(studentAnswerMapper.toDtoList(answers)).thenReturn(dtos);
+        // SCALE-4: now ADMIN-only + paginated.
+        org.springframework.data.domain.Page<StudentAnswer> page =
+                new org.springframework.data.domain.PageImpl<>(List.of(new StudentAnswer()));
+        when(studentAnswerService.findAll(any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
+        when(studentAnswerMapper.toDto(any(StudentAnswer.class))).thenReturn(new StudentAnswerDto());
 
         mockMvc.perform(get("/api/student-answers")
-                .with(user("user").roles("STUDENT")))
+                .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk());
+        // NOTE: ADMIN-only enforcement (@PreAuthorize) is verified in AttemptAnswerAdminListIT
+        // (full context); @WebMvcTest does not reliably activate method security.
     }
 
     @Test

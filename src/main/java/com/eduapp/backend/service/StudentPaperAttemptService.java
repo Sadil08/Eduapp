@@ -59,6 +59,12 @@ public class StudentPaperAttemptService {
      * 
      * @return a list of all StudentPaperAttempt entities
      */
+    // SCALE-4: paginated variant for the admin listing.
+    public org.springframework.data.domain.Page<StudentPaperAttempt> findAll(
+            org.springframework.data.domain.Pageable pageable) {
+        return attemptRepository.findAll(pageable);
+    }
+
     public List<StudentPaperAttempt> findAll() {
         logger.info("Fetching all student paper attempts");
         List<StudentPaperAttempt> attempts = attemptRepository.findAll();

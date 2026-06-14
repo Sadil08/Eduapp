@@ -146,12 +146,17 @@ public class StudentAnswerController {
         }
     }
 
+    // SCALE-4 + data-exposure fix: this dumped EVERY student's answers to any authenticated
+    // caller. Now ADMIN-only and paginated (size cap 100).
     @GetMapping
-    public ResponseEntity<List<StudentAnswerDto>> getAllStudentAnswers() {
-        logger.info("Received request to get all student answers");
-        List<StudentAnswer> answers = studentAnswerService.findAll();
-        List<StudentAnswerDto> dtos = studentAnswerMapper.toDtoList(answers);
-        return ResponseEntity.ok(dtos);
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<org.springframework.data.domain.Page<StudentAnswerDto>> getAllStudentAnswers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        logger.info("Admin requested student answers page {} size {}", page, size);
+        var pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0), Math.min(Math.max(size, 1), 100));
+        return ResponseEntity.ok(studentAnswerService.findAll(pageable).map(studentAnswerMapper::toDto));
     }
 
     @GetMapping("/{id}")

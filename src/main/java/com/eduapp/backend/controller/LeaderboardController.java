@@ -63,9 +63,16 @@ public class LeaderboardController {
         }
     }
 
+    // Leaderboards are a "top N" view; cap the response so a popular paper can't return a
+    // row per student. (Follow-up: the best-per-student dedup is still computed in memory
+    // with an N+1 analysis lookup — replace with a GROUP BY aggregate query.)
+    private static final int MAX_LEADERBOARD_SIZE = 100;
+
     @GetMapping("/paper/{paperId}")
-    public ResponseEntity<List<Map<String, Object>>> getLeaderboard(@PathVariable Long paperId) {
-        logger.info("Fetching leaderboard for paper ID: {}", paperId);
+    public ResponseEntity<List<Map<String, Object>>> getLeaderboard(@PathVariable Long paperId,
+            @RequestParam(defaultValue = "100") int limit) {
+        logger.info("Fetching leaderboard for paper ID: {} (limit {})", paperId, limit);
+        int safeLimit = Math.min(Math.max(limit, 1), MAX_LEADERBOARD_SIZE);
 
         // Fetch all opted-in attempts for the paper
         List<StudentPaperAttempt> attempts = attemptRepository
@@ -135,6 +142,7 @@ public class LeaderboardController {
                     }
                     return Integer.compare((int) a.get("timeTaken"), (int) b.get("timeTaken"));
                 })
+                .limit(safeLimit)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(leaderboard);

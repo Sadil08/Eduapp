@@ -22,11 +22,17 @@ public class LeaderboardEntryController {
         this.leaderboardEntryService = leaderboardEntryService;
     }
 
+    // SCALE-4 + data-exposure: this dumped every leaderboard entry to any authenticated
+    // caller (and is not used by the UI — the real leaderboard is /api/leaderboard/paper/{id}).
+    // Now ADMIN-only and paginated (size cap 100).
     @GetMapping
-    public ResponseEntity<List<LeaderboardEntry>> getAll() {
-        logger.info("Fetching all leaderboard entries");
-        List<LeaderboardEntry> entries = leaderboardEntryService.findAll();
-        return ResponseEntity.ok(entries);
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<org.springframework.data.domain.Page<LeaderboardEntry>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        var pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0), Math.min(Math.max(size, 1), 100));
+        return ResponseEntity.ok(leaderboardEntryService.findAll(pageable));
     }
 
     @GetMapping("/{id}")

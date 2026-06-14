@@ -21,6 +21,12 @@ public class LeaderboardEntryService {
         this.leaderboardEntryRepository = leaderboardEntryRepository;
     }
 
+    // SCALE-4: paginated variant for the admin listing.
+    public org.springframework.data.domain.Page<LeaderboardEntry> findAll(
+            org.springframework.data.domain.Pageable pageable) {
+        return leaderboardEntryRepository.findAll(pageable);
+    }
+
     public List<LeaderboardEntry> findAll() {
         logger.info("Fetching all leaderboard entries");
         return leaderboardEntryRepository.findAll();

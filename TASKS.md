@@ -99,7 +99,7 @@
   - DONE (chosen long-term path = server-side search + pagination, frontend updated in lockstep): **paper picker** — new `GET /api/papers/search?q=&page=&size=` (`Page<PaperDto>`, name search, size capped 100); frontend `paperService.searchPapers` + `bundles/create-custom` page rewired from "load every paper + filter client-side" to debounced server-side search + paged results (selected-paper details tracked separately). Tested: `PaperSearchIT` (paged, capped, filtered); frontend `tsc --noEmit` clean. Pattern (Spring `Page<>` + `Page<T>` TS type) is now established for reuse.
   - DONE 2026-06-14: `GET /api/admin/papers` → `Page<AdminPaperDto>` + `?q` search (size cap 100); admin papers page rewired to server-side search + a controlled `<Pagination>` (Table pagination disabled to avoid antd re-slicing), stat cards sourced from `getSystemStats` (cheap COUNTs) instead of client-side reduce over all papers. `ListTable` now respects an explicit `pagination` prop. Tested: `PaperSearchIT.adminPapers_arePagedAndSearchable_adminOnly`.
   - REMAINING ROLLOUT (apply the same pattern, each backend+frontend in lockstep, sequenced by risk/cardinality):
-    1. `GET /api/reviews` (public, grows) + reviews list UI.
+    1. ~~`GET /api/reviews` public list~~ — ALREADY BOUNDED (`/api/reviews/public?limit=` capped at 50). No work needed. The genuinely unbounded review query is `getAllReviewsForAdmin()` → covered under admin feedback below.
     3. `GET /api/admin/feedback`, `/api/admin/bundles`, `/api/admin/custom-bundles` admin tables.
     4. Per-user attempt/answer history endpoints (StudentPaperAttempt/StudentAnswer) — grow per user.
     5. Leaderboards — cap + page (also a query-cost concern at scale).

@@ -64,6 +64,23 @@ public class ImprovementService {
         return improvements.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
+    // SCALE-4: paginated admin listing (optional status filter).
+    public org.springframework.data.domain.Page<ImprovementDto> getImprovementsForAdmin(
+            ImprovementStatus status, org.springframework.data.domain.Pageable pageable) {
+        org.springframework.data.domain.Page<Improvement> page = (status != null)
+                ? improvementRepository.findByStatusOrderByCreatedAtDesc(status, pageable)
+                : improvementRepository.findAllByOrderByCreatedAtDesc(pageable);
+        return page.map(this::mapToDto);
+    }
+
+    public long countImprovementsByStatus(ImprovementStatus status) {
+        return improvementRepository.countByStatus(status);
+    }
+
+    public long countAllImprovements() {
+        return improvementRepository.count();
+    }
+
     @Transactional
     public ImprovementDto updateImprovementStatus(Long improvementId, ImprovementStatus status,
             Long adminId, String adminNotes) {

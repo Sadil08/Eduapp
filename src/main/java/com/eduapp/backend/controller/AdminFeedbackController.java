@@ -9,6 +9,9 @@ import com.eduapp.backend.service.ImprovementService;
 import com.eduapp.backend.service.ReviewService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,23 +38,41 @@ public class AdminFeedbackController {
         this.jwtUtil = jwtUtil;
     }
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     /**
-     * Get all reviews with optional status filter
+     * SCALE-4: paginated reviews with optional status filter. ?status=&page=&size= (size cap 100).
      */
     @GetMapping("/reviews")
-    public ResponseEntity<List<ReviewDto>> getAllReviews(
-            @RequestParam(required = false) ReviewStatus status) {
-
+    public ResponseEntity<Page<ReviewDto>> getAllReviews(
+            @RequestParam(required = false) ReviewStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         try {
-            List<ReviewDto> reviews = status != null
-                    ? reviewService.getReviewsByStatus(status)
-                    : reviewService.getAllReviewsForAdmin();
-            return ResponseEntity.ok(reviews);
-
+            Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
+            return ResponseEntity.ok(reviewService.getReviewsForAdmin(status, pageable));
         } catch (Exception e) {
             logger.error("Error fetching reviews for admin", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * Cheap COUNT-based summary so the admin page can show totals without loading every row.
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Long>> getFeedbackStats() {
+        long pendingReviews = reviewService.countReviewsByStatus(ReviewStatus.PENDING);
+        long approvedReviews = reviewService.countReviewsByStatus(ReviewStatus.APPROVED);
+        long rejectedReviews = reviewService.countReviewsByStatus(ReviewStatus.REJECTED);
+        long pendingImprovements = improvementService.countImprovementsByStatus(ImprovementStatus.PENDING);
+        return ResponseEntity.ok(Map.of(
+                "pendingReviews", pendingReviews,
+                "approvedReviews", approvedReviews,
+                "rejectedReviews", rejectedReviews,
+                "totalReviews", pendingReviews + approvedReviews + rejectedReviews,
+                "pendingImprovements", pendingImprovements,
+                "totalImprovements", improvementService.countAllImprovements()));
     }
 
     /**
@@ -103,18 +124,16 @@ public class AdminFeedbackController {
     }
 
     /**
-     * Get all improvements with optional status filter
+     * SCALE-4: paginated improvements with optional status filter. ?status=&page=&size= (size cap 100).
      */
     @GetMapping("/improvements")
-    public ResponseEntity<List<ImprovementDto>> getAllImprovements(
-            @RequestParam(required = false) ImprovementStatus status) {
-
+    public ResponseEntity<Page<ImprovementDto>> getAllImprovements(
+            @RequestParam(required = false) ImprovementStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         try {
-            List<ImprovementDto> improvements = status != null
-                    ? improvementService.getImprovementsByStatus(status)
-                    : improvementService.getAllImprovementsForAdmin();
-            return ResponseEntity.ok(improvements);
-
+            Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
+            return ResponseEntity.ok(improvementService.getImprovementsForAdmin(status, pageable));
         } catch (Exception e) {
             logger.error("Error fetching improvements for admin", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

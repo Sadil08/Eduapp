@@ -2,6 +2,7 @@ package com.eduapp.backend.repository;
 
 import com.eduapp.backend.model.Review;
 import com.eduapp.backend.model.ReviewStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +16,11 @@ import java.util.Optional;
 public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     List<Review> findByStatusOrderByCreatedAtDesc(ReviewStatus status);
+
+    // SCALE-4: paginated admin listings (the admin feedback table no longer loads every review).
+    Page<Review> findByStatusOrderByCreatedAtDesc(ReviewStatus status, Pageable pageable);
+
+    Page<Review> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     List<Review> findByUserIdOrderByCreatedAtDesc(Long userId);
 

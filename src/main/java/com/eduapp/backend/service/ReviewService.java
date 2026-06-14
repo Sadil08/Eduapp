@@ -74,6 +74,19 @@ public class ReviewService {
         return reviews.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
+    // SCALE-4: paginated admin listing (optional status filter).
+    public org.springframework.data.domain.Page<ReviewDto> getReviewsForAdmin(
+            ReviewStatus status, org.springframework.data.domain.Pageable pageable) {
+        org.springframework.data.domain.Page<Review> page = (status != null)
+                ? reviewRepository.findByStatusOrderByCreatedAtDesc(status, pageable)
+                : reviewRepository.findAllByOrderByCreatedAtDesc(pageable);
+        return page.map(this::mapToDto);
+    }
+
+    public long countReviewsByStatus(ReviewStatus status) {
+        return reviewRepository.countByStatus(status);
+    }
+
     @Transactional
     public ReviewDto approveReview(Long reviewId, Long adminId) {
         logger.info("Admin {} approving review {}", adminId, reviewId);

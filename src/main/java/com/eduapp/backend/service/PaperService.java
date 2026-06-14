@@ -121,6 +121,14 @@ public class PaperService {
         return papers;
     }
 
+    // SCALE-3: paginated, optional name search. Replaces "load every paper then filter
+    // client-side" for pickers/lists that grow with the catalogue.
+    public org.springframework.data.domain.Page<Paper> search(String query,
+            org.springframework.data.domain.Pageable pageable) {
+        String q = query == null ? "" : query.trim();
+        return paperRepository.findByNameContainingIgnoreCase(q, pageable);
+    }
+
     /**
      * Retrieves a paper by its ID.
      * 

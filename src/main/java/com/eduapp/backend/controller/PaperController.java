@@ -70,6 +70,27 @@ public class PaperController {
         return ResponseEntity.ok(dtos);
     }
 
+    private static final int MAX_PAGE_SIZE = 100;
+
+    /**
+     * SCALE-3: paginated, searchable paper listing — the scalable replacement for
+     * {@code /available} (which loads every paper). Used by the custom-bundle paper
+     * picker. Returns a {@link org.springframework.data.domain.Page} of {@link PaperDto}.
+     */
+    @GetMapping("/search")
+    public ResponseEntity<org.springframework.data.domain.Page<PaperDto>> searchPapers(
+            @RequestParam(name = "q", defaultValue = "") String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        var pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0), safeSize,
+                org.springframework.data.domain.Sort.by("name").ascending());
+        org.springframework.data.domain.Page<PaperDto> result =
+                paperService.search(query, pageable).map(paperMapper::toDto);
+        return ResponseEntity.ok(result);
+    }
+
     /**
      * Handles GET request to retrieve a specific paper by ID (Admin only).
      */

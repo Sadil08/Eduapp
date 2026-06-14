@@ -95,8 +95,15 @@
 - [x] S.2 Right-size async pool: core 20–50, max 100, queue 500–1000, sensible `RejectedExecutionHandler` (503/CallerRuns) `(SCALE-2)`. **Test:** burst of >105 concurrent tasks no `TaskRejectedException` to user.
 - [x] S.3 Verify/implement `AsyncUncaughtExceptionHandler` logging in `AsyncConfig` `(AMB-async-err)`. **Test:** failing async task is logged, not swallowed.
 - [~] S.4 Paginate `AIAnalysisController` + all admin list endpoints (`AdminUserController`, `AdminBundleController`, `AdminCustomBundleController`) + All public/student endpoints that return lists of entities/data(When user base grows to about 500000+ and number of paper also grow 1M+ getting paginated responses is a must(or any othe scalable technique))— `Pageable`, default size 20, max 100 `(SCALE-3, SCALE-4)`. **Test:** `?page&size` honoured; oversize clamped.
-  - DONE: `AIAnalysisController.getAll()` paginated (unbounded, fast-growing); `AdminUserController` was already paginated.
-  - REMAINING (broad sweep): 46 list-returning controller methods total. This is a **frontend-contract-breaking** change (`List` → `Page`) across high-cardinality endpoints (papers, paper-bundles, reviews, attempts, leaderboards, admin feedback/bundles, student answers, school lists). Plan: paginate the unbounded/high-growth ones in lockstep with frontend updates; leave small bounded reference lists (subjects, exam-types, lessons, a single user's cart) as-is. Sequenced in a dedicated pagination pass (see below).
+  - DONE: `AIAnalysisController.getAll()` paginated; `AdminUserController` + public `PaperBundleController` list were already paginated.
+  - DONE (chosen long-term path = server-side search + pagination, frontend updated in lockstep): **paper picker** — new `GET /api/papers/search?q=&page=&size=` (`Page<PaperDto>`, name search, size capped 100); frontend `paperService.searchPapers` + `bundles/create-custom` page rewired from "load every paper + filter client-side" to debounced server-side search + paged results (selected-paper details tracked separately). Tested: `PaperSearchIT` (paged, capped, filtered); frontend `tsc --noEmit` clean. Pattern (Spring `Page<>` + `Page<T>` TS type) is now established for reuse.
+  - REMAINING ROLLOUT (apply the same pattern, each backend+frontend in lockstep, sequenced by risk/cardinality):
+    1. `GET /api/admin/papers` (AdminPaperController) + admin papers page table → server-side page+search.
+    2. `GET /api/reviews` (public, grows) + reviews list UI.
+    3. `GET /api/admin/feedback`, `/api/admin/bundles`, `/api/admin/custom-bundles` admin tables.
+    4. Per-user attempt/answer history endpoints (StudentPaperAttempt/StudentAnswer) — grow per user.
+    5. Leaderboards — cap + page (also a query-cost concern at scale).
+    - LEAVE AS-IS (bounded reference data, won't hit the scale concern): subjects, exam-types, lessons, a single user's cart/notifications/progress.
 - [x] S.5 Cache `AdminDashboardController` revenue with TTL `(SCALE-5)`. `@Cacheable("revenueCache")`, 60s TTL in RedisConfig. ✅ 2026-06-14
 - [x] S.6 Explicit HikariCP config (max-pool 20, min-idle 5, timeout 30s, leak-detection 60s) `(SCALE-7)`. In `application.properties`. ✅ 2026-06-14
 - [x] S.7 S3 calls: api-call timeouts (attempt 10s / total 30s) on the S3Client so a slow Supabase can't pile up threads `(SCALE-8)`. (Resilience4j circuit-breaker = optional follow-up; timeouts are the load-bearing fix.) ✅ 2026-06-14

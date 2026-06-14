@@ -82,6 +82,9 @@ public class StudentBundleAccessService {
                 .collect(Collectors.toList());
     }
 
+    // SCALE-5: revenue is a full SUM scan; cache it (TTL configured in RedisConfig's
+    // "revenueCache") so frequent dashboard polling doesn't repeatedly hammer the DB.
+    @org.springframework.cache.annotation.Cacheable(value = "revenueCache", key = "'total'")
     public java.math.BigDecimal calculateTotalRevenue() {
         java.math.BigDecimal total = studentBundleAccessRepository.sumPricePaid();
         return total != null ? total : java.math.BigDecimal.ZERO;

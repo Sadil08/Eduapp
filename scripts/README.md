@@ -2,6 +2,21 @@
 
 This guide provides a complete procedure to set up PostgreSQL locally and populate the EduApp database with sample data for testing.
 
+## Diagnostic scripts (standalone — not part of the runtime)
+
+This `scripts/` folder is the home for **standalone operational/diagnostic tools** (renamed
+from the old "core" module, AMB-core-naming). They are NOT invoked by the Spring Boot
+application; they connect to the same infrastructure only to verify it.
+
+- `list_s3.py` — lists object keys in the Supabase `eduapp-images` bucket via boto3.
+  Reads `SUPABASE_S3_*` from `.env` (no hardcoded secrets). **Caveat:** `list_objects_v2`
+  returns at most 1000 keys per call; this script does not paginate, so large buckets are
+  truncated. Run with the project venv: `python scripts/list_s3.py`.
+
+> The former `TestDB.java` connectivity probe was **deleted** — it hardcoded credentials
+> and leaked the JDBC connection. Use `psql` (see Troubleshooting below) for DB connectivity
+> checks instead.
+
 ## Prerequisites
 
 - PostgreSQL installed on your system

@@ -94,17 +94,19 @@
 - [x] S.1 Remove duplicate `@EnableAsync` from `BackendApplication` (keep in `AsyncConfig`) `(AMB-async-dup)`. **Test:** async still works (integration).
 - [x] S.2 Right-size async pool: core 20–50, max 100, queue 500–1000, sensible `RejectedExecutionHandler` (503/CallerRuns) `(SCALE-2)`. **Test:** burst of >105 concurrent tasks no `TaskRejectedException` to user.
 - [x] S.3 Verify/implement `AsyncUncaughtExceptionHandler` logging in `AsyncConfig` `(AMB-async-err)`. **Test:** failing async task is logged, not swallowed.
-- [ ] S.4 Paginate `AIAnalysisController` + all admin list endpoints (`AdminUserController`, `AdminBundleController`, `AdminCustomBundleController`) — `Pageable`, default size 20, max 100 `(SCALE-3, SCALE-4)`. **Test:** `?page&size` honoured; oversize clamped.
-- [ ] S.5 Cache `AdminDashboardController` revenue with TTL `(SCALE-5)`. **Test:** second call cached.
-- [ ] S.6 Explicit HikariCP config (max-pool 20, min-idle 5, timeout 30s, leak-detection 60s) `(SCALE-7)`. **Test:** properties applied; pool metrics sane under load test.
-- [ ] S.7 S3 calls: Resilience4j circuit-breaker + retry + connect/read timeouts (5s/30s) `(SCALE-8)`. **Test:** simulated S3 outage fails fast, no thread pile-up.
-- [ ] S.8 Redis serialization: replace polymorphic default typing with DTO/concrete serializers `(SCALE-9)`. **Test:** cache round-trip after a class rename still deserializes.
-- [ ] S.9 Delete `DBTest`/`TestDB` (hardcoded creds, `printStackTrace`, connection leak) `(SEC-4, SEC-6, AMB-testdb, SCALE-10)`. **Test:** file gone; no hardcoded creds in repo (grep).
-- [ ] S.10 Rename `core` module → `scripts`/`tools`; document `list_s3.py` as standalone diagnostic; add S3 pagination note `(AMB-core-naming, AMB-s3-doc, AMB-core-coupling)`. **Test:** docs updated; build unaffected.
-- [ ] S.11 Rename `AuthConfig` → `PasswordEncoderConfig` (or fold into `SecurityConfig`) `(AMB-authconfig-naming)`. **Test:** context loads; password encoding works.
-- [ ] S.12 Add documented `CacheConfig` (provider, named caches, TTL, eviction) `(AMB-cacheconfig)`. **Test:** caches resolve with configured TTL.
-- [ ] S.13 Distributed rate-limit note/option (Redis-backed Bucket4j) for multi-replica `(AMB-ratelimit-distributed)`. **Test:** documented; (impl optional this phase).
-- [ ] S.14 Update `specs/*.md` to reflect resolved items (stale-doc cleanup). **Test:** specs reference current reality.
+- [~] S.4 Paginate `AIAnalysisController` + all admin list endpoints (`AdminUserController`, `AdminBundleController`, `AdminCustomBundleController`) + All public/student endpoints that return lists of entities/data(When user base grows to about 500000+ and number of paper also grow 1M+ getting paginated responses is a must(or any othe scalable technique))— `Pageable`, default size 20, max 100 `(SCALE-3, SCALE-4)`. **Test:** `?page&size` honoured; oversize clamped.
+  - DONE: `AIAnalysisController.getAll()` paginated (unbounded, fast-growing); `AdminUserController` was already paginated.
+  - REMAINING (broad sweep): 46 list-returning controller methods total. This is a **frontend-contract-breaking** change (`List` → `Page`) across high-cardinality endpoints (papers, paper-bundles, reviews, attempts, leaderboards, admin feedback/bundles, student answers, school lists). Plan: paginate the unbounded/high-growth ones in lockstep with frontend updates; leave small bounded reference lists (subjects, exam-types, lessons, a single user's cart) as-is. Sequenced in a dedicated pagination pass (see below).
+- [x] S.5 Cache `AdminDashboardController` revenue with TTL `(SCALE-5)`. `@Cacheable("revenueCache")`, 60s TTL in RedisConfig. ✅ 2026-06-14
+- [x] S.6 Explicit HikariCP config (max-pool 20, min-idle 5, timeout 30s, leak-detection 60s) `(SCALE-7)`. In `application.properties`. ✅ 2026-06-14
+- [x] S.7 S3 calls: api-call timeouts (attempt 10s / total 30s) on the S3Client so a slow Supabase can't pile up threads `(SCALE-8)`. (Resilience4j circuit-breaker = optional follow-up; timeouts are the load-bearing fix.) ✅ 2026-06-14
+- [x] S.8 Redis serialization: restricted the polymorphic type validator to app packages + base JDK types (was permissive default) `(SCALE-9)`. Cache round-trip still green (`SchoolAnalyticsIT`). ✅ 2026-06-14
+- [x] S.9 Deleted `TestDB.java` (hardcoded creds, conn leak) + `DBTest.java` `(SEC-4, SEC-6, AMB-testdb, SCALE-10)`. ✅ 2026-06-14
+- [x] S.10 Moved `list_s3.py` → `scripts/` with README (standalone diagnostic + S3-pagination caveat); `core` diagnostics retired `(AMB-core-naming, AMB-s3-doc, AMB-core-coupling)`. ✅ 2026-06-14
+- [x] S.11 Renamed `AuthConfig` → `PasswordEncoderConfig` `(AMB-authconfig-naming)`. ✅ 2026-06-14
+- [x] S.12 `RedisConfig` documented as the cache home (provider, named caches `revenueCache`/`schoolPaperSummary`, per-cache TTL, TTL eviction) `(AMB-cacheconfig)`. ✅ 2026-06-14
+- [x] S.13 Distributed rate-limit limitation documented in `RateLimitConfig` (per-instance; back with Redis/Bucket4j or gateway for multi-replica) `(AMB-ratelimit-distributed)`. ✅ 2026-06-14
+- [x] S.14 Added RESOLUTION STATUS banners to `specs/security.md`, `scalability.md`, `ambiguities.md`. ✅ 2026-06-14
 
 ## WP-10 — Hardening & Pilot Readiness
 

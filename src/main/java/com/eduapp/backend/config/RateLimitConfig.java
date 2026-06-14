@@ -9,6 +9,15 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * In-process per-key rate limiting (Bucket4j).
+ *
+ * <p>NOTE (AMB-ratelimit-distributed): buckets live in a local {@link ConcurrentHashMap},
+ * so limits are enforced PER INSTANCE. Across horizontally-scaled replicas the effective
+ * limit is N× the configured value. For a multi-replica deployment, back Bucket4j with the
+ * shared Redis already configured here (bucket4j-redis / lettuce) so limits are global, or
+ * enforce limits at the reverse proxy / API gateway.
+ */
 @Configuration
 public class RateLimitConfig {
 

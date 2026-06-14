@@ -7,10 +7,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import java.net.URI;
+import java.time.Duration;
 
 /**
  * Configuration for Supabase Storage via S3-compatible API.
@@ -43,6 +45,13 @@ public class SupabaseStorageConfig {
                         AwsBasicCredentials.create(accessKey, secretKey)))
                 .region(Region.of("auto"))
                 .forcePathStyle(true)
+                // SCALE-8: bound how long an S3 call may block so a slow/unavailable
+                // Supabase backend cannot pile up and exhaust the request threads.
+                // apiCallAttemptTimeout = per attempt; apiCallTimeout = total incl. retries.
+                .overrideConfiguration(ClientOverrideConfiguration.builder()
+                        .apiCallAttemptTimeout(Duration.ofSeconds(10))
+                        .apiCallTimeout(Duration.ofSeconds(30))
+                        .build())
                 .build();
     }
 }

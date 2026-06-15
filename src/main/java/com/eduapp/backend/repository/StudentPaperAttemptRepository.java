@@ -1,10 +1,13 @@
 package com.eduapp.backend.repository;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import com.eduapp.backend.model.StudentPaperAttempt;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +16,26 @@ import java.util.Optional;
  * Provides database access for paper attempt records.
  */
 public interface StudentPaperAttemptRepository extends JpaRepository<StudentPaperAttempt, Long> {
+
+    /**
+     * WP-A1 durable marking: SUBMITTED attempts whose AI analysis never completed — i.e.
+     * the @Async job was lost (e.g. JVM crash). Stale ({@code completedAt < staleBefore})
+     * so the live async run had its chance, not ancient ({@code completedAt > minTime}),
+     * under the retry cap, throttled by {@code lastSubmissionTime}, and with no
+     * OverallPaperAnalysis row yet. The sweeper re-enqueues these.
+     */
+    @Query("SELECT a FROM StudentPaperAttempt a "
+            + "WHERE a.status = com.eduapp.backend.model.AttemptStatus.SUBMITTED "
+            + "AND a.completedAt < :staleBefore AND a.completedAt > :minTime "
+            + "AND a.submissionCount < :maxRetries "
+            + "AND (a.lastSubmissionTime IS NULL OR a.lastSubmissionTime < :retryThrottleBefore) "
+            + "AND NOT EXISTS (SELECT o FROM OverallPaperAnalysis o WHERE o.attempt = a) "
+            + "ORDER BY a.completedAt ASC")
+    List<StudentPaperAttempt> findStuckAnalysis(@Param("staleBefore") LocalDateTime staleBefore,
+            @Param("minTime") LocalDateTime minTime,
+            @Param("retryThrottleBefore") LocalDateTime retryThrottleBefore,
+            @Param("maxRetries") int maxRetries,
+            Pageable pageable);
 
     /**
      * Finds all attempts by a specific student.

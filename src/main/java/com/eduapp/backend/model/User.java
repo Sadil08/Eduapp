@@ -64,6 +64,12 @@ public class User {
     @Column(name = "last_password_change_date")
     private LocalDateTime lastPasswordChangeDate;
 
+    // N-S5: monotonically-increasing token version. Embedded in every issued JWT; the auth
+    // filter rejects tokens whose version is below this. Incremented on password reset (and any
+    // future "log out everywhere") to instantly invalidate all previously-issued tokens.
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion = 0;
+
     // ---------- constructors ----------
     public User() {
     }
@@ -173,6 +179,19 @@ public class User {
 
     public Long getSchoolId() {
         return school != null ? school.getId() : null;
+    }
+
+    public int getTokenVersion() {
+        return tokenVersion;
+    }
+
+    public void setTokenVersion(int tokenVersion) {
+        this.tokenVersion = tokenVersion;
+    }
+
+    /** N-S5: bump to invalidate every JWT issued before now (password reset / log-out-everywhere). */
+    public void incrementTokenVersion() {
+        this.tokenVersion++;
     }
 
     public String getCountry() {

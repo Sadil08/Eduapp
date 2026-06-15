@@ -159,7 +159,8 @@ public class UserService implements UserDetailsService {
                 user.setLastLoginTime(java.time.LocalDateTime.now());
                 userRepository.save(user);
 
-                return jwtUtil.generateToken(email, user.getRole(), user.getId(), user.getReferralCode());
+                return jwtUtil.generateToken(email, user.getRole(), user.getId(),
+                                user.getReferralCode(), user.getTokenVersion());
         }
 
         public java.util.Optional<User> findById(Long id) {
@@ -231,11 +232,9 @@ public class UserService implements UserDetailsService {
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-                return org.springframework.security.core.userdetails.User
-                                .withUsername(user.getEmail())
-                                .password(user.getPassword())
-                                .authorities("ROLE_" + user.getRole().name())
-                                .build();
+                // N-SC1/N-S5: custom principal carries schoolId + tokenVersion so downstream
+                // filters don't re-query the user on every request.
+                return com.eduapp.backend.security.AuthenticatedUser.from(user);
         }
 
         // --- Forgot Password ---
@@ -320,6 +319,8 @@ public class UserService implements UserDetailsService {
                 // Reset Password
                 user.setPassword(passwordEncoder.encode(newPassword));
                 user.setLastPasswordChangeDate(LocalDateTime.now());
+                // N-S5: invalidate every JWT issued before this reset (a leaked/old token is now dead).
+                user.incrementTokenVersion();
                 userRepository.save(user);
 
                 // Delete used token

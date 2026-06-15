@@ -33,16 +33,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            String email = jwtUtil.extractEmail(token);
-
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                if (!jwtUtil.isTokenExpired(token)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+            // A malformed/expired token, or one with a wrong iss/aud (N-S6), throws here —
+            // we swallow it and continue unauthenticated so the request hits the 401 path.
+            try {
+                String email = jwtUtil.extractEmail(token);
+                if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                    // N-S5: reject tokens minted before the user's current token version
+                    // (e.g. issued before a password reset / log-out-everywhere).
+                    boolean versionOk = !(userDetails instanceof AuthenticatedUser au)
+                            || jwtUtil.extractTokenVersion(token) >= au.getTokenVersion();
+                    if (!jwtUtil.isTokenExpired(token) && versionOk) {
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
                 }
+            } catch (io.jsonwebtoken.JwtException | IllegalArgumentException ex) {
+                // invalid token → remain unauthenticated; do not leak details
+                logger.debug("Rejected JWT: " + ex.getMessage());
             }
         }
         filterChain.doFilter(request, response);

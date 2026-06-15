@@ -39,8 +39,8 @@ bare array. Query params: `?page` (0-based), `?size` (capped server-side), optio
 
 | # | Endpoint | Before | After | Frontend impact | Status |
 |---|----------|--------|-------|-----------------|--------|
-| B1 | `GET /api/papers` (admin all) | `List<PaperDto>` (ADMIN) | `Page<PaperDto>` `?page&size&q` | admin papers list reads `.content`. NOTE pre-existing bug: `paperService.getBundlePapers(bundleId)` calls this ADMIN endpoint with an *ignored* `bundleId` — broken before this change; must be repointed to a real bundle-papers source. `/api/papers/available` kept (deprecated) but hard-capped at 500. | ◐ |
-| B2 | `GET /api/admin/bundles` | `List<AdminBundleDto>` | `Page<AdminBundleDto>` `?page&size` | admin bundles list reads `.content` | ◐ |
+| B1 | `GET /api/papers` (admin all) | `List<PaperDto>` (ADMIN) | `Page<PaperDto>` `?page&size&q` | FE: `paperService.getBundlePapers` repointed to `GET /api/paper-bundles/{id}` `.papers` (fixes a pre-existing bug — it had passed an ignored `bundleId` to the admin endpoint). `/api/papers/available` kept (deprecated) hard-capped at 500. | ☑ |
+| B2 | `GET /api/admin/bundles` | `List<AdminBundleDto>` | `Page<AdminBundleDto>` `?page&size` | FE: `adminService.getBundles()` requests `size=100` and unwraps `.content`, still returns a flat array → 3 admin pages unchanged | ☑ |
 | B3 | `GET /api/paper-bundles` / `/summaries` (public catalog) | `List<...>` | _(deferred)_ | **DEFERRED** — public storefront; converting to `Page` is a UX decision (pages vs infinite-scroll) and needs frontend verification. Recommend a follow-up with the catalog UI. | ☐ |
 | B4 | `GET /api/questions` | `List<QuestionDto>` | `Page<QuestionDto>` `?page&size` (ADMIN, see A6) | none (no caller) | ☑ |
 
@@ -64,6 +64,19 @@ Goal: backend becomes paginated/secured while the **UI looks identical**. Strate
 
 Detailed per-file frontend caller map is appended in section **D** as each endpoint is changed.
 
-## D. Frontend caller map (filled per endpoint as work proceeds)
+## D. Frontend caller map
 
-_(to be appended)_
+| Backend change | Frontend file(s) | Action taken |
+|---|---|---|
+| A1 `/api/progress` own-data | `services/progressService.ts` → `app/progress/page.tsx` | None — page always passes the logged-in user's id; backend now ignores the param and returns own rows. Behaviour identical. |
+| A2 `/api/notifications` own-data | — | No frontend caller. |
+| A3 `/api/carts` own-data | `services/cartService.ts` | None — reads `response.data[0]`; still works (returns caller's cart). (Service is legacy/partly mismatched; flagged separately.) |
+| A6/B4 `/api/questions` admin+page | — | No frontend caller (`import-from-pdf`, `extract-batch` only). |
+| B1 `/api/papers` → Page | `services/paperService.ts` (`getBundlePapers`) | Repointed to `GET /api/paper-bundles/{id}` `.papers`. `getAllPapers()`→`/available` (capped) and `searchPapers()`→`/search` (already Page) unchanged. |
+| B2 `/api/admin/bundles` → Page | `services/adminService.ts` (`getBundles`) → `app/admin/bundles/page.tsx`, `app/admin/papers/page.tsx`, `app/admin/users/[id]/page.tsx` | Service requests `size=100`, unwraps `.content`, returns flat array → 3 pages unchanged. |
+| B3 public catalog | `services/bundleService.ts` etc. | **Deferred** with backend B3 (storefront UX decision). |
+
+Pre-existing issues surfaced (not regressions from this work, tracked under N-S9 / follow-ups):
+`cartService.ts` expects a `bundleIds` JSON field the backend model no longer has; the
+entity-body CRUD controllers (Cart/Notification/Progress/QuestionOption/OverallPaperAnalysis)
+still allow `GET/PUT/DELETE /{id}` without ownership checks.

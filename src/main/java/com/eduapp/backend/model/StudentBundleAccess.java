@@ -4,7 +4,12 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "student_bundle_accesses")
+// N-R3: a verified gateway payment can grant a bundle at most once. NULL payment_ids
+// (admin/legacy grants) are treated as distinct by Postgres, so they're unaffected; this
+// only constrains real paid grants — a backstop behind the app-level idempotency check.
+@Table(name = "student_bundle_accesses",
+        uniqueConstraints = @UniqueConstraint(name = "uq_sba_payment_bundle",
+                columnNames = {"payment_id", "bundle_id"}))
 public class StudentBundleAccess {
 
     @Id
@@ -21,7 +26,7 @@ public class StudentBundleAccess {
 
     private LocalDateTime purchasedAt = LocalDateTime.now();
 
-    @Column
+    @Column(name = "payment_id")
     private String paymentId;
 
     @Column(name = "expires_at")

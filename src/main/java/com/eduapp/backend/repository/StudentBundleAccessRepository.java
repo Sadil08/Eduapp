@@ -22,6 +22,12 @@ public interface StudentBundleAccessRepository extends JpaRepository<StudentBund
     boolean existsByStudentIdAndBundleId(Long studentId, Long bundleId);
 
     /**
+     * N-R3: has this gateway payment already been consumed? Makes checkout idempotent so a
+     * payment reference can't be replayed/reused to grant a second set of bundles.
+     */
+    boolean existsByPaymentId(String paymentId);
+
+    /**
      * Count number of students with access to a specific bundle
      */
     int countByBundleId(Long bundleId);

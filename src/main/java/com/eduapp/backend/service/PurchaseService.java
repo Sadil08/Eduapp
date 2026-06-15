@@ -73,6 +73,15 @@ public class PurchaseService {
 
             String paymentId = paymentResult.getPaymentId();
 
+            // N-R3: a verified payment may only be consumed ONCE. If we've already recorded a
+            // grant for this paymentId, this is a replay / reuse of the reference — skip
+            // idempotently so it cannot grant a second (unpaid) set of bundles.
+            if (paymentId != null && studentBundleAccessRepository.existsByPaymentId(paymentId)) {
+                logger.warn("Payment {} already processed — idempotent skip (replay/reuse blocked) for user {}",
+                        paymentId, user.getId());
+                return;
+            }
+
             for (PaperBundle bundle : bundles) {
                 logger.info("Processing bundle: {} (ID: {}) for user: {}", bundle.getName(), bundle.getId(),
                         user.getId());

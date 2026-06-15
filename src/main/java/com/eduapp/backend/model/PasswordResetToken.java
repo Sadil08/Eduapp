@@ -13,6 +13,7 @@ public class PasswordResetToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // N-S1: stores the BCRYPT HASH of the OTP, never the raw value.
     @Column(nullable = false)
     private String token;
 
@@ -25,6 +26,10 @@ public class PasswordResetToken {
 
     @Column(nullable = false)
     private LocalDateTime lastRequestTime;
+
+    // N-S2: failed verification attempts; the token is invalidated past a small cap.
+    @Column(nullable = false)
+    private int attemptCount = 0;
 
     public PasswordResetToken() {
         super();
@@ -45,6 +50,19 @@ public class PasswordResetToken {
         this.token = token;
         this.lastRequestTime = LocalDateTime.now();
         this.expiryDate = calculateExpiryDate(EXPIRATION);
+        this.attemptCount = 0; // fresh OTP → reset the lockout counter
+    }
+
+    public int getAttemptCount() {
+        return attemptCount;
+    }
+
+    public void setAttemptCount(int attemptCount) {
+        this.attemptCount = attemptCount;
+    }
+
+    public void incrementAttempt() {
+        this.attemptCount++;
     }
 
     public Long getId() {

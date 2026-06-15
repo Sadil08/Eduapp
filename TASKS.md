@@ -29,7 +29,8 @@
 - [x] 1.6 `AdminController.createAdmin` returns DTO, never raw `User`; add `@JsonIgnore` to `User.password` `(SEC-AdminController)`. **Test:** response body contains no `password` field across endpoints.
 - [ ] 1.7 Wire/verify rate limiting on `/api/auth/**` via `RateLimitConfig` `(SEC-ratelimit)`. **Test:** 11th login/min → 429.
 - [~] 1.8 `server.error.include-stacktrace=never` (DONE) + `GlobalExceptionHandler` now maps `AccessDeniedException`→403 and `AuthenticationException`→401 (DONE — fixed a real bug where method `@PreAuthorize` denials returned 400). Remaining: stop leaking `ex.getMessage()` in the generic 400 handler. `(SEC-stacktrace, NFR)`. **Test:** `SchoolInviteAndEnrolmentIT` teacher→403.
-- [ ] 1.9 Bean-validation (`jakarta.validation`) on all auth/request DTOs + `@Valid` `(SEC-NFR input validation)`. **Test:** malformed register payload → 400 with field errors.
+- [ ] 1.9 Bean-validation (`jakarta.validation`) on all auth/request DTOs + `@Valid` `(SEC-NFR input validation)`. **Test:** malformed register payload → 400 with field errors. → tracked as **N-S9** in `../AUDIT_RESPONSE.md` (only 2/44 controllers use @Valid).
+> 2026-06-15 — Deep NFR audit (`../NFR_DEEP_AUDIT.md`) verified against code; 28 findings recorded with granular sub-tasks in `../AUDIT_RESPONSE.md` (§ WP-N). Re-opened as under-executed: 1.8 (S8 error-message leak still live), default DEBUG logging (O1), GCP path (A3).
 
 ## WP-2 — Migration Discipline (Flyway cutover)
 

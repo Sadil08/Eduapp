@@ -1,8 +1,14 @@
 // src/main/java/com/eduapp/backend/dto/LoginRequest.java
 package com.eduapp.backend.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 public class LoginRequest {
+    @NotBlank(message = "Email is required")
+    @Email(message = "Must be a valid email")
     private String email;
+    @NotBlank(message = "Password is required")
     private String password;
 
     public LoginRequest() {}

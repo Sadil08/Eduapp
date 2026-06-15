@@ -1,6 +1,7 @@
 package com.eduapp.backend.service;
 
 import com.eduapp.backend.dto.*;
+import com.eduapp.backend.exception.BadRequestException;
 import com.eduapp.backend.model.PasswordResetToken;
 import com.eduapp.backend.model.Role;
 import com.eduapp.backend.model.User;
@@ -89,7 +90,7 @@ public class UserService implements UserDetailsService {
                 }
                 userRepository.findByEmail(req.getEmail())
                                 .ifPresent(u -> {
-                                        throw new RuntimeException("Email already exists");
+                                        throw new BadRequestException("Email already exists");
                                 });
 
                 User user = new User();
@@ -131,7 +132,7 @@ public class UserService implements UserDetailsService {
         public User createAdmin(RegisterRequest req) {
                 userRepository.findByEmail(req.getEmail())
                                 .ifPresent(u -> {
-                                        throw new RuntimeException("Email already exists");
+                                        throw new BadRequestException("Email already exists");
                                 });
 
                 User user = new User();
@@ -145,11 +146,12 @@ public class UserService implements UserDetailsService {
 
         // --- Login ---
         public String login(String email, String rawPassword, String ipAddress) {
+                // N-S7: identical generic error for unknown-email and wrong-password (no user enumeration).
                 User user = userRepository.findByEmail(email)
-                                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                                .orElseThrow(() -> new BadRequestException("Invalid email or password"));
 
                 if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-                        throw new RuntimeException("Invalid password");
+                        throw new BadRequestException("Invalid email or password");
                 }
 
                 // Update login stats
@@ -239,26 +241,34 @@ public class UserService implements UserDetailsService {
         // --- Forgot Password ---
         @Transactional
         public void forgotPassword(String email) {
-                User user = userRepository.findByEmail(email)
-                                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                // N-P2: never reveal whether an email is registered. Silently no-op for unknown
+                // emails; the controller always responds "OTP sent".
+                Optional<User> userOpt = userRepository.findByEmail(email);
+                if (userOpt.isEmpty()) {
+                        logger.info("forgot-password requested for non-existent email (no-op)");
+                        return;
+                }
+                User user = userOpt.get();
 
                 // Check for existing token and rate limit
                 Optional<PasswordResetToken> existingToken = passwordResetTokenRepository.findByUser(user);
 
                 String otp = generateOTP();
+                // N-S1: persist only the BCrypt hash of the OTP; the raw OTP goes to the user's email.
+                String otpHash = passwordEncoder.encode(otp);
 
                 if (existingToken.isPresent()) {
                         PasswordResetToken token = existingToken.get();
 
                         // Check 1 minute cooldown
                         if (token.getLastRequestTime().plusMinutes(1).isAfter(LocalDateTime.now())) {
-                                throw new RuntimeException("Please wait 1 minute before requesting a new OTP");
+                                throw new BadRequestException("Please wait 1 minute before requesting a new OTP");
                         }
 
-                        token.updateToken(otp);
+                        token.updateToken(otpHash);
                         passwordResetTokenRepository.save(token);
                 } else {
-                        PasswordResetToken newToken = new PasswordResetToken(otp, user);
+                        PasswordResetToken newToken = new PasswordResetToken(otpHash, user);
                         passwordResetTokenRepository.save(newToken);
                 }
 
@@ -266,28 +276,45 @@ public class UserService implements UserDetailsService {
                 emailService.sendPasswordResetEmail(user.getEmail(), otp);
         }
 
-        @Transactional
+        // N-S2: the OTP attempt-count increment / lockout-delete MUST survive the thrown
+        // BadRequestException — otherwise the default rollback-on-RuntimeException undoes the
+        // counter and the brute-force lockout never triggers.
+        @Transactional(noRollbackFor = BadRequestException.class)
         public void resetPassword(String email, String otp, String newPassword) {
+                // N-P2/N-S7: don't reveal email existence — same generic error as a bad OTP.
                 User user = userRepository.findByEmail(email)
-                                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                                .orElseThrow(() -> new BadRequestException("Invalid or expired OTP"));
 
                 // Check 1-day password change limit
                 if (user.getLastPasswordChangeDate() != null &&
                                 user.getLastPasswordChangeDate().plusHours(24).isAfter(LocalDateTime.now())) {
-                        throw new RuntimeException("You can only change your password once every 24 hours");
+                        throw new BadRequestException("You can only change your password once every 24 hours");
                 }
 
                 PasswordResetToken token = passwordResetTokenRepository.findByUser(user)
                                 .orElseThrow(() -> new RuntimeException("Invalid or expired OTP"));
 
-                // Validate OTP
-                if (!token.getToken().equals(otp)) {
-                        throw new RuntimeException("Invalid OTP");
+                // Validate Expiry first.
+                if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
+                        passwordResetTokenRepository.delete(token);
+                        throw new BadRequestException("Invalid or expired OTP");
                 }
 
-                // Validate Expiry
-                if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
-                        throw new RuntimeException("OTP has expired");
+                // N-S2: brute-force lockout — a 6-digit OTP is only 1M combinations.
+                if (token.getAttemptCount() >= MAX_OTP_ATTEMPTS) {
+                        passwordResetTokenRepository.delete(token);
+                        throw new BadRequestException("Too many invalid attempts. Please request a new OTP.");
+                }
+
+                // N-S1: compare against the stored BCrypt hash, not a plaintext value.
+                if (!passwordEncoder.matches(otp, token.getToken())) {
+                        token.incrementAttempt();
+                        if (token.getAttemptCount() >= MAX_OTP_ATTEMPTS) {
+                                passwordResetTokenRepository.delete(token); // lock out → force re-generation
+                        } else {
+                                passwordResetTokenRepository.save(token);
+                        }
+                        throw new BadRequestException("Invalid OTP");
                 }
 
                 // Reset Password
@@ -298,6 +325,8 @@ public class UserService implements UserDetailsService {
                 // Delete used token
                 passwordResetTokenRepository.delete(token);
         }
+
+        private static final int MAX_OTP_ATTEMPTS = 5;
 
         private String generateOTP() {
                 SecureRandom random = new SecureRandom();

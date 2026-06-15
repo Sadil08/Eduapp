@@ -42,11 +42,22 @@ public class WalletService {
         return walletTransactionRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
     }
 
+    /** N-R1: reject non-positive / null / absurdly large top-ups (negative would subtract balance). */
+    private static final BigDecimal MAX_WALLET_AMOUNT = new BigDecimal("1000000");
+
+    private void validateAmount(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0
+                || amount.compareTo(MAX_WALLET_AMOUNT) > 0) {
+            throw new com.eduapp.backend.exception.BadRequestException("Invalid amount");
+        }
+    }
+
     @Transactional
     public void topUp(Long userId, BigDecimal amount) {
         logger.info("Topping up wallet for user {}: {}", userId, amount);
+        validateAmount(amount);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new com.eduapp.backend.exception.BadRequestException("User not found"));
 
         user.setWalletBalance(user.getWalletBalance().add(amount));
         userRepository.save(user);
@@ -65,8 +76,9 @@ public class WalletService {
     @Transactional
     public void debit(User user, BigDecimal amount, String description) {
         logger.info("Debiting wallet for user {}: {}", user.getId(), amount);
+        validateAmount(amount); // N-R1: a negative "debit" would CREDIT the wallet
         if (user.getWalletBalance().compareTo(amount) < 0) {
-            throw new RuntimeException("Insufficient wallet balance");
+            throw new com.eduapp.backend.exception.BadRequestException("Insufficient wallet balance");
         }
 
         user.setWalletBalance(user.getWalletBalance().subtract(amount));

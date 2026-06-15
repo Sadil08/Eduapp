@@ -29,11 +29,7 @@ public class EmailServiceImpl implements EmailService {
     public void sendPasswordResetEmail(String to, String otp) {
         try {
             logger.info("Preparing to send Password Reset OTP to: {}", to);
-
-            // Log OTP regardless for dev/testing
-            logger.info("========================================");
-            logger.info("PASSWORD RESET OTP for {}: {}", to, otp);
-            logger.info("========================================");
+            // N-S3: never log the OTP value — it's a credential. (Was logged unconditionally.)
 
             if (fromEmail != null && !fromEmail.isEmpty()) {
                 SimpleMailMessage message = new SimpleMailMessage();
@@ -51,7 +47,7 @@ public class EmailServiceImpl implements EmailService {
                 logger.info("Password Reset Email sent successfully to {}", to);
             } else {
                 logger.warn(
-                        "SMTP not configured (spring.mail.username is empty). Email NOT sent. Check console for OTP.");
+                        "SMTP not configured (spring.mail.username is empty). Password-reset email NOT sent.");
             }
 
         } catch (Exception e) {

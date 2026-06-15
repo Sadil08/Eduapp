@@ -8,6 +8,7 @@ import com.eduapp.backend.dto.ForgotPasswordRequest;
 import com.eduapp.backend.dto.ResetPasswordRequest;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@RequestBody RegisterRequest req,
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest req,
             jakarta.servlet.http.HttpServletRequest request) {
         String ip = getClientIp(request);
         User saved = userService.register(req, ip);
@@ -31,7 +32,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest req,
+    public ResponseEntity<JwtResponse> login(@Valid @RequestBody LoginRequest req,
             jakarta.servlet.http.HttpServletRequest request) {
         String ip = getClientIp(request);
         String token = userService.login(req.getEmail(), req.getPassword(), ip);
@@ -39,13 +40,13 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest req) {
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
         userService.forgotPassword(req.getEmail());
         return ResponseEntity.ok().body("{\"message\": \"OTP sent to email\"}");
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
         userService.resetPassword(req.getEmail(), req.getOtp(), req.getNewPassword());
         return ResponseEntity.ok().body("{\"message\": \"Password reset successfully\"}");
     }

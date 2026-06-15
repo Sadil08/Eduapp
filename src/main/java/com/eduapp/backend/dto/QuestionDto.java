@@ -1,6 +1,8 @@
 package com.eduapp.backend.dto;
 
+import com.eduapp.backend.media.SignedUrlSerializer;
 import com.eduapp.backend.model.QuestionType;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.util.List;
 
 public class QuestionDto {
@@ -9,7 +11,9 @@ public class QuestionDto {
     private String text;
     private QuestionType type;
     private String correctAnswerText;
+    @JsonSerialize(using = SignedUrlSerializer.class)
     private String imageUrl;
+    @JsonSerialize(using = SignedUrlSerializer.class)
     private String modelAnswerImageUrl;
     private String extractedText;
     private Boolean requiresImageDisplay;

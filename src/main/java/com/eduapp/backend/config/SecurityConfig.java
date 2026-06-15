@@ -72,7 +72,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/invites/accept").permitAll() // token-gated teacher onboarding
                         .requestMatchers("/api/auth/forgot-password").permitAll()
                         .requestMatchers("/api/auth/reset-password").permitAll()
-                        .requestMatchers("/api/files/**").permitAll() // serve uploaded files without auth
+                        // WP-A0.3f: /api/files/** permitAll removed — media is now served via
+                        // short-lived signed URLs embedded (signed) in authorized DTOs; the
+                        // legacy public-redirect FileController was deleted.
                         .requestMatchers(HttpMethod.GET, "/api/paper-bundles").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/paper-bundles/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/subjects/**").permitAll()

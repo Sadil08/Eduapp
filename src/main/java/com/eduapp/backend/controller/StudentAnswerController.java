@@ -123,7 +123,10 @@ public class StudentAnswerController {
 
             return ResponseEntity.ok(Map.of(
                     "extractedText", extractedText,
+                    // imageUrl = canonical stored value (persist this); signedImageUrl =
+                    // short-lived link for immediate preview now that the bucket is private.
                     "imageUrl", imageUrl,
+                    "signedImageUrl", fileStorageService.generateSignedUrl(imageUrl, FileStorageService.SIGNED_URL_TTL),
                     "extractionsRemaining", remaining,
                     "extractionsUsed", used,
                     "extractionsMax", 2));

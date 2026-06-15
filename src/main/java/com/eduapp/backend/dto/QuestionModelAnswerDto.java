@@ -1,9 +1,13 @@
 package com.eduapp.backend.dto;
 
+import com.eduapp.backend.media.SignedUrlSerializer;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 public class QuestionModelAnswerDto {
     private Long id;
     private Long questionId;
     private String answerText;
+    @JsonSerialize(using = SignedUrlSerializer.class)
     private String imageUrl;
     private String extractedText;
 

@@ -1,5 +1,7 @@
 package com.eduapp.backend.dto;
 
+import com.eduapp.backend.media.SignedUrlSerializer;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import java.time.LocalDateTime;
 
 /**
@@ -11,9 +13,11 @@ public class StudentAnswerDto {
     private Long attemptId;
     private Long questionId;
     private String questionText; // For display purposes
+    @JsonSerialize(using = SignedUrlSerializer.class)
     private String questionImageUrl; // For display purposes
     private Boolean hideQuestionText; // For display purposes
     private String answerText;
+    @JsonSerialize(using = SignedUrlSerializer.class)
     private String imageUrl;
     private String extractedText;
     private Long selectedOptionId;
@@ -28,6 +32,7 @@ public class StudentAnswerDto {
     private String correctAnswerText; // Correct answer for essay/text questions
     private Long correctOptionId; // ID of correct option for MCQ questions
     private String correctOptionText; // Text of correct option for MCQ questions
+    @JsonSerialize(using = SignedUrlSerializer.class)
     private String correctAnswerImageUrl; // Image URL for the model answer
 
     public StudentAnswerDto() {

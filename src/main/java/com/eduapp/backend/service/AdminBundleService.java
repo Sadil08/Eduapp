@@ -119,37 +119,44 @@ public class AdminBundleService {
     }
 
     /**
-     * Get all bundles with their statistics
+     * Get all bundles with their statistics.
+     * @deprecated N-SC2/B2: unbounded. Use {@link #getAllBundlesWithStats(org.springframework.data.domain.Pageable)}.
      */
+    @Deprecated
     public List<AdminBundleDto> getAllBundlesWithStats() {
         logger.info("Fetching all bundles with statistics");
+        return bundleRepository.findAll().stream()
+                .map(this::toAdminBundleDto)
+                .collect(Collectors.toList());
+    }
 
-        List<PaperBundle> bundles = bundleRepository.findAll();
+    /**
+     * N-SC2/B2: bounded page of bundles with statistics (the scalable replacement).
+     * Returns {@code Page<AdminBundleDto>}.
+     */
+    public org.springframework.data.domain.Page<AdminBundleDto> getAllBundlesWithStats(
+            org.springframework.data.domain.Pageable pageable) {
+        logger.info("Fetching bundles-with-stats page {} size {}", pageable.getPageNumber(), pageable.getPageSize());
+        return bundleRepository.findAll(pageable).map(this::toAdminBundleDto);
+    }
 
-        return bundles.stream().map(bundle -> {
-            AdminBundleDto dto = new AdminBundleDto();
-            // Copy basic fields from PaperBundle
-            dto.setId(bundle.getId());
-            dto.setName(bundle.getName());
-            dto.setDescription(bundle.getDescription());
-            dto.setPrice(bundle.getPrice());
-            dto.setType(bundle.getType());
-            dto.setExamTypeId(bundle.getExamType() != null ? bundle.getExamType().getId() : null);
-            dto.setExamTypeName(bundle.getExamType() != null ? bundle.getExamType().getName() : null);
-            dto.setSubjectId(bundle.getSubject() != null ? bundle.getSubject().getId() : null);
-            dto.setLessonId(bundle.getLesson() != null ? bundle.getLesson().getId() : null);
-            dto.setIsPastPaper(bundle.getIsPastPaper());
-
-            // Set admin-specific fields
-            dto.setCreatedAt(bundle.getCreatedAt());
-            dto.setUpdatedAt(bundle.getUpdatedAt());
-            dto.setCreatedBy(bundle.getCreatedBy() != null ? bundle.getCreatedBy().getId() : null);
-
-            // Add statistics
-            dto.setStats(getBundleStats(bundle.getId()));
-
-            return dto;
-        }).collect(Collectors.toList());
+    private AdminBundleDto toAdminBundleDto(PaperBundle bundle) {
+        AdminBundleDto dto = new AdminBundleDto();
+        dto.setId(bundle.getId());
+        dto.setName(bundle.getName());
+        dto.setDescription(bundle.getDescription());
+        dto.setPrice(bundle.getPrice());
+        dto.setType(bundle.getType());
+        dto.setExamTypeId(bundle.getExamType() != null ? bundle.getExamType().getId() : null);
+        dto.setExamTypeName(bundle.getExamType() != null ? bundle.getExamType().getName() : null);
+        dto.setSubjectId(bundle.getSubject() != null ? bundle.getSubject().getId() : null);
+        dto.setLessonId(bundle.getLesson() != null ? bundle.getLesson().getId() : null);
+        dto.setIsPastPaper(bundle.getIsPastPaper());
+        dto.setCreatedAt(bundle.getCreatedAt());
+        dto.setUpdatedAt(bundle.getUpdatedAt());
+        dto.setCreatedBy(bundle.getCreatedBy() != null ? bundle.getCreatedBy().getId() : null);
+        dto.setStats(getBundleStats(bundle.getId()));
+        return dto;
     }
 
     /**

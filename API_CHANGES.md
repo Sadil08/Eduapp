@@ -39,10 +39,12 @@ bare array. Query params: `?page` (0-based), `?size` (capped server-side), optio
 
 | # | Endpoint | Before | After | Frontend impact | Status |
 |---|----------|--------|-------|-----------------|--------|
-| B1 | `GET /api/papers` (admin all) | `List<PaperDto>` (ADMIN) | `Page<PaperDto>` `?page&size&q` | admin papers list reads `.content` | ☐ |
-| B2 | `GET /api/admin/bundles` | `List<AdminBundleDto>` | `Page<AdminBundleDto>` `?page&size&q` | admin bundles list reads `.content` | ☐ |
-| B3 | `GET /api/paper-bundles` / `/summaries` (public catalog) | `List<...>` | `Page<...>` `?page&size` | catalog grid reads `.content`; keep infinite-scroll/"load more" UX | ☐ |
+| B1 | `GET /api/papers` (admin all) | `List<PaperDto>` (ADMIN) | `Page<PaperDto>` `?page&size&q` | admin papers list reads `.content`. NOTE pre-existing bug: `paperService.getBundlePapers(bundleId)` calls this ADMIN endpoint with an *ignored* `bundleId` — broken before this change; must be repointed to a real bundle-papers source. `/api/papers/available` kept (deprecated) but hard-capped at 500. | ◐ |
+| B2 | `GET /api/admin/bundles` | `List<AdminBundleDto>` | `Page<AdminBundleDto>` `?page&size` | admin bundles list reads `.content` | ◐ |
+| B3 | `GET /api/paper-bundles` / `/summaries` (public catalog) | `List<...>` | _(deferred)_ | **DEFERRED** — public storefront; converting to `Page` is a UX decision (pages vs infinite-scroll) and needs frontend verification. Recommend a follow-up with the catalog UI. | ☐ |
 | B4 | `GET /api/questions` | `List<QuestionDto>` | `Page<QuestionDto>` `?page&size` (ADMIN, see A6) | none (no caller) | ☑ |
+
+Backend for B1/B2/B4 verified by `NSC2AuthorizationIT` (Page shape + admin lock).
 
 Reference tables left **as full lists** (naturally bounded, low churn): `GET /api/subjects`,
 `/api/lessons`, `/api/exam-types`. Documented as accepted; ArchUnit guard will allow these.

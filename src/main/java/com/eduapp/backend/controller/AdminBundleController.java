@@ -47,14 +47,22 @@ public class AdminBundleController {
     }
 
     /**
-     * Get all bundles with statistics
-     * GET /api/admin/bundles
+     * Get all bundles with statistics — N-SC2/B2: paginated.
+     * GET /api/admin/bundles?page=&size=
+     * Returns a Spring Page: { content, totalElements, totalPages, number, size }.
      */
+    private static final int MAX_PAGE_SIZE = 100;
+
     @GetMapping
-    public ResponseEntity<List<AdminBundleDto>> getAllBundles() {
-        logger.info("Admin requested all bundles with stats");
-        List<AdminBundleDto> bundles = adminBundleService.getAllBundlesWithStats();
-        return ResponseEntity.ok(bundles);
+    public ResponseEntity<org.springframework.data.domain.Page<AdminBundleDto>> getAllBundles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        logger.info("Admin requested bundles-with-stats page {} size {}", page, size);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        var pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0), safeSize,
+                org.springframework.data.domain.Sort.by("id").descending());
+        return ResponseEntity.ok(adminBundleService.getAllBundlesWithStats(pageable));
     }
 
     /**

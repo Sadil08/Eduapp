@@ -48,31 +48,44 @@ public class PaperController {
         this.studentPaperAttemptMapper = studentPaperAttemptMapper;
     }
 
+    private static final int MAX_PAGE_SIZE = 100;
+    // N-SC2/B1: cap the deprecated /available list so it can never return an unbounded result.
+    private static final int AVAILABLE_CAP = 500;
+
     /**
-     * Handles GET request to retrieve all papers (Admin only).
+     * Handles GET request to retrieve papers (Admin only) — N-SC2/B1: paginated.
+     * GET /api/papers?q=&page=&size= → Page<PaperDto> { content, totalElements, totalPages, ... }.
      */
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<PaperDto>> getAllPapers() {
-        logger.info("Received request to get all papers");
-        List<Paper> papers = paperService.findAll();
-        List<PaperDto> dtos = paperMapper.toDtoList(papers);
-        return ResponseEntity.ok(dtos);
+    public ResponseEntity<org.springframework.data.domain.Page<PaperDto>> getAllPapers(
+            @RequestParam(name = "q", defaultValue = "") String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        logger.info("Admin requested papers page {} size {} q='{}'", page, size, query);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        var pageable = org.springframework.data.domain.PageRequest.of(
+                Math.max(page, 0), safeSize,
+                org.springframework.data.domain.Sort.by("name").ascending());
+        org.springframework.data.domain.Page<PaperDto> result =
+                paperService.search(query, pageable).map(paperMapper::toDto);
+        return ResponseEntity.ok(result);
     }
 
     /**
-     * Handles GET request to retrieve all available papers (for custom bundle creation).
-     * Available to all authenticated users.
+     * Retrieve available papers (custom bundle creation). Available to all authenticated users.
+     * @deprecated N-SC2/B1: loads many rows; use {@code /api/papers/search} (paginated). Hard-capped
+     * at {@value #AVAILABLE_CAP} so it stays bounded until callers migrate.
      */
+    @Deprecated
     @GetMapping("/available")
     public ResponseEntity<List<PaperDto>> getAllAvailablePapers() {
-        logger.info("Received request to get all available papers for custom bundle");
-        List<Paper> papers = paperService.findAll();
-        List<PaperDto> dtos = paperMapper.toDtoList(papers);
+        logger.info("Received request to get available papers (capped at {})", AVAILABLE_CAP);
+        var pageable = org.springframework.data.domain.PageRequest.of(0, AVAILABLE_CAP,
+                org.springframework.data.domain.Sort.by("name").ascending());
+        List<PaperDto> dtos = paperService.search("", pageable).map(paperMapper::toDto).getContent();
         return ResponseEntity.ok(dtos);
     }
-
-    private static final int MAX_PAGE_SIZE = 100;
 
     /**
      * SCALE-3: paginated, searchable paper listing — the scalable replacement for

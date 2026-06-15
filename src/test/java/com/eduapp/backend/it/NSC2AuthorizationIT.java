@@ -83,6 +83,24 @@ class NSC2AuthorizationIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void adminPapers_isPaginated() {
+        User admin = createUser(Role.ADMIN);
+        ResponseEntity<Map> resp = rest.exchange("/api/papers?page=0&size=5", HttpMethod.GET,
+                new HttpEntity<>(bearer(admin)), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(resp.getBody()).containsKey("content").containsKey("totalElements");
+    }
+
+    @Test
+    void adminBundles_isPaginated() {
+        User admin = createUser(Role.ADMIN);
+        ResponseEntity<Map> resp = rest.exchange("/api/admin/bundles?page=0&size=5", HttpMethod.GET,
+                new HttpEntity<>(bearer(admin)), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(resp.getBody()).containsKey("content").containsKey("totalElements");
+    }
+
+    @Test
     void allQuestions_isAdminOnly() {
         User student = createUser(Role.STUDENT);
         ResponseEntity<String> asStudent = rest.exchange("/api/questions", HttpMethod.GET,

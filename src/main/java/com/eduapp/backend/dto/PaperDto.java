@@ -1,10 +1,13 @@
 package com.eduapp.backend.dto;
 
 import com.eduapp.backend.model.PaperType;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 
 public class PaperDto {
     private Long id;
+    // N-S9: create/update are full-replace, so the name is always required (no validation groups needed).
+    @NotBlank(message = "Paper name is required")
     private String name;
     private String description;
     private PaperType type;

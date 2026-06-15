@@ -1,6 +1,8 @@
 package com.eduapp.backend.dto;
 
 import com.eduapp.backend.model.QuestionType;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 /**
@@ -8,7 +10,10 @@ import java.util.List;
  * Used by admin to manage question content.
  */
 public class QuestionCreateDto {
+    // N-S9: create/update are full-replace; a question always needs text and a type.
+    @NotBlank(message = "Question text is required")
     private String text;
+    @NotNull(message = "Question type is required")
     private QuestionType type;
     private String correctAnswerText;
     private Integer marks;

@@ -1,11 +1,14 @@
 package com.eduapp.backend.dto;
 
 import com.eduapp.backend.model.PaperType;
+import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 import java.util.List;
 
 public class PaperBundleDto {
     private Long id;
+    // N-S9: create/update are full-replace, so a bundle always needs a name.
+    @NotBlank(message = "Bundle name is required")
     private String name;
     private String description;
     private BigDecimal price;

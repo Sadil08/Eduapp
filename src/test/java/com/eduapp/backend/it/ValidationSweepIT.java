@@ -37,12 +37,46 @@ class ValidationSweepIT extends AbstractIntegrationTest {
         return h;
     }
 
+    private HttpHeaders admin() {
+        String u = UUID.randomUUID().toString().substring(0, 8);
+        User user = new User("adm-" + u + "@t.test", "x", "adm-" + u);
+        user.setRole(Role.ADMIN);
+        user.setReferralCode("AD" + u);
+        user = userRepository.save(user);
+        HttpHeaders h = new HttpHeaders();
+        h.setBearerAuth(jwtUtil.generateToken(user.getEmail(), user.getRole(), user.getId(), user.getReferralCode()));
+        return h;
+    }
+
     @Test
     void createSchoolPaper_withBlankName_returns400() {
         ResponseEntity<Map> resp = rest.exchange("/api/school/papers", HttpMethod.POST,
                 new HttpEntity<>(Map.of("name", "", "type", "ESSAY"), schoolAdmin()), Map.class);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(resp.getBody()).containsKey("fields");
+    }
+
+    // N-S9b: shared create/update DTOs now enforce their required fields.
+    @Test
+    void createPaper_withBlankName_returns400() {
+        ResponseEntity<Map> resp = rest.exchange("/api/papers", HttpMethod.POST,
+                new HttpEntity<>(Map.of("name", "", "type", "ESSAY"), admin()), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void createBundle_withBlankName_returns400() {
+        ResponseEntity<Map> resp = rest.exchange("/api/admin/bundles", HttpMethod.POST,
+                new HttpEntity<>(Map.of("name", "", "type", "ESSAY"), admin()), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void addQuestion_withBlankText_returns400() {
+        // @Valid runs before the service, so blank text 400s even though paper 999999 is absent.
+        ResponseEntity<Map> resp = rest.exchange("/api/admin/papers/999999/questions", HttpMethod.POST,
+                new HttpEntity<>(Map.of("text", "", "type", "ESSAY"), admin()), Map.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test

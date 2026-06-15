@@ -65,12 +65,7 @@ public class StudentPaperAttemptService {
         return attemptRepository.findAll(pageable);
     }
 
-    public List<StudentPaperAttempt> findAll() {
-        logger.info("Fetching all student paper attempts");
-        List<StudentPaperAttempt> attempts = attemptRepository.findAll();
-        logger.info("Found {} student paper attempts", attempts.size());
-        return attempts;
-    }
+    // N-SC2: removed the unbounded no-arg findAll() (no callers) — use the paginated variant above.
 
     /**
      * Retrieves a student paper attempt by its ID.

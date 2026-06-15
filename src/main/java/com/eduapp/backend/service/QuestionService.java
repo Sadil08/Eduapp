@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -43,12 +42,7 @@ public class QuestionService {
      * 
      * @return a list of all Question entities
      */
-    public List<Question> findAll() {
-        logger.info("Fetching all questions");
-        List<Question> questions = questionRepository.findAll();
-        logger.info("Found {} questions", questions.size());
-        return questions;
-    }
+    // N-SC2: removed the unbounded no-arg findAll() (no callers) — use findAll(Pageable).
 
     /** N-SC2/B4: bounded page of questions (replaces the unbounded HTTP findAll). */
     public org.springframework.data.domain.Page<Question> findAll(org.springframework.data.domain.Pageable pageable) {

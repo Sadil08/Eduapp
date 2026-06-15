@@ -46,8 +46,22 @@ bare array. Query params: `?page` (0-based), `?size` (capped server-side), optio
 
 Backend for B1/B2/B4 verified by `NSC2AuthorizationIT` (Page shape + admin lock).
 
+| B5 | `GET /api/question-options` | `List<QuestionOptionDto>` | `Page<QuestionOptionDto>` (ADMIN) | none (no caller) | ☑ |
+| B6 | `GET /api/student-bundle-access` | `List<StudentBundleAccess>` | `Page<StudentBundleAccess>` (ADMIN) | none (no caller) | ☑ |
+| B7 | `GET /api/overall-paper-analyses` | `List<OverallPaperAnalysis>` | `Page<OverallPaperAnalysis>` (ADMIN) | none (no caller) | ☑ |
+
 Reference tables left **as full lists** (naturally bounded, low churn): `GET /api/subjects`,
-`/api/lessons`, `/api/exam-types`. Documented as accepted; ArchUnit guard will allow these.
+`/api/lessons`, `/api/exam-types`. Allow-listed in the ArchUnit guard.
+
+**Dead unbounded `findAll()` removed (no callers, no shape change):** `PaperService.findAll`,
+`QuestionService.findAll`, `AdminPaperService.getAllPapers`, `AIAnalysisService.findAll`,
+`LeaderboardEntryService.findAll`, `StudentAnswerService.findAll`,
+`StudentPaperAttemptService.findAll`, `UserService.getAllUsers`,
+`AdminBundleService.getAllBundlesWithStats()` (no-arg). Callers already used paginated variants.
+
+**Regression guard:** `ScalabilityArchitectureTest` (ArchUnit) fails the build if any service
+calls a no-arg `findAll()` on a repository, except the allow-list (reference tables +
+`AnalyticsService` [N-SC3] + `PaperBundleService` [B3]).
 
 ## C. Frontend remediation plan
 

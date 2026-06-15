@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -21,9 +20,10 @@ public class OverallPaperAnalysisService {
         this.overallPaperAnalysisRepository = overallPaperAnalysisRepository;
     }
 
-    public List<OverallPaperAnalysis> findAll() {
-        logger.info("Fetching all overall paper analyses");
-        return overallPaperAnalysisRepository.findAll();
+    /** N-SC2: bounded page of analyses (replaces the unbounded no-arg findAll). */
+    public org.springframework.data.domain.Page<OverallPaperAnalysis> findAll(
+            org.springframework.data.domain.Pageable pageable) {
+        return overallPaperAnalysisRepository.findAll(pageable);
     }
 
     public Optional<OverallPaperAnalysis> findById(Long id) {

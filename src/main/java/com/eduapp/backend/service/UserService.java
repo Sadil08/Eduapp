@@ -167,18 +167,8 @@ public class UserService implements UserDetailsService {
                 return userRepository.findById(id);
         }
 
-        // --- Get all users (admin) ---
-        @Transactional(readOnly = true)
-        public List<UserResponse> getAllUsers() {
-                logger.info("Fetching all users for admin");
-                List<User> users = userRepository.findAll();
-                List<UserResponse> responses = users.stream()
-                                .map(user -> new UserResponse(user.getId(), user.getUsername(), user.getEmail(),
-                                                user.getRole()))
-                                .collect(Collectors.toList());
-                logger.info("Found {} users", responses.size());
-                return responses;
-        }
+        // N-SC2: removed the unbounded getAllUsers() (no callers — the admin users list is
+        // served by AdminUserService.getAllUsers(search, pageable), which is paginated).
 
         // --- Get detailed user data (admin) ---
         @Transactional(readOnly = true)

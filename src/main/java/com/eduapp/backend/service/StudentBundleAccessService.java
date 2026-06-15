@@ -24,9 +24,10 @@ public class StudentBundleAccessService {
         this.studentBundleAccessRepository = studentBundleAccessRepository;
     }
 
-    public List<StudentBundleAccess> findAll() {
-        logger.info("Fetching all student bundle accesses");
-        return studentBundleAccessRepository.findAll();
+    /** N-SC2: bounded page of bundle-access rows (replaces the unbounded no-arg findAll). */
+    public org.springframework.data.domain.Page<StudentBundleAccess> findAll(
+            org.springframework.data.domain.Pageable pageable) {
+        return studentBundleAccessRepository.findAll(pageable);
     }
 
     public Optional<StudentBundleAccess> findById(Long id) {

@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -116,18 +115,6 @@ public class AdminBundleService {
                 bundle.getName(), totalPapers, totalStudentsWithAccess, totalAttempts);
 
         return stats;
-    }
-
-    /**
-     * Get all bundles with their statistics.
-     * @deprecated N-SC2/B2: unbounded. Use {@link #getAllBundlesWithStats(org.springframework.data.domain.Pageable)}.
-     */
-    @Deprecated
-    public List<AdminBundleDto> getAllBundlesWithStats() {
-        logger.info("Fetching all bundles with statistics");
-        return bundleRepository.findAll().stream()
-                .map(this::toAdminBundleDto)
-                .collect(Collectors.toList());
     }
 
     /**

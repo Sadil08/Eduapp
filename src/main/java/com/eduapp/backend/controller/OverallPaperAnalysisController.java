@@ -27,11 +27,16 @@ public class OverallPaperAnalysisController {
         this.overallPaperAnalysisService = overallPaperAnalysisService;
     }
 
+    // N-SC2: ADMIN-only (class-level) + paginated. Returns a Spring Page.
+    private static final int MAX_PAGE_SIZE = 100;
+
     @GetMapping
-    public ResponseEntity<List<OverallPaperAnalysis>> getAll() {
-        logger.info("Fetching all overall paper analyses");
-        List<OverallPaperAnalysis> analyses = overallPaperAnalysisService.findAll();
-        return ResponseEntity.ok(analyses);
+    public ResponseEntity<org.springframework.data.domain.Page<OverallPaperAnalysis>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        var pageable = org.springframework.data.domain.PageRequest.of(Math.max(page, 0), safeSize);
+        return ResponseEntity.ok(overallPaperAnalysisService.findAll(pageable));
     }
 
     @GetMapping("/{id}")

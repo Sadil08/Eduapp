@@ -109,17 +109,7 @@ public class PaperService {
         this.studentAnswerService = studentAnswerService;
     }
 
-    /**
-     * Retrieves all papers from the database.
-     * 
-     * @return a list of all Paper entities
-     */
-    public List<Paper> findAll() {
-        logger.info("Fetching all papers");
-        List<Paper> papers = paperRepository.findAll();
-        logger.info("Found {} papers", papers.size());
-        return papers;
-    }
+    // N-SC2: removed the unbounded no-arg findAll() (no callers) — use search(query, pageable).
 
     // SCALE-3: paginated, optional name search. Replaces "load every paper then filter
     // client-side" for pickers/lists that grow with the catalogue.

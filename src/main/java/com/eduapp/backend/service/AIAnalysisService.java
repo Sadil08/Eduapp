@@ -420,11 +420,7 @@ public class AIAnalysisService {
         }
     }
 
-    // CRUD Methods for AIAnalysis (Legacy/Existing Support)
-    public List<AIAnalysis> findAll() {
-        return aiAnalysisRepository.findAll();
-    }
-
+    // N-SC2: removed the unbounded no-arg findAll() (no callers). Use the paginated variant.
     // SCALE-3: paginated access — the table grows with every analysis, so an unbounded
     // findAll() would eventually OOM/timeout. Callers should use this.
     public org.springframework.data.domain.Page<AIAnalysis> findAll(

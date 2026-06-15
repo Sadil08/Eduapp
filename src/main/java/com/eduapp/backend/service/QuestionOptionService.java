@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -35,15 +34,10 @@ public class QuestionOptionService {
         this.questionRepository = questionRepository;
     }
 
-    /**
-     * Retrieves all question options from the database.
-     * @return a list of all QuestionOption entities
-     */
-    public List<QuestionOption> findAll() {
-        logger.info("Fetching all question options");
-        List<QuestionOption> options = questionOptionRepository.findAll();
-        logger.info("Found {} question options", options.size());
-        return options;
+    /** N-SC2: bounded page of question options (replaces the unbounded no-arg findAll). */
+    public org.springframework.data.domain.Page<QuestionOption> findAll(
+            org.springframework.data.domain.Pageable pageable) {
+        return questionOptionRepository.findAll(pageable);
     }
 
     /**

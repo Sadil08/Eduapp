@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -36,12 +35,16 @@ public class QuestionOptionController {
         this.questionOptionMapper = questionOptionMapper;
     }
 
+    // N-SC2: ADMIN-only (class-level) + paginated. Returns a Spring Page.
+    private static final int MAX_PAGE_SIZE = 100;
+
     @GetMapping
-    public ResponseEntity<List<QuestionOptionDto>> getAllQuestionOptions() {
-        logger.info("Received request to get all question options");
-        List<QuestionOption> options = questionOptionService.findAll();
-        List<QuestionOptionDto> dtos = questionOptionMapper.toDtoList(options);
-        return ResponseEntity.ok(dtos);
+    public ResponseEntity<org.springframework.data.domain.Page<QuestionOptionDto>> getAllQuestionOptions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        var pageable = org.springframework.data.domain.PageRequest.of(Math.max(page, 0), safeSize);
+        return ResponseEntity.ok(questionOptionService.findAll(pageable).map(questionOptionMapper::toDto));
     }
 
     @GetMapping("/{id}")

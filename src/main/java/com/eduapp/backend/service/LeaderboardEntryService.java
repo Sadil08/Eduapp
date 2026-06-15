@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -27,10 +26,7 @@ public class LeaderboardEntryService {
         return leaderboardEntryRepository.findAll(pageable);
     }
 
-    public List<LeaderboardEntry> findAll() {
-        logger.info("Fetching all leaderboard entries");
-        return leaderboardEntryRepository.findAll();
-    }
+    // N-SC2: removed the unbounded no-arg findAll() (no callers) — use the paginated variant above.
 
     public Optional<LeaderboardEntry> findById(Long id) {
         if (id == null) {

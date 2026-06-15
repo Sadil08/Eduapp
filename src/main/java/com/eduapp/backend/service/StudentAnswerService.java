@@ -52,12 +52,7 @@ public class StudentAnswerService {
         return studentAnswerRepository.findAll(pageable);
     }
 
-    public List<StudentAnswer> findAll() {
-        logger.info("Fetching all student answers");
-        List<StudentAnswer> answers = studentAnswerRepository.findAll();
-        logger.info("Found {} student answers", answers.size());
-        return answers;
-    }
+    // N-SC2: removed the unbounded no-arg findAll() (no callers) — use the paginated variant above.
 
     /**
      * Retrieves a student answer by its ID.

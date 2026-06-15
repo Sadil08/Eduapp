@@ -52,16 +52,7 @@ public class AdminPaperService {
         this.lessonRepository = lessonRepository;
     }
 
-    /**
-     * Get all papers with statistics
-     */
-    public List<AdminPaperDto> getAllPapers() {
-        logger.info("Fetching all papers with statistics");
-
-        List<Paper> papers = paperRepository.findAll();
-
-        return papers.stream().map(this::mapToAdminDto).collect(Collectors.toList());
-    }
+    // N-SC2: removed the unbounded getAllPapers() (no callers) — use searchPapers(query, pageable).
 
     // SCALE-3: paginated + name-searched admin paper listing (the table no longer loads
     // every paper as the catalogue grows).

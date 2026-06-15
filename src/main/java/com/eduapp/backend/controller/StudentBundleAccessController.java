@@ -29,12 +29,17 @@ public class StudentBundleAccessController {
         this.jwtUtil = jwtUtil;
     }
 
+    // N-SC2: ADMIN-only + paginated. Returns a Spring Page.
+    private static final int MAX_PAGE_SIZE = 100;
+
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<StudentBundleAccess>> getAll() {
-        logger.info("Fetching all student bundle accesses");
-        List<StudentBundleAccess> accesses = studentBundleAccessService.findAll();
-        return ResponseEntity.ok(accesses);
+    public ResponseEntity<org.springframework.data.domain.Page<StudentBundleAccess>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        var pageable = org.springframework.data.domain.PageRequest.of(Math.max(page, 0), safeSize);
+        return ResponseEntity.ok(studentBundleAccessService.findAll(pageable));
     }
 
     @GetMapping("/my-bundles")

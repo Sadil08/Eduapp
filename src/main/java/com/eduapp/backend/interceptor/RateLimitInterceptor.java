@@ -1,9 +1,6 @@
 package com.eduapp.backend.interceptor;
 
-import com.eduapp.backend.config.RateLimitConfig;
 import com.eduapp.backend.security.JwtUtil;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.ConsumptionProbe;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -13,60 +10,75 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+/**
+ * Per-caller rate limiting (Redis-backed via {@link RedisRateLimiter}, so limits hold
+ * across multiple backend instances). Keyed by authenticated user when a JWT is present,
+ * otherwise by client IP. Tiered limits: auth (login/register), extraction (heavy AI),
+ * and a general default.
+ *
+ * <p>Note: AI-service endpoints are not publicly exposed and are reached only through this
+ * backend, so rate limiting here also protects the AI tier — the AI service itself does
+ * not (and must not) rate-limit by IP, since the backend is its sole client.
+ */
 @Component
 public class RateLimitInterceptor implements HandlerInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(RateLimitInterceptor.class);
 
+    // Requests per 60-second window.
+    private static final int LIMIT_AUTH = 10;
+    private static final int LIMIT_EXTRACTION = 5;
+    private static final int LIMIT_GENERAL = 60;
+
     @Autowired
-    private RateLimitConfig rateLimitConfig;
+    private RedisRateLimiter rateLimiter;
 
     @Autowired
     private JwtUtil jwtUtil;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
-            throws Exception {
-        String key = resolveBucketKey(request);
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        String caller = resolveCaller(request);
         String uri = request.getRequestURI();
 
-        Bucket bucket;
-
+        String tier;
+        int limit;
         if (uri.startsWith("/api/auth")) {
-            bucket = rateLimitConfig.resolveAuthBucket(key);
+            tier = "auth";
+            limit = LIMIT_AUTH;
         } else if (uri.contains("/extract")) {
-            bucket = rateLimitConfig.resolveExtractionBucket(key);
+            tier = "extraction";
+            limit = LIMIT_EXTRACTION;
         } else {
-            bucket = rateLimitConfig.resolveBucket(key);
+            tier = "general";
+            limit = LIMIT_GENERAL;
         }
 
-        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+        RedisRateLimiter.Result result = rateLimiter.tryConsume(tier + ":" + caller, limit);
 
-        if (probe.isConsumed()) {
-            response.addHeader("X-Rate-Limit-Remaining", String.valueOf(probe.getRemainingTokens()));
+        if (result.allowed()) {
+            if (result.remaining() >= 0) {
+                response.addHeader("X-Rate-Limit-Remaining", String.valueOf(result.remaining()));
+            }
             return true;
-        } else {
-            long waitForRefill = probe.getNanosToWaitForRefill() / 1_000_000_000;
-            response.addHeader("X-Rate-Limit-Retry-After-Seconds", String.valueOf(waitForRefill));
-            response.sendError(HttpStatus.TOO_MANY_REQUESTS.value(),
-                    "Rate limit exceeded. Try again in " + waitForRefill + " seconds.");
-            logger.warn("Rate limit exceeded for key: {} on endpoint: {}", key, uri);
-            return false;
         }
+
+        response.addHeader("X-Rate-Limit-Retry-After-Seconds", String.valueOf(result.retryAfterSeconds()));
+        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        logger.warn("Rate limit exceeded for {} on {}", caller, uri);
+        return false;
     }
 
-    private String resolveBucketKey(HttpServletRequest request) {
+    private String resolveCaller(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
             try {
-                String email = jwtUtil.extractEmail(token);
+                String email = jwtUtil.extractEmail(authHeader.substring(7));
                 if (email != null) {
                     return "user:" + email;
                 }
             } catch (Exception e) {
-                // Token invalid or expired, fall back to IP
-                logger.debug("Failed to extract user from token for rate limiting: {}", e.getMessage());
+                logger.debug("Rate-limit token parse failed, falling back to IP: {}", e.getMessage());
             }
         }
         return "ip:" + getClientIp(request);

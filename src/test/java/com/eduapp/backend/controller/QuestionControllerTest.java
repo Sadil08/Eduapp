@@ -22,11 +22,14 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
-// Import the dependency-free RateLimitConfig so the (real) RateLimitInterceptor wired by
-// WebConfig can be created in the slice. JwtUtil is mocked below.
+// Import RedisRateLimiter so the (real) RateLimitInterceptor wired by WebConfig can be
+// created in the slice; the mocked StringRedisTemplate below makes it fail-open (allow).
 @WebMvcTest(QuestionController.class)
-@Import(com.eduapp.backend.config.RateLimitConfig.class)
+@Import(com.eduapp.backend.interceptor.RedisRateLimiter.class)
 public class QuestionControllerTest {
+
+    @MockBean
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     private MockMvc mockMvc;

@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.SubjectDto;
 import com.eduapp.backend.mapper.SubjectMapper;
 import com.eduapp.backend.model.Subject;
@@ -75,7 +77,7 @@ public class SubjectController {
      * @return a ResponseEntity containing the created SubjectDto
      */
     @PostMapping
-    public ResponseEntity<SubjectDto> createSubject(@RequestBody SubjectDto dto) {
+    public ResponseEntity<SubjectDto> createSubject(@Valid @RequestBody SubjectDto dto) {
         logger.info("Received request to create subject: {}", dto.getName());
         Subject subject = subjectMapper.toEntity(dto);
         Subject savedSubject = subjectService.save(subject);
@@ -91,7 +93,7 @@ public class SubjectController {
      * @return a ResponseEntity containing the updated SubjectDto if found, or 404 if not
      */
     @PutMapping("/{id}")
-    public ResponseEntity<SubjectDto> updateSubject(@PathVariable Long id, @RequestBody SubjectDto dto) {
+    public ResponseEntity<SubjectDto> updateSubject(@PathVariable Long id, @Valid @RequestBody SubjectDto dto) {
         logger.info("Received request to update subject with ID: {}", id);
         Optional<Subject> existingSubject = subjectService.findById(id);
         if (existingSubject.isPresent()) {

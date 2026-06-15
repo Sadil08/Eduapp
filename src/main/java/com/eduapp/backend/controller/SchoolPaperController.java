@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.*;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.repository.UserRepository;
@@ -31,7 +33,7 @@ public class SchoolPaperController {
 
     @PostMapping
     public ResponseEntity<SchoolPaperDto> create(@AuthenticationPrincipal UserDetails principal,
-            @RequestBody CreateSchoolPaperRequest req) {
+            @Valid @RequestBody CreateSchoolPaperRequest req) {
         Long createdBy = userRepository.findByEmail(principal.getUsername()).map(User::getId).orElse(null);
         return ResponseEntity.ok(SchoolPaperDto.from(
                 paperService.createDraft(req.getName(), req.getDescription(), req.getType(), createdBy)));
@@ -54,7 +56,7 @@ public class SchoolPaperController {
 
     @PostMapping("/{id}/questions")
     public ResponseEntity<SchoolQuestionDto> addQuestion(@PathVariable Long id,
-            @RequestBody AddSchoolQuestionRequest req) {
+            @Valid @RequestBody AddSchoolQuestionRequest req) {
         return ResponseEntity.ok(SchoolQuestionDto.from(
                 paperService.addQuestion(id, req.getText(), req.getType(), req.getMarks(), req.getCorrectAnswerText())));
     }
@@ -65,7 +67,7 @@ public class SchoolPaperController {
     }
 
     @PostMapping("/{id}/assign")
-    public ResponseEntity<SchoolPaperDto> assign(@PathVariable Long id, @RequestBody AssignSchoolPaperRequest req) {
+    public ResponseEntity<SchoolPaperDto> assign(@PathVariable Long id, @Valid @RequestBody AssignSchoolPaperRequest req) {
         return ResponseEntity.ok(SchoolPaperDto.from(paperService.assignToClass(
                 id, req.getClassId(), req.getExamWindowStart(), req.getExamWindowEnd(), req.getTimeLimitMinutes())));
     }

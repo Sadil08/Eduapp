@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.CartDto;
 import com.eduapp.backend.model.Cart;
 import com.eduapp.backend.service.CartService;
@@ -44,14 +46,14 @@ public class CartController {
     }
 
     @PostMapping
-    public ResponseEntity<Cart> create(@RequestBody Cart cart) {
+    public ResponseEntity<Cart> create(@Valid @RequestBody Cart cart) {
         logger.info("Creating cart");
         Cart saved = cartService.save(cart);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Cart> update(@PathVariable Long id, @RequestBody Cart cart) {
+    public ResponseEntity<Cart> update(@PathVariable Long id, @Valid @RequestBody Cart cart) {
         logger.info("Updating cart with ID: {}", id);
         if (!cartService.existsById(id)) {
             return ResponseEntity.notFound().build();

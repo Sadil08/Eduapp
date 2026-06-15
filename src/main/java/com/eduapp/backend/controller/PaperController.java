@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.PaperDto;
 import com.eduapp.backend.dto.PaperAttemptDto;
 import com.eduapp.backend.dto.PaperSubmissionDto;
@@ -155,7 +157,7 @@ public class PaperController {
     public ResponseEntity<StudentPaperAttemptDto> submitPaper(@PathVariable Long id,
             @RequestParam(value = "bundleId", required = false) Long bundleId,
             @RequestParam(value = "customBundleId", required = false) Long customBundleId,
-            @RequestBody PaperSubmissionDto submission,
+            @Valid @RequestBody PaperSubmissionDto submission,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             logger.warn("Missing or malformed Authorization header");
@@ -216,7 +218,7 @@ public class PaperController {
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PaperDto> createPaper(@RequestBody PaperDto dto) {
+    public ResponseEntity<PaperDto> createPaper(@Valid @RequestBody PaperDto dto) {
         logger.info("Received request to create paper: {}", dto.getName());
         Paper paper = paperMapper.toEntity(dto);
         Paper savedPaper = paperService.save(paper);
@@ -229,7 +231,7 @@ public class PaperController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PaperDto> updatePaper(@PathVariable Long id, @RequestBody PaperDto dto) {
+    public ResponseEntity<PaperDto> updatePaper(@PathVariable Long id, @Valid @RequestBody PaperDto dto) {
         logger.info("Received request to update paper with ID: {}", id);
         try {
             Paper updatedPaper = paperService.updatePaper(id, dto);

@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.CustomBundleDto;
 import com.eduapp.backend.model.CustomBundleStatus;
 import com.eduapp.backend.security.JwtUtil;
@@ -83,7 +85,7 @@ public class AdminCustomBundleController {
      * PUT /api/admin/custom-bundles/price-per-paper
      */
     @PutMapping("/price-per-paper")
-    public ResponseEntity<Void> updatePricePerPaper(@RequestBody UpdatePriceRequest request) {
+    public ResponseEntity<Void> updatePricePerPaper(@Valid @RequestBody UpdatePriceRequest request) {
         customBundleService.updatePricePerPaper(request.getPrice());
         return ResponseEntity.ok().build();
     }

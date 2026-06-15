@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.*;
 import com.eduapp.backend.mapper.QuestionMapper;
 import com.eduapp.backend.model.Paper;
@@ -78,7 +80,7 @@ public class AdminPaperController {
      */
     @PostMapping
     public ResponseEntity<Paper> createPaper(
-            @RequestBody PaperDto dto,
+            @Valid @RequestBody PaperDto dto,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -107,7 +109,7 @@ public class AdminPaperController {
     @PutMapping("/{id}")
     public ResponseEntity<Paper> updatePaper(
             @PathVariable Long id,
-            @RequestBody PaperDto dto) {
+            @Valid @RequestBody PaperDto dto) {
 
         logger.info("Admin updating paper ID: {}", id);
 
@@ -150,7 +152,7 @@ public class AdminPaperController {
     @PostMapping("/{id}/questions")
     public ResponseEntity<QuestionDto> addQuestion(
             @PathVariable Long id,
-            @RequestBody QuestionCreateDto dto) {
+            @Valid @RequestBody QuestionCreateDto dto) {
 
         logger.info("Admin adding question to paper ID: {}", id);
 
@@ -174,7 +176,7 @@ public class AdminPaperController {
     public ResponseEntity<QuestionDto> updateQuestion(
             @PathVariable Long paperId,
             @PathVariable Long questionId,
-            @RequestBody QuestionCreateDto dto) {
+            @Valid @RequestBody QuestionCreateDto dto) {
 
         logger.info("Admin updating question {} in paper {}", questionId, paperId);
 

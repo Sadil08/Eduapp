@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.PaymentResult;
 import com.eduapp.backend.model.ExtraAttemptPurchase;
 import com.eduapp.backend.model.Paper;
@@ -58,7 +60,7 @@ public class ExtraAttemptController {
     public ResponseEntity<ExtraAttemptPurchaseDto> purchaseExtraAttempts(
             @PathVariable Long paperId,
             @RequestParam(required = false) Long bundleId,
-            @RequestBody PurchaseExtraAttemptsRequest request,
+            @Valid @RequestBody PurchaseExtraAttemptsRequest request,
             @RequestHeader("Authorization") String authHeader) {
 
         String token = authHeader.substring(7);

@@ -1,8 +1,10 @@
 package com.eduapp.backend.dto;
 
 import com.eduapp.backend.model.QuestionType;
+import jakarta.validation.constraints.NotBlank;
 
 public class AddSchoolQuestionRequest {
+    @NotBlank(message = "Question text is required")
     private String text;
     private QuestionType type;
     private Integer marks;

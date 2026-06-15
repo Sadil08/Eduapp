@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.QuestionDto;
 import com.eduapp.backend.mapper.QuestionMapper;
 import com.eduapp.backend.model.Question;
@@ -218,7 +220,7 @@ public class QuestionController {
     }
 
     @PostMapping
-    public ResponseEntity<QuestionDto> createQuestion(@RequestBody QuestionDto dto) {
+    public ResponseEntity<QuestionDto> createQuestion(@Valid @RequestBody QuestionDto dto) {
         logger.info("Received request to create question");
         Question question = questionMapper.toEntity(dto);
         Question savedQuestion = questionService.save(question);
@@ -227,7 +229,7 @@ public class QuestionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<QuestionDto> updateQuestion(@PathVariable Long id, @RequestBody QuestionDto dto) {
+    public ResponseEntity<QuestionDto> updateQuestion(@PathVariable Long id, @Valid @RequestBody QuestionDto dto) {
         logger.info("Received request to update question with ID: {}", id);
         Optional<Question> existingQuestion = questionService.findById(id);
         if (existingQuestion.isPresent()) {

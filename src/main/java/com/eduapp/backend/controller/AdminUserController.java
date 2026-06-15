@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.*;
 import com.eduapp.backend.model.StudentBundleAccess;
 import com.eduapp.backend.security.JwtUtil;
@@ -81,7 +83,7 @@ public class AdminUserController {
     @PostMapping("/{userId}/bundles")
     public ResponseEntity<StudentBundleAccess> grantBundleAccess(
             @PathVariable Long userId,
-            @RequestBody GrantBundleAccessDto dto,
+            @Valid @RequestBody GrantBundleAccessDto dto,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -149,7 +151,7 @@ public class AdminUserController {
     public ResponseEntity<Void> updateAttemptLimit(
             @PathVariable Long userId,
             @PathVariable Long paperId,
-            @RequestBody UpdateAttemptLimitDto dto) {
+            @Valid @RequestBody UpdateAttemptLimitDto dto) {
 
         logger.info("Admin updating attempt limit for user {} on paper {} to {}",
                 userId, paperId, dto.getMaxFreeAttempts());

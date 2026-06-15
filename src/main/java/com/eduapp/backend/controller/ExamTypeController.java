@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.model.ExamType;
 import com.eduapp.backend.service.ExamTypeService;
 import org.springframework.http.HttpStatus;
@@ -30,13 +32,13 @@ public class ExamTypeController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<ExamType> createExamType(@RequestBody ExamType examType) {
+    public ResponseEntity<ExamType> createExamType(@Valid @RequestBody ExamType examType) {
         return ResponseEntity.status(HttpStatus.CREATED).body(examTypeService.createExamType(examType));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<ExamType> updateExamType(@PathVariable Long id, @RequestBody ExamType examType) {
+    public ResponseEntity<ExamType> updateExamType(@PathVariable Long id, @Valid @RequestBody ExamType examType) {
         return ResponseEntity.ok(examTypeService.updateExamType(id, examType));
     }
 

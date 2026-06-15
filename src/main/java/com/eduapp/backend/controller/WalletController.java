@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.security.JwtUtil;
 import com.eduapp.backend.service.WalletService;
 import org.springframework.http.HttpStatus;
@@ -51,7 +53,7 @@ public class WalletController {
     // WALLET_DISABLED: Top-up endpoint disabled
     @PostMapping("/topup")
     public ResponseEntity<Map<String, String>> topUp(@RequestHeader("Authorization") String authHeader,
-            @RequestBody Map<String, BigDecimal> request) {
+            @Valid @RequestBody Map<String, BigDecimal> request) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
                 .body(Map.of("message",
                         "Wallet top-up is currently unavailable. Payments are processed directly via PayHere."));
@@ -66,7 +68,7 @@ public class WalletController {
 
     // WALLET_DISABLED: Referral percentage setter disabled
     @PostMapping("/referral-percentage")
-    public ResponseEntity<Map<String, String>> setReferralPercentage(@RequestBody Map<String, BigDecimal> request) {
+    public ResponseEntity<Map<String, String>> setReferralPercentage(@Valid @RequestBody Map<String, BigDecimal> request) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
                 .body(Map.of("message", "Referral system is currently disabled."));
     }

@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.repository.StudentPaperAttemptRepository;
 import com.eduapp.backend.repository.StudentAnswerRepository;
 import com.eduapp.backend.dto.StudentAnswerDto;
@@ -175,7 +177,7 @@ public class StudentAnswerController {
     }
 
     @PostMapping
-    public ResponseEntity<StudentAnswerDto> createStudentAnswer(@RequestBody StudentAnswerDto dto) {
+    public ResponseEntity<StudentAnswerDto> createStudentAnswer(@Valid @RequestBody StudentAnswerDto dto) {
         logger.info("Received request to create student answer");
 
         // Validate image upload permission if imageUrl is provided
@@ -227,7 +229,7 @@ public class StudentAnswerController {
     @PostMapping("/attempts/{attemptId}/save-draft")
     public ResponseEntity<?> saveDraftAnswers(
             @PathVariable Long attemptId,
-            @RequestBody List<StudentAnswerDto> draftDtos) {
+            @Valid @RequestBody List<StudentAnswerDto> draftDtos) {
         try {
             logger.info("Saving {} draft answers for attempt {}", draftDtos.size(), attemptId);
             

@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.CustomBundleDto;
 import com.eduapp.backend.security.JwtUtil;
 import com.eduapp.backend.service.CustomBundleService;
@@ -88,7 +90,7 @@ public class CustomBundleController {
      */
     @PostMapping
     public ResponseEntity<CustomBundleDto> createBundle(
-            @RequestBody CreateBundleRequest request,
+            @Valid @RequestBody CreateBundleRequest request,
             @RequestHeader("Authorization") String authHeader) {
 
         Long userId = extractUserId(authHeader);
@@ -147,7 +149,7 @@ public class CustomBundleController {
     @PostMapping("/{id}/purchase")
     public ResponseEntity<CustomBundleDto> purchaseBundle(
             @PathVariable Long id,
-            @RequestBody com.eduapp.backend.dto.PaymentRequest paymentRequest,
+            @Valid @RequestBody com.eduapp.backend.dto.PaymentRequest paymentRequest,
             @RequestHeader("Authorization") String authHeader) {
 
         Long userId = extractUserId(authHeader);

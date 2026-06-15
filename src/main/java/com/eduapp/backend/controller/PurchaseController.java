@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.PaymentRequest;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.security.JwtUtil;
@@ -28,7 +30,7 @@ public class PurchaseController {
 
     @PostMapping("/checkout")
     public ResponseEntity<Void> checkout(@RequestHeader("Authorization") String authHeader,
-            @RequestBody PaymentRequest paymentRequest) {
+            @Valid @RequestBody PaymentRequest paymentRequest) {
         String token = authHeader.substring(7);
         Long userId = jwtUtil.extractUserId(token);
         User user = userService.findById(userId)

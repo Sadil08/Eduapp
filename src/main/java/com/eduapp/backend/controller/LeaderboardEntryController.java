@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.model.LeaderboardEntry;
 import com.eduapp.backend.service.LeaderboardEntryService;
 import org.slf4j.Logger;
@@ -43,14 +45,14 @@ public class LeaderboardEntryController {
     }
 
     @PostMapping
-    public ResponseEntity<LeaderboardEntry> create(@RequestBody LeaderboardEntry entry) {
+    public ResponseEntity<LeaderboardEntry> create(@Valid @RequestBody LeaderboardEntry entry) {
         logger.info("Creating leaderboard entry");
         LeaderboardEntry saved = leaderboardEntryService.save(entry);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<LeaderboardEntry> update(@PathVariable Long id, @RequestBody LeaderboardEntry entry) {
+    public ResponseEntity<LeaderboardEntry> update(@PathVariable Long id, @Valid @RequestBody LeaderboardEntry entry) {
         logger.info("Updating leaderboard entry with ID: {}", id);
         if (!leaderboardEntryService.existsById(id)) {
             return ResponseEntity.notFound().build();

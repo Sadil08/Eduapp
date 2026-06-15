@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.model.StudentPaperAttempt;
 import com.eduapp.backend.repository.StudentPaperAttemptRepository;
 import com.eduapp.backend.security.JwtUtil;
@@ -34,7 +36,7 @@ public class LeaderboardController {
     }
 
     @PostMapping("/opt-in")
-    public ResponseEntity<Void> optIn(@RequestBody Map<String, Long> payload,
+    public ResponseEntity<Void> optIn(@Valid @RequestBody Map<String, Long> payload,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             logger.warn("Missing or malformed Authorization header");

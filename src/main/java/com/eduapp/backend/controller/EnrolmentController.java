@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.JoinClassRequest;
 import com.eduapp.backend.dto.SchoolEnrolmentDto;
 import com.eduapp.backend.model.User;
@@ -29,7 +31,7 @@ public class EnrolmentController {
 
     @PostMapping("/join")
     public ResponseEntity<SchoolEnrolmentDto> join(@AuthenticationPrincipal UserDetails principal,
-            @RequestBody JoinClassRequest req) {
+            @Valid @RequestBody JoinClassRequest req) {
         User user = userRepository.findByEmail(principal.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return ResponseEntity.ok(SchoolEnrolmentDto.from(

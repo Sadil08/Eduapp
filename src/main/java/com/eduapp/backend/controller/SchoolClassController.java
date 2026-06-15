@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.SchoolClassDto;
 import com.eduapp.backend.service.SchoolClassService;
 import org.springframework.http.ResponseEntity;
@@ -38,7 +40,7 @@ public class SchoolClassController {
     }
 
     @PostMapping
-    public ResponseEntity<SchoolClassDto> create(@RequestBody SchoolClassDto req) {
+    public ResponseEntity<SchoolClassDto> create(@Valid @RequestBody SchoolClassDto req) {
         return ResponseEntity.ok(SchoolClassDto.from(
                 service.create(req.getTeacherId(), req.getName(), req.getSubject(), req.getYearGroup())));
     }

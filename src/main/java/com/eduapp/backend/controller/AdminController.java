@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.RegisterRequest;
 import com.eduapp.backend.dto.UserResponse;
 import com.eduapp.backend.model.User;
@@ -18,7 +20,7 @@ public class AdminController {
 
     @PostMapping("/create")
     @PreAuthorize("hasRole('ADMIN')") // 👈 restricts to admin users
-    public ResponseEntity<UserResponse> createAdmin(@RequestBody RegisterRequest req) {
+    public ResponseEntity<UserResponse> createAdmin(@Valid @RequestBody RegisterRequest req) {
         // SECURITY: return a DTO, never the raw User entity (would expose the BCrypt hash).
         User created = userService.createAdmin(req);
         return ResponseEntity.ok(

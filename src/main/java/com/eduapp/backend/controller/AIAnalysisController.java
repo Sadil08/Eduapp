@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.model.AIAnalysis;
 import com.eduapp.backend.service.AIAnalysisService;
 import org.slf4j.Logger;
@@ -49,14 +51,14 @@ public class AIAnalysisController {
     }
 
     @PostMapping
-    public ResponseEntity<AIAnalysis> create(@RequestBody AIAnalysis analysis) {
+    public ResponseEntity<AIAnalysis> create(@Valid @RequestBody AIAnalysis analysis) {
         logger.info("Creating AI analysis");
         AIAnalysis saved = aiAnalysisService.save(analysis);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AIAnalysis> update(@PathVariable Long id, @RequestBody AIAnalysis analysis) {
+    public ResponseEntity<AIAnalysis> update(@PathVariable Long id, @Valid @RequestBody AIAnalysis analysis) {
         logger.info("Updating AI analysis with ID: {}", id);
         if (!aiAnalysisService.existsById(id)) {
             return ResponseEntity.notFound().build();

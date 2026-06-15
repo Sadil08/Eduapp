@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.OverrideMarkRequest;
 import com.eduapp.backend.dto.SchoolAttemptDto;
 import com.eduapp.backend.service.SchoolAttemptService;
@@ -30,7 +32,7 @@ public class SchoolAttemptReviewController {
     }
 
     @PostMapping("/{id}/override")
-    public ResponseEntity<SchoolAttemptDto> override(@PathVariable Long id, @RequestBody OverrideMarkRequest req) {
+    public ResponseEntity<SchoolAttemptDto> override(@PathVariable Long id, @Valid @RequestBody OverrideMarkRequest req) {
         return ResponseEntity.ok(SchoolAttemptDto.from(
                 attemptService.teacherOverride(id, req.getMark(), req.getNote())));
     }

@@ -1,6 +1,9 @@
 package com.eduapp.backend.dto;
 
+import jakarta.validation.constraints.NotNull;
+
 public class SubmitAnswerRequest {
+    @NotNull(message = "questionId is required")
     private Long questionId;
     private String answerText;
 

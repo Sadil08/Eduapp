@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.model.Notification;
 import com.eduapp.backend.service.NotificationService;
 import org.slf4j.Logger;
@@ -37,14 +39,14 @@ public class NotificationController {
     }
 
     @PostMapping
-    public ResponseEntity<Notification> create(@RequestBody Notification notification) {
+    public ResponseEntity<Notification> create(@Valid @RequestBody Notification notification) {
         logger.info("Creating notification");
         Notification saved = notificationService.save(notification);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Notification> update(@PathVariable Long id, @RequestBody Notification notification) {
+    public ResponseEntity<Notification> update(@PathVariable Long id, @Valid @RequestBody Notification notification) {
         logger.info("Updating notification with ID: {}", id);
         if (!notificationService.existsById(id)) {
             return ResponseEntity.notFound().build();

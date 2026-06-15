@@ -1,8 +1,10 @@
 package com.eduapp.backend.dto;
 
 import com.eduapp.backend.model.PaperType;
+import jakarta.validation.constraints.NotBlank;
 
 public class CreateSchoolPaperRequest {
+    @NotBlank(message = "Paper name is required")
     private String name;
     private String description;
     private PaperType type;

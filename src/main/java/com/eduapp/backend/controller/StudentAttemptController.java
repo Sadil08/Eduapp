@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.*;
 import com.eduapp.backend.model.SchoolPaperAttempt;
 import com.eduapp.backend.model.User;
@@ -37,14 +39,14 @@ public class StudentAttemptController {
 
     @PostMapping("/start")
     public ResponseEntity<SchoolAttemptDto> start(@AuthenticationPrincipal UserDetails principal,
-            @RequestBody Map<String, Long> body) {
+            @Valid @RequestBody Map<String, Long> body) {
         SchoolPaperAttempt attempt = attemptService.start(currentUserId(principal), body.get("paperId"));
         return ResponseEntity.ok(SchoolAttemptDto.from(attempt));
     }
 
     @PostMapping("/{id}/answers")
     public ResponseEntity<Void> answer(@AuthenticationPrincipal UserDetails principal,
-            @PathVariable Long id, @RequestBody SubmitAnswerRequest req) {
+            @PathVariable Long id, @Valid @RequestBody SubmitAnswerRequest req) {
         attemptService.answer(currentUserId(principal), id, req.getQuestionId(), req.getAnswerText());
         return ResponseEntity.ok().build();
     }

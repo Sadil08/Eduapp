@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.MyBundleDto;
 import com.eduapp.backend.model.StudentBundleAccess;
 import com.eduapp.backend.service.StudentBundleAccessService;
@@ -62,7 +64,7 @@ public class StudentBundleAccessController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<StudentBundleAccess> create(@RequestBody StudentBundleAccess access) {
+    public ResponseEntity<StudentBundleAccess> create(@Valid @RequestBody StudentBundleAccess access) {
         logger.info("Creating student bundle access");
         StudentBundleAccess saved = studentBundleAccessService.save(access);
         return ResponseEntity.ok(saved);
@@ -70,7 +72,7 @@ public class StudentBundleAccessController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<StudentBundleAccess> update(@PathVariable Long id, @RequestBody StudentBundleAccess access) {
+    public ResponseEntity<StudentBundleAccess> update(@PathVariable Long id, @Valid @RequestBody StudentBundleAccess access) {
         logger.info("Updating student bundle access with ID: {}", id);
         if (!studentBundleAccessService.existsById(id)) {
             return ResponseEntity.notFound().build();

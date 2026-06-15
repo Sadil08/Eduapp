@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.StudentPaperAttemptDto;
 import com.eduapp.backend.mapper.StudentPaperAttemptMapper;
 import com.eduapp.backend.model.StudentPaperAttempt;
@@ -60,7 +62,7 @@ public class StudentPaperAttemptController {
     }
 
     @PostMapping
-    public ResponseEntity<StudentPaperAttemptDto> createAttempt(@RequestBody StudentPaperAttemptDto dto) {
+    public ResponseEntity<StudentPaperAttemptDto> createAttempt(@Valid @RequestBody StudentPaperAttemptDto dto) {
         logger.info("Received request to create student paper attempt");
         StudentPaperAttempt attempt = attemptMapper.toEntity(dto);
         StudentPaperAttempt savedAttempt = attemptService.save(attempt);

@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.ImprovementDto;
 import com.eduapp.backend.dto.ReviewDto;
 import com.eduapp.backend.model.ImprovementStatus;
@@ -146,7 +148,7 @@ public class AdminFeedbackController {
     @PutMapping("/improvements/{id}/status")
     public ResponseEntity<ImprovementDto> updateImprovementStatus(
             @PathVariable Long id,
-            @RequestBody Map<String, String> request,
+            @Valid @RequestBody Map<String, String> request,
             @RequestHeader("Authorization") String authHeader) {
 
         try {

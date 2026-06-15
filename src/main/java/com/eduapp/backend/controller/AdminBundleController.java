@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.*;
 import com.eduapp.backend.model.PaperBundle;
 import com.eduapp.backend.security.JwtUtil;
@@ -77,7 +79,7 @@ public class AdminBundleController {
      */
     @PostMapping
     public ResponseEntity<PaperBundle> createBundle(
-            @RequestBody PaperBundleDto dto,
+            @Valid @RequestBody PaperBundleDto dto,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -106,7 +108,7 @@ public class AdminBundleController {
     @PutMapping("/{id}")
     public ResponseEntity<PaperBundle> updateBundle(
             @PathVariable Long id,
-            @RequestBody PaperBundleDto dto) {
+            @Valid @RequestBody PaperBundleDto dto) {
 
         logger.info("Admin updating bundle ID: {}", id);
 

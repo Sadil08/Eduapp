@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.model.Progress;
 import com.eduapp.backend.service.ProgressService;
 import org.slf4j.Logger;
@@ -37,14 +39,14 @@ public class ProgressController {
     }
 
     @PostMapping
-    public ResponseEntity<Progress> create(@RequestBody Progress progress) {
+    public ResponseEntity<Progress> create(@Valid @RequestBody Progress progress) {
         logger.info("Creating progress");
         Progress saved = progressService.save(progress);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Progress> update(@PathVariable Long id, @RequestBody Progress progress) {
+    public ResponseEntity<Progress> update(@PathVariable Long id, @Valid @RequestBody Progress progress) {
         logger.info("Updating progress with ID: {}", id);
         if (!progressService.existsById(id)) {
             return ResponseEntity.notFound().build();

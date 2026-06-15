@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.model.OverallPaperAnalysis;
 import com.eduapp.backend.service.OverallPaperAnalysisService;
 import org.slf4j.Logger;
@@ -37,14 +39,14 @@ public class OverallPaperAnalysisController {
     }
 
     @PostMapping
-    public ResponseEntity<OverallPaperAnalysis> create(@RequestBody OverallPaperAnalysis analysis) {
+    public ResponseEntity<OverallPaperAnalysis> create(@Valid @RequestBody OverallPaperAnalysis analysis) {
         logger.info("Creating overall paper analysis");
         OverallPaperAnalysis saved = overallPaperAnalysisService.save(analysis);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OverallPaperAnalysis> update(@PathVariable Long id, @RequestBody OverallPaperAnalysis analysis) {
+    public ResponseEntity<OverallPaperAnalysis> update(@PathVariable Long id, @Valid @RequestBody OverallPaperAnalysis analysis) {
         logger.info("Updating overall paper analysis with ID: {}", id);
         if (!overallPaperAnalysisService.existsById(id)) {
             return ResponseEntity.notFound().build();

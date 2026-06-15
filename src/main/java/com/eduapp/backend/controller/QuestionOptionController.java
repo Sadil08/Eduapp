@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.QuestionOptionDto;
 import com.eduapp.backend.mapper.QuestionOptionMapper;
 import com.eduapp.backend.model.QuestionOption;
@@ -51,7 +53,7 @@ public class QuestionOptionController {
     }
 
     @PostMapping
-    public ResponseEntity<QuestionOptionDto> createQuestionOption(@RequestBody QuestionOptionDto dto) {
+    public ResponseEntity<QuestionOptionDto> createQuestionOption(@Valid @RequestBody QuestionOptionDto dto) {
         logger.info("Received request to create question option");
         QuestionOption option = questionOptionMapper.toEntity(dto);
         QuestionOption savedOption = questionOptionService.save(option);

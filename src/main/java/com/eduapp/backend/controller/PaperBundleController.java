@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.PaperBundleDto;
 import com.eduapp.backend.service.PaperBundleService;
 import org.slf4j.Logger;
@@ -167,7 +169,7 @@ public class PaperBundleController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<PaperBundleDto> createPaperBundle(@RequestBody PaperBundleDto dto) {
+    public ResponseEntity<PaperBundleDto> createPaperBundle(@Valid @RequestBody PaperBundleDto dto) {
         logger.info("Received request to create paper bundle: {}", dto.getName());
         PaperBundleDto savedDto = paperBundleService.createBundle(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedDto);

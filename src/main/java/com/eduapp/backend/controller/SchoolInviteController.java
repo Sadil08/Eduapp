@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.CreateInviteRequest;
 import com.eduapp.backend.dto.SchoolInviteDto;
 import com.eduapp.backend.security.TenantContext;
@@ -29,7 +31,7 @@ public class SchoolInviteController {
     }
 
     @PostMapping
-    public ResponseEntity<SchoolInviteDto> create(@RequestBody CreateInviteRequest req) {
+    public ResponseEntity<SchoolInviteDto> create(@Valid @RequestBody CreateInviteRequest req) {
         return ResponseEntity.ok(SchoolInviteDto.from(inviteService.createTeacherInvite(req.getEmail())));
     }
 

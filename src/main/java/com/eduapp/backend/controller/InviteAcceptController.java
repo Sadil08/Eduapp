@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.AcceptInviteRequest;
 import com.eduapp.backend.dto.UserResponse;
 import com.eduapp.backend.model.User;
@@ -23,7 +25,7 @@ public class InviteAcceptController {
     }
 
     @PostMapping("/accept")
-    public ResponseEntity<UserResponse> accept(@RequestBody AcceptInviteRequest req) {
+    public ResponseEntity<UserResponse> accept(@Valid @RequestBody AcceptInviteRequest req) {
         User user = inviteService.acceptInvite(req.getToken(), req.getName(), req.getPassword());
         return ResponseEntity.ok(
                 new UserResponse(user.getId(), user.getUsername(), user.getEmail(), user.getRole()));

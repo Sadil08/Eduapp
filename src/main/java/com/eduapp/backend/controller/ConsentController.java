@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.ConsentRequest;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.repository.UserRepository;
@@ -29,7 +31,7 @@ public class ConsentController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> record(@AuthenticationPrincipal UserDetails principal,
-            @RequestBody ConsentRequest req) {
+            @Valid @RequestBody ConsentRequest req) {
         User user = userRepository.findByEmail(principal.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         var saved = consentService.record(user.getId(), req.getConsentVersion(),

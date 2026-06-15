@@ -1,5 +1,7 @@
 package com.eduapp.backend.controller;
 
+import jakarta.validation.Valid;
+
 import com.eduapp.backend.dto.LessonDto;
 import com.eduapp.backend.mapper.LessonMapper;
 import com.eduapp.backend.model.Lesson;
@@ -52,7 +54,7 @@ public class LessonController {
     }
 
     @PostMapping
-    public ResponseEntity<LessonDto> createLesson(@RequestBody LessonDto dto) {
+    public ResponseEntity<LessonDto> createLesson(@Valid @RequestBody LessonDto dto) {
         logger.info("Received request to create lesson: {}", dto.getName());
         Lesson lesson = lessonMapper.toEntity(dto);
         Lesson savedLesson = lessonService.save(lesson);
@@ -61,7 +63,7 @@ public class LessonController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<LessonDto> updateLesson(@PathVariable Long id, @RequestBody LessonDto dto) {
+    public ResponseEntity<LessonDto> updateLesson(@PathVariable Long id, @Valid @RequestBody LessonDto dto) {
         logger.info("Received request to update lesson with ID: {}", id);
         Optional<Lesson> existingLesson = lessonService.findById(id);
         if (existingLesson.isPresent()) {

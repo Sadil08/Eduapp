@@ -28,14 +28,23 @@ public abstract class AbstractIntegrationTest {
 
     @DynamicPropertySource
     static void forceScratchDatabase(DynamicPropertyRegistry registry) {
-        Map<String, String> env = readDotEnv();
+        Map<String, String> dotEnv = readDotEnv();
         // Guarantees no test can accidentally point at the real eduapp_db.
         registry.add("spring.datasource.url",
                 () -> "jdbc:postgresql://localhost:5432/eduapp_test");
+        // CI passes creds as real env vars; locally they come from .env; fall back to defaults.
         registry.add("spring.datasource.username",
-                () -> env.getOrDefault("SPRING_DATASOURCE_USERNAME", "postgres"));
+                () -> creds("SPRING_DATASOURCE_USERNAME", dotEnv, "postgres"));
         registry.add("spring.datasource.password",
-                () -> env.getOrDefault("SPRING_DATASOURCE_PASSWORD", ""));
+                () -> creds("SPRING_DATASOURCE_PASSWORD", dotEnv, "postgres"));
+    }
+
+    private static String creds(String key, Map<String, String> dotEnv, String dflt) {
+        String fromEnv = System.getenv(key);
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return fromEnv;
+        }
+        return dotEnv.getOrDefault(key, dflt);
     }
 
     private static Map<String, String> readDotEnv() {

@@ -64,16 +64,20 @@ public class QuestionControllerTest {
     @MockBean
     private software.amazon.awssdk.services.s3.S3Client s3Client;
 
+    // N-SC2-A/B4: GET /api/questions is now ADMIN-only and paginated (returns a Page).
     @Test
-    void getAllQuestions_ReturnsOk() throws Exception {
-        List<Question> questions = List.of(new Question());
-        List<QuestionDto> dtos = List.of(new QuestionDto());
-        when(questionService.findAll()).thenReturn(questions);
-        when(questionMapper.toDtoList(questions)).thenReturn(dtos);
+    void getAllQuestions_asAdmin_ReturnsOk() throws Exception {
+        org.springframework.data.domain.Page<Question> page =
+                new org.springframework.data.domain.PageImpl<>(List.of(new Question()));
+        when(questionService.findAll(any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
+        when(questionMapper.toDto(any(Question.class))).thenReturn(new QuestionDto());
 
-        mockMvc.perform(get("/api/questions")
-                .with(user("user").roles("STUDENT")))
-                .andExpect(status().isOk());
+        // Method security (@PreAuthorize) isn't active in this @WebMvcTest slice; the
+        // ADMIN-only enforcement is verified in NSC2AuthorizationIT against the real filter chain.
+        mockMvc.perform(get("/api/questions").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .jsonPath("$.content").exists());
     }
 
     @Test

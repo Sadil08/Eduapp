@@ -7,13 +7,16 @@ import com.eduapp.backend.service.OverallPaperAnalysisService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
 
+// N-SC2-A: admin-only management tooling (no public/student callers).
 @RestController
 @RequestMapping("/api/overall-paper-analyses")
+@PreAuthorize("hasRole('ADMIN')")
 public class OverallPaperAnalysisController {
 
     private static final Logger logger = LoggerFactory.getLogger(OverallPaperAnalysisController.class);

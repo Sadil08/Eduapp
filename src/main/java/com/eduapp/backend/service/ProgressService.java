@@ -21,9 +21,13 @@ public class ProgressService {
         this.progressRepository = progressRepository;
     }
 
-    public List<Progress> findAll() {
-        logger.info("Fetching all progress");
-        return progressRepository.findAll();
+    /**
+     * N-SC2-A: scoped to a single user. The old no-arg {@code findAll()} returned every user's
+     * progress to any authenticated caller — a horizontal-privilege leak — and was unbounded.
+     */
+    public List<Progress> findByUserId(Long userId) {
+        logger.info("Fetching progress for user {}", userId);
+        return progressRepository.findByUserId(userId);
     }
 
     public Optional<Progress> findById(Long id) {

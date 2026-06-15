@@ -26,9 +26,10 @@ public class CartService {
         this.userRepository = userRepository;
     }
 
-    public List<Cart> findAll() {
-        logger.info("Fetching all carts");
-        return cartRepository.findAll();
+    // N-SC2-A: scoped to a single user (was an unbounded all-users findAll() exposed over HTTP).
+    public List<Cart> findByUserId(Long userId) {
+        logger.info("Fetching carts for user {}", userId);
+        return cartRepository.findByUserId(userId);
     }
 
     public Optional<Cart> findById(Long id) {

@@ -11,8 +11,12 @@ import com.eduapp.backend.service.FileStorageService;
 import com.eduapp.backend.service.QuestionModelAnswerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -199,11 +203,18 @@ public class QuestionController {
         }
     }
 
+    // N-SC2-A/B4: ADMIN-only + paginated. Was unbounded `findAll()` callable by any user.
+    // Returns a Spring Page: { content, totalElements, totalPages, number, size }.
+    private static final int MAX_PAGE_SIZE = 100;
+
     @GetMapping
-    public ResponseEntity<List<QuestionDto>> getAllQuestions() {
-        logger.info("Received request to get all questions");
-        List<Question> questions = questionService.findAll();
-        List<QuestionDto> dtos = questionMapper.toDtoList(questions);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<QuestionDto>> getAllQuestions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), safeSize);
+        Page<QuestionDto> dtos = questionService.findAll(pageable).map(questionMapper::toDto);
         return ResponseEntity.ok(dtos);
     }
 

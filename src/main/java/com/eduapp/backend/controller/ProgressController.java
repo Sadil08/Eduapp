@@ -3,10 +3,12 @@ package com.eduapp.backend.controller;
 import jakarta.validation.Valid;
 
 import com.eduapp.backend.model.Progress;
+import com.eduapp.backend.security.AuthenticatedUser;
 import com.eduapp.backend.service.ProgressService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,10 +26,11 @@ public class ProgressController {
         this.progressService = progressService;
     }
 
+    // N-SC2-A: returns ONLY the authenticated caller's progress. Previously returned every
+    // user's progress to any logged-in user (the client-supplied ?userId was ignored).
     @GetMapping
-    public ResponseEntity<List<Progress>> getAll() {
-        logger.info("Fetching all progress");
-        List<Progress> progresses = progressService.findAll();
+    public ResponseEntity<List<Progress>> getMyProgress(@AuthenticationPrincipal AuthenticatedUser principal) {
+        List<Progress> progresses = progressService.findByUserId(principal.getUserId());
         return ResponseEntity.ok(progresses);
     }
 

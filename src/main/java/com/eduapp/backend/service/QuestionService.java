@@ -50,6 +50,11 @@ public class QuestionService {
         return questions;
     }
 
+    /** N-SC2/B4: bounded page of questions (replaces the unbounded HTTP findAll). */
+    public org.springframework.data.domain.Page<Question> findAll(org.springframework.data.domain.Pageable pageable) {
+        return questionRepository.findAll(pageable);
+    }
+
     /**
      * Retrieves a question by its ID.
      * 

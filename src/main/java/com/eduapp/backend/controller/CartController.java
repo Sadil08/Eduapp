@@ -4,10 +4,12 @@ import jakarta.validation.Valid;
 
 import com.eduapp.backend.dto.CartDto;
 import com.eduapp.backend.model.Cart;
+import com.eduapp.backend.security.AuthenticatedUser;
 import com.eduapp.backend.service.CartService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,10 +33,10 @@ public class CartController {
         this.bundleRepo = bundleRepo;
     }
 
+    // N-SC2-A: returns ONLY the authenticated caller's cart(s) (was every user's cart).
     @GetMapping
-    public ResponseEntity<List<Cart>> getAll() {
-        logger.info("Fetching all carts");
-        List<Cart> carts = cartService.findAll();
+    public ResponseEntity<List<Cart>> getMyCarts(@AuthenticationPrincipal AuthenticatedUser principal) {
+        List<Cart> carts = cartService.findByUserId(principal.getUserId());
         return ResponseEntity.ok(carts);
     }
 

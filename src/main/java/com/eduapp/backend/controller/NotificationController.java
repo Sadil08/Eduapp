@@ -3,10 +3,12 @@ package com.eduapp.backend.controller;
 import jakarta.validation.Valid;
 
 import com.eduapp.backend.model.Notification;
+import com.eduapp.backend.security.AuthenticatedUser;
 import com.eduapp.backend.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,10 +26,11 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
 
+    // N-SC2-A: returns ONLY the authenticated caller's notifications (was all users').
     @GetMapping
-    public ResponseEntity<List<Notification>> getAll() {
-        logger.info("Fetching all notifications");
-        List<Notification> notifications = notificationService.findAll();
+    public ResponseEntity<List<Notification>> getMyNotifications(
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        List<Notification> notifications = notificationService.findByUserId(principal.getUserId());
         return ResponseEntity.ok(notifications);
     }
 

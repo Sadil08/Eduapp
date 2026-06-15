@@ -21,9 +21,10 @@ public class NotificationService {
         this.notificationRepository = notificationRepository;
     }
 
-    public List<Notification> findAll() {
-        logger.info("Fetching all notifications");
-        return notificationRepository.findAll();
+    // N-SC2-A: scoped to a single user (was an unbounded all-users findAll()).
+    public List<Notification> findByUserId(Long userId) {
+        logger.info("Fetching notifications for user {}", userId);
+        return notificationRepository.findByUserId(userId);
     }
 
     public Optional<Notification> findById(Long id) {

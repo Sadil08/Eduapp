@@ -21,10 +21,10 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
  * <p>A small allow-list covers the cases consciously accepted for now:
  * <ul>
  *   <li>reference tables that are naturally tiny ({@code Subject}, {@code Lesson}, {@code ExamType});</li>
- *   <li>{@code AnalyticsService} — tracked separately under N-SC3 (rewrite as DB aggregates);</li>
  *   <li>{@code PaperBundleService} — public catalog pagination deferred under N-SC2/B3.</li>
  * </ul>
  * When those are addressed, remove them from the allow-list so the rule covers them too.
+ * (N-SC3 cleared {@code AnalyticsService} — its dead unbounded query was removed.)
  */
 class ScalabilityArchitectureTest {
 
@@ -37,7 +37,6 @@ class ScalabilityArchitectureTest {
             "com.eduapp.backend.service.SubjectService",
             "com.eduapp.backend.service.LessonService",
             "com.eduapp.backend.service.ExamTypeService",
-            "com.eduapp.backend.service.AnalyticsService",
             "com.eduapp.backend.service.PaperBundleService");
 
     @Test

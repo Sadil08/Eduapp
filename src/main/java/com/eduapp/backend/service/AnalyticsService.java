@@ -129,42 +129,10 @@ public class AnalyticsService {
         );
     }
 
-    /**
-     * Get detailed user analytics with filters
-     */
-    public List<UserAnalyticsDto> getUserAnalytics() {
-        logger.info("Fetching user analytics");
-
-        List<User> users = userRepository.findAll();
-        Map<Long, BigDecimal> revenuePerUser = getRevenuePerUserMap();
-        Map<Long, Long> extractionsPerUser = getExtractionsPerUserMap();
-        Map<Long, Long> attemptsPerUser = getAttemptsPerUserMap();
-        Map<Long, Double> avgScorePerUser = getAvgScorePerUserMap();
-
-        return users.stream().map(user -> {
-            Long userId = user.getId();
-            Long bundlesPurchased = (long) bundleAccessRepository.findByStudentId(userId).size();
-            BigDecimal totalSpent = revenuePerUser.getOrDefault(userId, BigDecimal.ZERO);
-            Long totalExtractions = extractionsPerUser.getOrDefault(userId, 0L);
-            Long totalAttempts = attemptsPerUser.getOrDefault(userId, 0L);
-            Double avgScore = avgScorePerUser.getOrDefault(userId, 0.0);
-
-            return new UserAnalyticsDto(
-                    userId,
-                    user.getUsername(),
-                    user.getEmail(),
-                    user.getRole(),
-                    user.getCountry(),
-                    user.getCreatedAt(),
-                    user.getLastLoginTime(),
-                    bundlesPurchased,
-                    totalSpent,
-                    totalExtractions,
-                    totalAttempts,
-                    avgScore
-            );
-        }).collect(Collectors.toList());
-    }
+    // N-SC3: the unbounded getUserAnalytics() (userRepository.findAll() + an N+1
+    // findByStudentId per user) was removed — it had no callers. The admin endpoint uses
+    // getUserAnalyticsPaginated() below, which pushes filtering/aggregation into a single
+    // paged DB query (findUserAnalyticsOptimized) instead of materialising every user.
 
     /**
      * Get paginated user analytics with filters (optimized version with direct query)
@@ -356,49 +324,11 @@ public class AnalyticsService {
     }
 
     // Helper methods
-    private Map<Long, BigDecimal> getRevenuePerUserMap() {
-        // Standard bundle revenue per user
-        List<Object[]> standardResults = bundleAccessRepository.getRevenuePerUser();
-        Map<Long, BigDecimal> revenueMap = new HashMap<>();
-        standardResults.forEach(row -> {
-            Long userId = ((Number) row[0]).longValue();
-            BigDecimal revenue = (BigDecimal) row[1];
-            revenueMap.merge(userId, revenue, BigDecimal::add);
-        });
-        
-        // Custom bundle revenue per user
-        List<Object[]> customResults = customBundleRepository.getRevenuePerUser();
-        customResults.forEach(row -> {
-            Long userId = ((Number) row[0]).longValue();
-            BigDecimal revenue = (BigDecimal) row[1];
-            revenueMap.merge(userId, revenue, BigDecimal::add);
-        });
-        
-        return revenueMap;
-    }
-
     private Map<Long, Long> getExtractionsPerUserMap() {
         List<Object[]> results = extractionRepository.sumExtractionCountsGroupedByUser();
         return results.stream().collect(Collectors.toMap(
                 row -> ((Number) row[0]).longValue(),
                 row -> ((Number) row[1]).longValue()
-        ));
-    }
-
-    private Map<Long, Long> getAttemptsPerUserMap() {
-        List<Object[]> results = attemptRepository.countAttemptsByUser();
-        return results.stream().collect(Collectors.toMap(
-                row -> ((Number) row[0]).longValue(),
-                row -> ((Number) row[1]).longValue()
-        ));
-    }
-
-    private Map<Long, Double> getAvgScorePerUserMap() {
-        // Using leaderboard entries as proxy for scores
-        List<Object[]> results = leaderboardRepository.avgScoreByUser();
-        return results.stream().collect(Collectors.toMap(
-                row -> ((Number) row[0]).longValue(),
-                row -> ((Number) row[1]).doubleValue()
         ));
     }
 

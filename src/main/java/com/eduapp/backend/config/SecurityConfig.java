@@ -68,6 +68,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // WP-A1.2: health is public for liveness/readiness probes; metrics &
+                        // the Prometheus scrape endpoint are ADMIN-only (or scrape via network policy).
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/api/auth/**").permitAll() // open endpoints
                         .requestMatchers(HttpMethod.POST, "/api/invites/accept").permitAll() // token-gated teacher onboarding
                         .requestMatchers("/api/auth/forgot-password").permitAll()

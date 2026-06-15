@@ -9,7 +9,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import java.util.Map;
 
-@RestControllerAdvice
+// Scoped to our API controllers so it does NOT intercept framework/actuator endpoints
+// (the catch-all previously turned /actuator/prometheus into a 500 "Something went wrong").
+@RestControllerAdvice(basePackages = "com.eduapp.backend.controller")
 public class GlobalExceptionHandler {
 
     // SECURITY: these must be declared BEFORE the broad RuntimeException handler so the

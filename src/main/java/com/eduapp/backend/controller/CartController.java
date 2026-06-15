@@ -9,6 +9,7 @@ import com.eduapp.backend.service.CartService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,6 +41,9 @@ public class CartController {
         return ResponseEntity.ok(carts);
     }
 
+    // N-S9: raw entity-CRUD on carts is ADMIN-only (mass-assignment + cross-user risk).
+    // Users manage their own cart through /my-cart and /my-cart/items/{bundleId} below.
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<Cart> getById(@PathVariable Long id) {
         logger.info("Fetching cart with ID: {}", id);
@@ -47,6 +51,7 @@ public class CartController {
         return cart.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<Cart> create(@Valid @RequestBody Cart cart) {
         logger.info("Creating cart");
@@ -54,6 +59,7 @@ public class CartController {
         return ResponseEntity.ok(saved);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Cart> update(@PathVariable Long id, @Valid @RequestBody Cart cart) {
         logger.info("Updating cart with ID: {}", id);
@@ -65,6 +71,7 @@ public class CartController {
         return ResponseEntity.ok(updated);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         logger.info("Deleting cart with ID: {}", id);

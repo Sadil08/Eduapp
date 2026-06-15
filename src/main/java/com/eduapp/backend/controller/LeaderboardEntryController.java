@@ -7,13 +7,18 @@ import com.eduapp.backend.service.LeaderboardEntryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
 
+// N-S9: raw entity-CRUD scaffolding. The user-facing leaderboard is served by
+// LeaderboardController (/api/leaderboard/...); this controller has no non-admin callers,
+// so it is locked to ADMIN to close the open create/update/delete + mass-assignment holes.
 @RestController
 @RequestMapping("/api/leaderboard-entries")
+@PreAuthorize("hasRole('ADMIN')")
 public class LeaderboardEntryController {
 
     private static final Logger logger = LoggerFactory.getLogger(LeaderboardEntryController.class);

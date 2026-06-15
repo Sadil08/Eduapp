@@ -8,6 +8,7 @@ import com.eduapp.backend.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +35,9 @@ public class NotificationController {
         return ResponseEntity.ok(notifications);
     }
 
+    // N-S9: notifications are system-generated. Reads-by-id and all writes are ADMIN-only
+    // (no non-admin caller); users see their own via the scoped list above.
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<Notification> getById(@PathVariable Long id) {
         logger.info("Fetching notification with ID: {}", id);
@@ -41,6 +45,7 @@ public class NotificationController {
         return notification.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<Notification> create(@Valid @RequestBody Notification notification) {
         logger.info("Creating notification");
@@ -48,6 +53,7 @@ public class NotificationController {
         return ResponseEntity.ok(saved);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Notification> update(@PathVariable Long id, @Valid @RequestBody Notification notification) {
         logger.info("Updating notification with ID: {}", id);
@@ -59,6 +65,7 @@ public class NotificationController {
         return ResponseEntity.ok(updated);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         logger.info("Deleting notification with ID: {}", id);

@@ -31,6 +31,26 @@ public class AIService {
     @org.springframework.beans.factory.annotation.Value("${ai.service.url:http://localhost:8000}")
     private String aiServiceUrl;
 
+    // SEC-1: shared secret sent as X-API-Key on every call so the Python extraction service can
+    // reject any request that didn't come from this backend. Empty in local dev (service runs
+    // with auth disabled); MUST be set in every deployed environment.
+    @org.springframework.beans.factory.annotation.Value("${ai.service.api-key:}")
+    private String aiServiceApiKey;
+
+    /** Multipart headers + the X-API-Key auth header (when configured). */
+    private HttpHeaders aiHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        applyApiKey(headers);
+        return headers;
+    }
+
+    private void applyApiKey(HttpHeaders headers) {
+        if (aiServiceApiKey != null && !aiServiceApiKey.isBlank()) {
+            headers.set("X-API-Key", aiServiceApiKey);
+        }
+    }
+
     public String extractTextFromImage(MultipartFile file) {
         return extractTextFromImage(file, null, null, "question");
     }
@@ -48,8 +68,7 @@ public class AIService {
             logger.info("Sending image to AI service for extraction (subject: {}, lesson: {}, docType: {})",
                     subjectName, lessonName, docType);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            HttpHeaders headers = aiHeaders();
 
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("file", new ByteArrayResource(file.getBytes()) {
@@ -114,8 +133,7 @@ public class AIService {
             logger.info("Sending {} images to AI service for batch extraction (subject: {})",
                     filesWithIds.size(), subjectName);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            HttpHeaders headers = aiHeaders();
 
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
@@ -199,8 +217,7 @@ public class AIService {
             logger.info("Sending PDF(s) to AI service for paper extraction (subject: {}, paperType: {})",
                     subject, paperType);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            HttpHeaders headers = aiHeaders();
 
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
@@ -303,9 +320,12 @@ public class AIService {
                 "total_marks", question.getMarks() != null ? question.getMarks() : 10);
 
         try {
+            HttpHeaders markHeaders = new HttpHeaders();
+            markHeaders.setContentType(MediaType.APPLICATION_JSON);
+            applyApiKey(markHeaders);
             ResponseEntity<Map> response = restTemplate.postForEntity(
                     aiServiceUrl + "/mark",
-                    payload,
+                    new HttpEntity<>(payload, markHeaders),
                     Map.class);
 
             if (response.getBody() != null) {

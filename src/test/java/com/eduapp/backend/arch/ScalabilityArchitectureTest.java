@@ -18,13 +18,9 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
  * paginated ({@code findAll(Pageable)}) or scoped ({@code findByX}) finder instead. A new
  * violation fails the build.
  *
- * <p>A small allow-list covers the cases consciously accepted for now:
- * <ul>
- *   <li>reference tables that are naturally tiny ({@code Subject}, {@code Lesson}, {@code ExamType});</li>
- *   <li>{@code PaperBundleService} — public catalog pagination deferred under N-SC2/B3.</li>
- * </ul>
- * When those are addressed, remove them from the allow-list so the rule covers them too.
- * (N-SC3 cleared {@code AnalyticsService} — its dead unbounded query was removed.)
+ * <p>The allow-list now covers only the naturally-tiny reference tables ({@code Subject},
+ * {@code Lesson}, {@code ExamType}). N-SC3 cleared {@code AnalyticsService} and B3 cleared
+ * {@code PaperBundleService} (the public catalog is served by a paged query).
  */
 class ScalabilityArchitectureTest {
 
@@ -36,8 +32,7 @@ class ScalabilityArchitectureTest {
     private static final Set<String> ALLOW_LISTED_SERVICES = Set.of(
             "com.eduapp.backend.service.SubjectService",
             "com.eduapp.backend.service.LessonService",
-            "com.eduapp.backend.service.ExamTypeService",
-            "com.eduapp.backend.service.PaperBundleService");
+            "com.eduapp.backend.service.ExamTypeService");
 
     @Test
     void servicesDoNotCallUnboundedFindAll() {

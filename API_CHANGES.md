@@ -41,7 +41,7 @@ bare array. Query params: `?page` (0-based), `?size` (capped server-side), optio
 |---|----------|--------|-------|-----------------|--------|
 | B1 | `GET /api/papers` (admin all) | `List<PaperDto>` (ADMIN) | `Page<PaperDto>` `?page&size&q` | FE: `paperService.getBundlePapers` repointed to `GET /api/paper-bundles/{id}` `.papers` (fixes a pre-existing bug — it had passed an ignored `bundleId` to the admin endpoint). `/api/papers/available` kept (deprecated) hard-capped at 500. | ☑ |
 | B2 | `GET /api/admin/bundles` | `List<AdminBundleDto>` | `Page<AdminBundleDto>` `?page&size` | FE: `adminService.getBundles()` requests `size=100` and unwraps `.content`, still returns a flat array → 3 admin pages unchanged | ☑ |
-| B3 | `GET /api/paper-bundles` / `/summaries` (public catalog) | `List<...>` | _(deferred)_ | **DEFERRED** — public storefront; converting to `Page` is a UX decision (pages vs infinite-scroll) and needs frontend verification. Recommend a follow-up with the catalog UI. | ☐ |
+| B3 | public catalog | — | already `Page` | **RESOLVED, no API change** — `GET /api/paper-bundles` was already paginated (`Page<PaperBundleSummaryDto>` via `filterBundlesPaginated`); the frontend catalog already consumes it. The unbounded `PaperBundleService.getAll()` / `getAllSummaries()` were **dead code** and were deleted. No storefront change needed. | ☑ |
 | B4 | `GET /api/questions` | `List<QuestionDto>` | `Page<QuestionDto>` `?page&size` (ADMIN, see A6) | none (no caller) | ☑ |
 
 Backend for B1/B2/B4 verified by `NSC2AuthorizationIT` (Page shape + admin lock).

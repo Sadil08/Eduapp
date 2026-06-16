@@ -98,29 +98,8 @@ public class PaperBundleService {
         return paperBundleMapper.toDto(saved);
     }
 
-    /**
-     * Retrieves all paper bundles.
-     * 
-     * @return a list of all PaperBundleDto
-     */
-    public List<PaperBundleDto> getAll() {
-        logger.info("Fetching all paper bundles");
-        List<PaperBundle> bundles = paperBundleRepository.findAll();
-        List<PaperBundleDto> dtos = paperBundleMapper.toDtoList(bundles);
-        logger.info("Found {} paper bundles", dtos.size());
-        return dtos;
-    }
-
-    /**
-     * Retrieves all paper bundle summaries (public view).
-     * 
-     * @return a list of PaperBundleSummaryDto
-     */
-    public List<PaperBundleSummaryDto> getAllSummaries() {
-        logger.info("Fetching all paper bundle summaries");
-        List<PaperBundle> bundles = paperBundleRepository.findAll();
-        return paperBundleMapper.toSummaryDtoList(bundles);
-    }
+    // N-SC2/B3: removed the unbounded getAll() / getAllSummaries() (no callers). The public
+    // catalog (GET /api/paper-bundles) is served by filterBundlesPaginated() — a paged query.
 
     /**
      * Retrieves paper bundle details for a user.

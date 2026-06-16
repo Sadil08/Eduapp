@@ -1,8 +1,6 @@
 package com.eduapp.backend.service;
 
 import com.eduapp.backend.dto.analytics.*;
-import com.eduapp.backend.model.Role;
-import com.eduapp.backend.model.User;
 import com.eduapp.backend.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,7 +9,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
@@ -28,26 +25,19 @@ public class AnalyticsService {
 
     private final UserRepository userRepository;
     private final StudentBundleAccessRepository bundleAccessRepository;
-    private final StudentPaperAttemptRepository attemptRepository;
     private final QuestionExtractionTrackingRepository extractionRepository;
-    private final ProgressRepository progressRepository;
-    private final LeaderboardEntryRepository leaderboardRepository;
     private final CustomBundleRepository customBundleRepository;
 
+    // N-SC3 cleanup: attempt/leaderboard/progress repos were only used by the deleted
+    // unbounded getUserAnalytics(); they're no longer injected.
     public AnalyticsService(
             UserRepository userRepository,
             StudentBundleAccessRepository bundleAccessRepository,
-            StudentPaperAttemptRepository attemptRepository,
             QuestionExtractionTrackingRepository extractionRepository,
-            ProgressRepository progressRepository,
-            LeaderboardEntryRepository leaderboardRepository,
             CustomBundleRepository customBundleRepository) {
         this.userRepository = userRepository;
         this.bundleAccessRepository = bundleAccessRepository;
-        this.attemptRepository = attemptRepository;
         this.extractionRepository = extractionRepository;
-        this.progressRepository = progressRepository;
-        this.leaderboardRepository = leaderboardRepository;
         this.customBundleRepository = customBundleRepository;
     }
 

@@ -31,6 +31,75 @@ public class AIService {
     @org.springframework.beans.factory.annotation.Value("${ai.service.url:http://localhost:8000}")
     private String aiServiceUrl;
 
+    // SCALE-1: bulkhead. AI extraction is a slow, blocking call; without a cap, a burst (or a
+    // slow AI service) would tie up every Tomcat worker thread and 503 the whole app. Limit the
+    // number of concurrent AI calls and fast-fail the rest so other endpoints stay responsive.
+    @org.springframework.beans.factory.annotation.Value("${ai.service.max-concurrent:8}")
+    private int maxConcurrentAiCalls;
+    @org.springframework.beans.factory.annotation.Value("${ai.service.acquire-timeout-ms:2000}")
+    private long acquireTimeoutMs;
+    private java.util.concurrent.Semaphore aiSlots;
+
+    // SCALE-3: lightweight circuit breaker. After N consecutive failures the circuit "opens" and
+    // calls fast-fail for a cooldown, so the backend stops hammering (and wasting bulkhead slots
+    // on) a down/slow AI service. A single trial after the cooldown closes it again on success.
+    @org.springframework.beans.factory.annotation.Value("${ai.service.cb-failure-threshold:5}")
+    private int cbFailureThreshold;
+    @org.springframework.beans.factory.annotation.Value("${ai.service.cb-open-ms:30000}")
+    private long cbOpenMs;
+    private final java.util.concurrent.atomic.AtomicInteger consecutiveFailures =
+            new java.util.concurrent.atomic.AtomicInteger();
+    private volatile long circuitOpenUntilMs = 0L;
+
+    @jakarta.annotation.PostConstruct
+    void initBulkhead() {
+        this.aiSlots = new java.util.concurrent.Semaphore(Math.max(1, maxConcurrentAiCalls));
+    }
+
+    /**
+     * SCALE-1 + SCALE-3: single entry point for AI calls — circuit breaker (fast-fail when the
+     * AI service is known down) + bulkhead (cap concurrency so AI I/O can't starve Tomcat threads).
+     */
+    private ResponseEntity<Map> callAi(String path, HttpEntity<?> entity) {
+        if (System.currentTimeMillis() < circuitOpenUntilMs) {
+            throw new RuntimeException("AI service circuit is open — failing fast; retry shortly");
+        }
+        acquireAiSlot();
+        try {
+            ResponseEntity<Map> r = restTemplate.postForEntity(aiServiceUrl + path, entity, Map.class);
+            consecutiveFailures.set(0); // success closes the circuit
+            return r;
+        } catch (RuntimeException e) {
+            if (consecutiveFailures.incrementAndGet() >= cbFailureThreshold) {
+                circuitOpenUntilMs = System.currentTimeMillis() + cbOpenMs;
+                consecutiveFailures.set(0);
+                logger.error("AI service circuit OPENED for {}ms after repeated failures", cbOpenMs);
+            }
+            throw e;
+        } finally {
+            releaseAiSlot();
+        }
+    }
+
+    /** SCALE-1: acquire a bulkhead slot or fast-fail so the caller thread never blocks unbounded. */
+    private void acquireAiSlot() {
+        try {
+            if (aiSlots != null
+                    && !aiSlots.tryAcquire(acquireTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                throw new RuntimeException("AI service is busy (bulkhead full) — please retry shortly");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while waiting for an AI slot", e);
+        }
+    }
+
+    private void releaseAiSlot() {
+        if (aiSlots != null) {
+            aiSlots.release();
+        }
+    }
+
     // SEC-1: shared secret sent as X-API-Key on every call so the Python extraction service can
     // reject any request that didn't come from this backend. Empty in local dev (service runs
     // with auth disabled); MUST be set in every deployed environment.
@@ -95,10 +164,7 @@ public class AIService {
 
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    aiServiceUrl + "/extract",
-                    requestEntity,
-                    Map.class);
+            ResponseEntity<Map> response = callAi("/extract", requestEntity);
 
             if (response.getBody() != null && response.getBody().containsKey("extracted_text")) {
                 Object extracted = response.getBody().get("extracted_text");
@@ -163,10 +229,7 @@ public class AIService {
 
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    aiServiceUrl + "/extract-batch",
-                    requestEntity,
-                    Map.class);
+            ResponseEntity<Map> response = callAi("/extract-batch", requestEntity);
 
             if (response.getBody() != null && response.getBody().containsKey("results")) {
                 @SuppressWarnings("unchecked")
@@ -255,10 +318,7 @@ public class AIService {
 
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    aiServiceUrl + "/extract-paper",
-                    requestEntity,
-                    Map.class);
+            ResponseEntity<Map> response = callAi("/extract-paper", requestEntity);
 
             if (response.getBody() != null) {
                 logger.info("Paper extraction completed successfully");

@@ -4,7 +4,11 @@ import com.eduapp.backend.model.*;
 import com.eduapp.backend.repository.SchoolInviteRepository;
 import com.eduapp.backend.repository.SchoolRepository;
 import com.eduapp.backend.repository.UserRepository;
+import com.eduapp.backend.security.AuthenticatedUser;
+import com.eduapp.backend.security.RoleCreationPolicy;
 import com.eduapp.backend.security.TenantContext;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,9 +51,21 @@ public class SchoolInviteService {
         if (schoolId == null) {
             throw new IllegalStateException("No tenant in context — only a school-tier admin can invite teachers");
         }
+        // SEC-4: enforce the role-creation matrix — only a role permitted to mint TEACHER may
+        // invite one. The /api/school route also admits TEACHER, so this blocks teacher→teacher.
+        RoleCreationPolicy.assertCanCreate(currentCreatorRole(), Role.TEACHER);
         SchoolInvite invite = new SchoolInvite(schoolId, email, Role.TEACHER,
                 generateToken(), LocalDateTime.now().plusDays(INVITE_TTL_DAYS));
         return inviteRepository.save(invite);
+    }
+
+    /** The authenticated caller's role, or null when unauthenticated. */
+    private Role currentCreatorRole() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof AuthenticatedUser principal) {
+            return principal.getRole();
+        }
+        return null;
     }
 
     /** Accepts an invite by token, creating the invited user in the invite's school. */

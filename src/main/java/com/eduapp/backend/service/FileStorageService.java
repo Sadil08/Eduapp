@@ -97,6 +97,13 @@ public class FileStorageService {
             throw new IllegalArgumentException("File size exceeds maximum of 5MB");
         }
 
+        // SEC-7: content-type is client-supplied and spoofable. Verify the actual bytes carry a
+        // real image signature, so a renamed script/polyglot labelled image/png is rejected.
+        byte[] bytes = file.getBytes();
+        if (!looksLikeAllowedImage(bytes)) {
+            throw new IllegalArgumentException("File content is not a valid image");
+        }
+
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null && originalFilename.contains(".")
                 ? originalFilename.substring(originalFilename.lastIndexOf("."))
@@ -116,7 +123,7 @@ public class FileStorageService {
                 .contentType(contentType)
                 .build();
 
-        s3Client.putObject(putRequest, RequestBody.fromBytes(file.getBytes()));
+        s3Client.putObject(putRequest, RequestBody.fromBytes(bytes));
 
         // Return full public URL
         String fileUrl = publicUrl + "/" + objectKey;
@@ -203,5 +210,40 @@ public class FileStorageService {
                 || contentType.equals("image/webp")
                 || contentType.equals("image/heic")
                 || contentType.equals("image/heif");
+    }
+
+    /**
+     * SEC-7: true if the leading bytes match a supported image signature (JPEG/PNG/GIF/WEBP/
+     * HEIC-HEIF) — content-based validation independent of the client's declared content-type.
+     */
+    static boolean looksLikeAllowedImage(byte[] b) {
+        if (b == null || b.length < 12) {
+            return false;
+        }
+        // JPEG: FF D8 FF
+        if ((b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) {
+            return true;
+        }
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        if ((b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G'
+                && (b[4] & 0xFF) == 0x0D && (b[5] & 0xFF) == 0x0A) {
+            return true;
+        }
+        // GIF: "GIF8"
+        if (b[0] == 'G' && b[1] == 'I' && b[2] == 'F' && b[3] == '8') {
+            return true;
+        }
+        // WEBP: "RIFF"...."WEBP"
+        if (b[0] == 'R' && b[1] == 'I' && b[2] == 'F' && b[3] == 'F'
+                && b[8] == 'W' && b[9] == 'E' && b[10] == 'B' && b[11] == 'P') {
+            return true;
+        }
+        // HEIC/HEIF: bytes 4..7 == "ftyp" with a heic/heif/mif1 brand at 8..11
+        if (b[4] == 'f' && b[5] == 't' && b[6] == 'y' && b[7] == 'p') {
+            String brand = new String(new char[]{(char) b[8], (char) b[9], (char) b[10], (char) b[11]});
+            return brand.startsWith("hei") || brand.startsWith("mif") || brand.startsWith("hev")
+                    || brand.startsWith("msf") || brand.startsWith("avif");
+        }
+        return false;
     }
 }

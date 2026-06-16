@@ -36,6 +36,12 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     @Autowired
     private JwtUtil jwtUtil;
 
+    // SEC-8: X-Forwarded-For is client-controlled and can be spoofed to rotate the rate-limit
+    // key. Only honour it when explicitly enabled (i.e. the app sits behind a trusted proxy/LB
+    // that overwrites it). Default false → use the real socket address.
+    @org.springframework.beans.factory.annotation.Value("${app.rate-limit.trust-forwarded-header:false}")
+    private boolean trustForwardedHeader;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String caller = resolveCaller(request);
@@ -43,18 +49,24 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
         String tier;
         int limit;
+        // SEC-5: sensitive tiers fail CLOSED on a Redis outage (no brute-force / cost-abuse
+        // window); the general tier fails OPEN so a cache blip doesn't take the app down.
+        boolean failOpen;
         if (uri.startsWith("/api/auth")) {
             tier = "auth";
             limit = LIMIT_AUTH;
+            failOpen = false;
         } else if (uri.contains("/extract")) {
             tier = "extraction";
             limit = LIMIT_EXTRACTION;
+            failOpen = false;
         } else {
             tier = "general";
             limit = LIMIT_GENERAL;
+            failOpen = true;
         }
 
-        RedisRateLimiter.Result result = rateLimiter.tryConsume(tier + ":" + caller, limit);
+        RedisRateLimiter.Result result = rateLimiter.tryConsume(tier + ":" + caller, limit, failOpen);
 
         if (result.allowed()) {
             if (result.remaining() >= 0) {
@@ -85,9 +97,12 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
+        // SEC-8: only trust X-Forwarded-For when configured to (behind a trusted proxy).
+        if (trustForwardedHeader) {
+            String xForwardedFor = request.getHeader("X-Forwarded-For");
+            if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+                return xForwardedFor.split(",")[0].trim();
+            }
         }
         return request.getRemoteAddr();
     }

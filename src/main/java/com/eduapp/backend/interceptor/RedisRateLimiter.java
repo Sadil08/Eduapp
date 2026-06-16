@@ -29,11 +29,19 @@ public class RedisRateLimiter {
 
     public record Result(boolean allowed, long remaining, long retryAfterSeconds) {}
 
+    /** Backwards-compatible default: fail OPEN on Redis outage (for non-sensitive tiers). */
+    public Result tryConsume(String bucketKey, int limitPerMinute) {
+        return tryConsume(bucketKey, limitPerMinute, true);
+    }
+
     /**
      * @param bucketKey       composite key, e.g. "auth:user:alice@x.com" or "general:ip:1.2.3.4"
      * @param limitPerMinute  max requests allowed in the 60s window
+     * @param failOpen        SEC-5: on Redis outage, {@code true} allows the request (availability),
+     *                        {@code false} denies it (use for sensitive tiers like auth/extraction
+     *                        so an outage can't enable brute-force or cost-abuse).
      */
-    public Result tryConsume(String bucketKey, int limitPerMinute) {
+    public Result tryConsume(String bucketKey, int limitPerMinute, boolean failOpen) {
         String key = "rl:" + bucketKey;
         try {
             Long count = redis.opsForValue().increment(key);
@@ -52,9 +60,13 @@ public class RedisRateLimiter {
             }
             return new Result(allowed, remaining, retryAfter);
         } catch (Exception e) {
-            // Redis down → fail open so the platform stays available.
-            logger.warn("Redis rate limiter unavailable, allowing request (fail-open): {}", e.getMessage());
-            return new Result(true, -1, 0);
+            if (failOpen) {
+                logger.warn("Redis rate limiter unavailable, allowing request (fail-open): {}", e.getMessage());
+                return new Result(true, -1, 0);
+            }
+            // SEC-5: sensitive tier → fail CLOSED so a cache outage can't open brute-force/abuse.
+            logger.error("Redis rate limiter unavailable, BLOCKING request (fail-closed): {}", e.getMessage());
+            return new Result(false, 0, WINDOW.toSeconds());
         }
     }
 }

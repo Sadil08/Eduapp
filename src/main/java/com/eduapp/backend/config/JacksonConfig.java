@@ -28,6 +28,11 @@ public class JacksonConfig {
     public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
         ObjectMapper objectMapper = builder.createXmlMapper(false).build();
         objectMapper.registerModule(hibernate6Module());
+        // SEC-6: strip control/null characters from every incoming JSON string.
+        com.fasterxml.jackson.databind.module.SimpleModule sanitizing =
+                new com.fasterxml.jackson.databind.module.SimpleModule("input-sanitizing");
+        sanitizing.addDeserializer(String.class, new SanitizingStringDeserializer());
+        objectMapper.registerModule(sanitizing);
         return objectMapper;
     }
 }

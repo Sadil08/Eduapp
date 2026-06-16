@@ -96,7 +96,9 @@ public class UserService implements UserDetailsService {
                 User user = new User();
                 user.setEmail(req.getEmail());
                 user.setPassword(passwordEncoder.encode(req.getPassword()));
-                user.setUsername(req.getName());
+                // SEC-6: the display name is an identity field — strip angle brackets so it can
+                // never become an HTML tag wherever it's later rendered.
+                user.setUsername(com.eduapp.backend.util.TextSanitizer.stripAngleBrackets(req.getName()));
 
                 // SECURITY: public self-registration must NEVER honour a client-supplied role.
                 // Privileged roles (ADMIN, SCHOOL_ADMIN, TEACHER) are created only via

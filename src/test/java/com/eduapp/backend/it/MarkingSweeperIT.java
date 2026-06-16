@@ -2,10 +2,14 @@ package com.eduapp.backend.it;
 
 import com.eduapp.backend.model.*;
 import com.eduapp.backend.repository.*;
+import com.eduapp.backend.service.MarkingSweeper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +23,11 @@ class MarkingSweeperIT extends AbstractIntegrationTest {
     @Autowired PaperRepository paperRepository;
     @Autowired StudentPaperAttemptRepository attemptRepository;
     @Autowired OverallPaperAnalysisRepository overallRepository;
+    @Autowired MarkingSweeper markingSweeper;
+    @Autowired DataSource dataSource;
+
+    // Must match MarkingSweeper.SWEEP_LOCK_KEY.
+    private static final long SWEEP_LOCK_KEY = 4_270_010_001L;
 
     private Paper paper;
 
@@ -69,5 +78,23 @@ class MarkingSweeperIT extends AbstractIntegrationTest {
         assertThat(ids).contains(stuck.getId());
         assertThat(ids).doesNotContain(recent.getId(), maxed.getId(), throttled.getId(),
                 ancient.getId(), inProgress.getId(), analysed.getId());
+    }
+
+    // SCALE-2: only one instance sweeps at a time. While another "instance" (a separate
+    // connection) holds the advisory lock, sweepOnce() must skip and re-enqueue nothing.
+    @Test
+    void sweepOnce_skipsWhenAnotherInstanceHoldsTheLock() throws Exception {
+        try (Connection held = dataSource.getConnection();
+                Statement st = held.createStatement()) {
+            st.execute("SELECT pg_advisory_lock(" + SWEEP_LOCK_KEY + ")");
+            try {
+                assertThat(markingSweeper.sweepOnce())
+                        .as("sweep skips when the lock is held elsewhere").isEqualTo(0);
+            } finally {
+                st.execute("SELECT pg_advisory_unlock(" + SWEEP_LOCK_KEY + ")");
+            }
+        }
+        // Lock released → a normal sweep runs again (no stuck attempts here → 0, but no skip).
+        assertThat(markingSweeper.sweepOnce()).isEqualTo(0);
     }
 }

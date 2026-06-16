@@ -2,6 +2,8 @@ package com.eduapp.backend.service;
 
 import com.eduapp.backend.model.StudentPaperAttempt;
 import com.eduapp.backend.repository.StudentPaperAttemptRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -31,8 +33,15 @@ public class MarkingSweeper {
     private static final int MAX_RETRIES = 5;
     private static final int BATCH = 20;
 
+    // SCALE-2: a fixed key for the Postgres advisory lock that serialises the sweep across
+    // horizontally-scaled instances (so only one runs at a time — no duplicate AI spend).
+    private static final long SWEEP_LOCK_KEY = 4_270_010_001L;
+
     private final StudentPaperAttemptRepository attemptRepository;
     private final AIAnalysisService aiAnalysisService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public MarkingSweeper(StudentPaperAttemptRepository attemptRepository, AIAnalysisService aiAnalysisService) {
         this.attemptRepository = attemptRepository;
@@ -55,6 +64,17 @@ public class MarkingSweeper {
      */
     @Transactional
     public int sweepOnce() {
+        // SCALE-2: only one instance sweeps at a time. The transaction-scoped advisory lock is
+        // auto-released at commit/rollback; if another instance holds it, skip this run.
+        Boolean gotLock = (Boolean) entityManager
+                .createNativeQuery("SELECT pg_try_advisory_xact_lock(:k)")
+                .setParameter("k", SWEEP_LOCK_KEY)
+                .getSingleResult();
+        if (!Boolean.TRUE.equals(gotLock)) {
+            logger.debug("MarkingSweeper: another instance holds the sweep lock; skipping this run");
+            return 0;
+        }
+
         LocalDateTime now = LocalDateTime.now();
         List<StudentPaperAttempt> stuck = attemptRepository.findStuckAnalysis(
                 now.minus(STALE_AFTER), now.minus(MAX_AGE), now.minus(RETRY_THROTTLE),

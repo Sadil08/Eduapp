@@ -6,6 +6,8 @@ import org.hibernate.annotations.FilterDef;
 import org.hibernate.annotations.ParamDef;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A class/section within a school (e.g. "Grade 10 - Physics - Section A").
@@ -27,8 +29,15 @@ public class SchoolClass {
     @Column(name = "school_id", nullable = false)
     private Long schoolId;
 
+    // BT-4.1: the creator/primary teacher (kept for back-compat); the full set is teacherIds.
     @Column(name = "teacher_id")
     private Long teacherId;
+
+    // BT-4.1: a class can have MANY teachers. Stored in the class_teachers join table.
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "class_teachers", joinColumns = @JoinColumn(name = "class_id"))
+    @Column(name = "teacher_id", nullable = false)
+    private Set<Long> teacherIds = new HashSet<>();
 
     @Column(nullable = false)
     private String name;
@@ -55,6 +64,36 @@ public class SchoolClass {
         this.subject = subject;
         this.yearGroup = yearGroup;
         this.classCode = classCode;
+        if (teacherId != null) {
+            this.teacherIds.add(teacherId);
+        }
+    }
+
+    // ---------- BT-4.1: multi-teacher accessors ----------
+    public Set<Long> getTeacherIds() {
+        return teacherIds;
+    }
+
+    public void setTeacherIds(Set<Long> teacherIds) {
+        this.teacherIds = teacherIds != null ? teacherIds : new HashSet<>();
+    }
+
+    public void addTeacher(Long teacherId) {
+        if (teacherId != null) {
+            this.teacherIds.add(teacherId);
+        }
+    }
+
+    public void removeTeacher(Long teacherId) {
+        this.teacherIds.remove(teacherId);
+    }
+
+    /** True if the given user teaches this class (member of the teacher set, or the legacy owner). */
+    public boolean isTaughtBy(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        return teacherIds.contains(userId) || userId.equals(teacherId);
     }
 
     public Long getId() {

@@ -2,12 +2,15 @@ package com.eduapp.backend.dto;
 
 import com.eduapp.backend.model.SchoolClass;
 
+import java.util.Set;
+
 /** Response/request DTO for school classes (never exposes cross-tenant internals beyond the owning school). */
 public class SchoolClassDto {
 
     private Long id;
     private Long schoolId;
     private Long teacherId;
+    private Set<Long> teacherIds; // BT-4.1: all teachers of the class
     private String name;
     private String subject;
     private String yearGroup;
@@ -21,11 +24,16 @@ public class SchoolClassDto {
         d.id = sc.getId();
         d.schoolId = sc.getSchoolId();
         d.teacherId = sc.getTeacherId();
+        d.teacherIds = sc.getTeacherIds();
         d.name = sc.getName();
         d.subject = sc.getSubject();
         d.yearGroup = sc.getYearGroup();
         d.classCode = sc.getClassCode();
         return d;
+    }
+
+    public Set<Long> getTeacherIds() {
+        return teacherIds;
     }
 
     public Long getId() {

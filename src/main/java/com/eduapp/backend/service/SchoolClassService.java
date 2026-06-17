@@ -50,6 +50,29 @@ public class SchoolClassService {
         return repository.save(sc);
     }
 
+    // BT-4.6: SCHOOL_ADMIN assigns/removes teachers on a class (tenant-scoped).
+    @Transactional
+    public SchoolClass assignTeacher(Long classId, Long teacherId) {
+        SchoolClass sc = getForCurrentTenant(classId);
+        sc.addTeacher(teacherId);
+        return repository.save(sc);
+    }
+
+    @Transactional
+    public SchoolClass removeTeacher(Long classId, Long teacherId) {
+        SchoolClass sc = getForCurrentTenant(classId);
+        sc.removeTeacher(teacherId);
+        return repository.save(sc);
+    }
+
+    /** BT-4.2: ownership check — is the given user a teacher of this class (within the tenant)? */
+    @Transactional(readOnly = true)
+    public boolean isTeacherOfClass(Long classId, Long userId) {
+        return repository.findByIdAndSchoolId(classId, requireTenant())
+                .map(sc -> sc.isTaughtBy(userId))
+                .orElse(false);
+    }
+
     private String generateUniqueClassCode() {
         String code;
         do {

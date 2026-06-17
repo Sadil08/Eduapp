@@ -44,4 +44,17 @@ public class SchoolClassController {
         return ResponseEntity.ok(SchoolClassDto.from(
                 service.create(req.getTeacherId(), req.getName(), req.getSubject(), req.getYearGroup())));
     }
+
+    // BT-4.6: only a SCHOOL_ADMIN manages the teacher roster of a class.
+    @PostMapping("/{id}/teachers/{teacherId}")
+    @PreAuthorize("hasRole('SCHOOL_ADMIN')")
+    public ResponseEntity<SchoolClassDto> assignTeacher(@PathVariable Long id, @PathVariable Long teacherId) {
+        return ResponseEntity.ok(SchoolClassDto.from(service.assignTeacher(id, teacherId)));
+    }
+
+    @DeleteMapping("/{id}/teachers/{teacherId}")
+    @PreAuthorize("hasRole('SCHOOL_ADMIN')")
+    public ResponseEntity<SchoolClassDto> removeTeacher(@PathVariable Long id, @PathVariable Long teacherId) {
+        return ResponseEntity.ok(SchoolClassDto.from(service.removeTeacher(id, teacherId)));
+    }
 }

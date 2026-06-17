@@ -46,11 +46,20 @@ public class EnrolmentService {
             throw new IllegalStateException("This account already belongs to a different school");
         }
 
-        if (enrolmentRepository.existsByClassIdAndStudentId(schoolClass.getId(), userId)) {
-            return enrolmentRepository.findByClassIdAndStudentId(schoolClass.getId(), userId).orElseThrow();
+        // BT-9: self-join is a REQUEST — a teacher must approve it.
+        var existing = enrolmentRepository.findByClassIdAndStudentId(schoolClass.getId(), userId);
+        if (existing.isPresent()) {
+            SchoolEnrolment e = existing.get();
+            // Re-requesting after a rejection reopens it as PENDING; otherwise return as-is.
+            if (e.getStatus() == SchoolEnrolmentStatus.REJECTED) {
+                e.setStatus(SchoolEnrolmentStatus.PENDING);
+                return enrolmentRepository.save(e);
+            }
+            return e;
         }
 
-        // Bind the user to the school and upgrade their role on first enrolment.
+        // Bind the user to the school and upgrade their role on first enrolment request, so they
+        // can use student endpoints — but class access stays gated until the enrolment is ACTIVE.
         if (currentSchoolId == null) {
             School school = schoolRepository.findById(targetSchoolId)
                     .orElseThrow(() -> new IllegalStateException("School no longer exists"));
@@ -61,6 +70,8 @@ public class EnrolmentService {
             userRepository.save(user);
         }
 
-        return enrolmentRepository.save(new SchoolEnrolment(targetSchoolId, schoolClass.getId(), userId));
+        SchoolEnrolment enrolment = new SchoolEnrolment(targetSchoolId, schoolClass.getId(), userId);
+        enrolment.setStatus(SchoolEnrolmentStatus.PENDING);
+        return enrolmentRepository.save(enrolment);
     }
 }

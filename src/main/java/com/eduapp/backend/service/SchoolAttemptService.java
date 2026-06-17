@@ -65,9 +65,12 @@ public class SchoolAttemptService {
             // Covers: not ASSIGNED, before the window opens, or after it closes.
             throw new IllegalStateException("This paper is not open for attempts right now");
         }
+        // BT-9.5: attempts require an ACTIVE (teacher-approved) enrolment.
         if (paper.getClassId() == null
-                || !enrolmentRepository.existsByClassIdAndStudentId(paper.getClassId(), studentId)) {
-            throw new org.springframework.security.access.AccessDeniedException("Not enrolled in this paper's class");
+                || !enrolmentRepository.existsByClassIdAndStudentIdAndStatus(
+                        paper.getClassId(), studentId, com.eduapp.backend.model.SchoolEnrolmentStatus.ACTIVE)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Your enrolment in this class is not active yet");
         }
 
         return attemptRepository.findBySchoolPaperIdAndStudentId(paperId, studentId)

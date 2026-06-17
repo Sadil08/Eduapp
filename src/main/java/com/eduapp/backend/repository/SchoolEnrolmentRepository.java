@@ -1,6 +1,7 @@
 package com.eduapp.backend.repository;
 
 import com.eduapp.backend.model.SchoolEnrolment;
+import com.eduapp.backend.model.SchoolEnrolmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -20,4 +21,9 @@ public interface SchoolEnrolmentRepository extends JpaRepository<SchoolEnrolment
     Optional<SchoolEnrolment> findByClassIdAndStudentId(Long classId, Long studentId);
 
     boolean existsByClassIdAndStudentId(Long classId, Long studentId);
+
+    // BT-9: approval-aware queries.
+    List<SchoolEnrolment> findByClassIdAndSchoolIdAndStatus(Long classId, Long schoolId, SchoolEnrolmentStatus status);
+
+    boolean existsByClassIdAndStudentIdAndStatus(Long classId, Long studentId, SchoolEnrolmentStatus status);
 }

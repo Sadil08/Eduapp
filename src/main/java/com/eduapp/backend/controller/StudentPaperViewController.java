@@ -40,8 +40,11 @@ public class StudentPaperViewController {
             @RequestParam Long classId) {
         User student = userRepository.findByEmail(principal.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        if (!enrolmentRepository.existsByClassIdAndStudentId(classId, student.getId())) {
-            throw new org.springframework.security.access.AccessDeniedException("Not enrolled in this class");
+        // BT-9.5: only an ACTIVE (teacher-approved) enrolment grants class access.
+        if (!enrolmentRepository.existsByClassIdAndStudentIdAndStatus(
+                classId, student.getId(), com.eduapp.backend.model.SchoolEnrolmentStatus.ACTIVE)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Your enrolment in this class is not active yet");
         }
         return ResponseEntity.ok(paperService.listAssignedForClass(classId).stream()
                 .map(SchoolPaperDto::from).toList());

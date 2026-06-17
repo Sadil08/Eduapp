@@ -15,6 +15,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByReferralCode(String referralCode);
 
+    /** BT-2: used by the first-admin bootstrap to run only on a cold system. */
+    boolean existsByRole(com.eduapp.backend.model.Role role);
+
     List<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(String username, String email);
 
     /**

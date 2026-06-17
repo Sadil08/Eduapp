@@ -129,6 +129,33 @@ public class UserService implements UserDetailsService {
                 return userRepository.save(user);
         }
 
+        /**
+         * BT-1/BT-2: provision a privileged user (SCHOOL_ADMIN / ADMIN / TEACHER) created by an
+         * admin flow — NOT public registration. The account is created with a random,
+         * unusable-until-reset password and an OTP is emailed so the user sets their own password
+         * (reuses the password-reset mechanism). {@code school} may be null for global ADMINs.
+         */
+        @Transactional
+        public User provisionUser(String email, String name, Role role, com.eduapp.backend.model.School school) {
+                userRepository.findByEmail(email).ifPresent(u -> {
+                        throw new BadRequestException("Email already exists");
+                });
+                User user = new User();
+                user.setEmail(email);
+                user.setUsername(com.eduapp.backend.util.TextSanitizer.stripAngleBrackets(name));
+                user.setRole(role);
+                user.setSchool(school);
+                user.setReferralCode(generateUniqueReferralCode());
+                // Random password the user never knows — they must set it via the emailed OTP.
+                user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+                User saved = userRepository.save(user);
+                // Email a set-password OTP (no-op send when SMTP isn't configured, e.g. tests).
+                forgotPassword(email);
+                logger.info("Provisioned {} account for {} (school={})", role, email,
+                                school != null ? school.getId() : "none");
+                return saved;
+        }
+
         // --- Create admin manually (restricted) ---
         @Transactional
         public User createAdmin(RegisterRequest req) {

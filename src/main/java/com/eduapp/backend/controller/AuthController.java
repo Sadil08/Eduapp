@@ -2,14 +2,17 @@ package com.eduapp.backend.controller;
 
 import com.eduapp.backend.dto.JwtResponse;
 import com.eduapp.backend.dto.LoginRequest;
+import com.eduapp.backend.dto.MeResponse;
 import com.eduapp.backend.dto.RegisterRequest;
 import com.eduapp.backend.dto.UserResponse;
 import com.eduapp.backend.dto.ForgotPasswordRequest;
 import com.eduapp.backend.dto.ResetPasswordRequest;
 import com.eduapp.backend.model.User;
+import com.eduapp.backend.security.AuthenticatedUser;
 import com.eduapp.backend.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -37,6 +40,22 @@ public class AuthController {
         String ip = getClientIp(request);
         String token = userService.login(req.getEmail(), req.getPassword(), ip);
         return ResponseEntity.ok(new JwtResponse(token));
+    }
+
+    /**
+     * FE-A1.1: server-validated identity. The frontend calls this on load and trusts only its
+     * response for role/identity (never a client-decoded JWT). Requires a valid token.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<MeResponse> me(@AuthenticationPrincipal AuthenticatedUser principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return userService.findById(principal.getUserId())
+                .map(u -> ResponseEntity.ok(new MeResponse(
+                        u.getId(), u.getUsername(), u.getEmail(), u.getRole(),
+                        u.getSchoolId(), u.getReferralCode())))
+                .orElseGet(() -> ResponseEntity.status(401).build());
     }
 
     @PostMapping("/forgot-password")

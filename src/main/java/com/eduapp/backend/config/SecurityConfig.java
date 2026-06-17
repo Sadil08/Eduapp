@@ -72,6 +72,7 @@ public class SecurityConfig {
                         // the Prometheus scrape endpoint are ADMIN-only (or scrape via network policy).
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        .requestMatchers("/api/auth/me").authenticated() // FE-A1.1: server-validated identity
                         .requestMatchers("/api/auth/**").permitAll() // open endpoints
                         .requestMatchers(HttpMethod.POST, "/api/invites/accept").permitAll() // token-gated teacher onboarding
                         .requestMatchers("/api/auth/forgot-password").permitAll()

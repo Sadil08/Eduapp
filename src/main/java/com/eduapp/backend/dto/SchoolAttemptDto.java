@@ -1,6 +1,7 @@
 package com.eduapp.backend.dto;
 
 import com.eduapp.backend.model.SchoolPaperAttempt;
+import com.eduapp.backend.model.User;
 
 import java.time.LocalDateTime;
 
@@ -8,6 +9,8 @@ import java.time.LocalDateTime;
 public class SchoolAttemptDto {
     private Long id;
     private Long studentId;
+    private String studentName;  // for the teacher review screen
+    private String studentEmail;
     private Long schoolPaperId;
     private String status;
     private Integer aiMark;
@@ -32,8 +35,20 @@ public class SchoolAttemptDto {
         return d;
     }
 
+    /** Enriched with the student's identity for teacher review screens. */
+    public static SchoolAttemptDto from(SchoolPaperAttempt a, User student) {
+        SchoolAttemptDto d = from(a);
+        if (student != null) {
+            d.studentName = student.getUsername();
+            d.studentEmail = student.getEmail();
+        }
+        return d;
+    }
+
     public Long getId() { return id; }
     public Long getStudentId() { return studentId; }
+    public String getStudentName() { return studentName; }
+    public String getStudentEmail() { return studentEmail; }
     public Long getSchoolPaperId() { return schoolPaperId; }
     public String getStatus() { return status; }
     public Integer getAiMark() { return aiMark; }

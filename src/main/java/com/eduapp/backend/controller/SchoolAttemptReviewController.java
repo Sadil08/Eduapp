@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 
 import com.eduapp.backend.dto.OverrideMarkRequest;
 import com.eduapp.backend.dto.SchoolAttemptDto;
+import com.eduapp.backend.repository.UserRepository;
 import com.eduapp.backend.service.SchoolAttemptService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,14 +22,18 @@ import java.util.List;
 public class SchoolAttemptReviewController {
 
     private final SchoolAttemptService attemptService;
+    private final UserRepository userRepository;
 
-    public SchoolAttemptReviewController(SchoolAttemptService attemptService) {
+    public SchoolAttemptReviewController(SchoolAttemptService attemptService, UserRepository userRepository) {
         this.attemptService = attemptService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
     public ResponseEntity<List<SchoolAttemptDto>> forPaper(@RequestParam Long paperId) {
-        return ResponseEntity.ok(attemptService.listForPaper(paperId).stream().map(SchoolAttemptDto::from).toList());
+        return ResponseEntity.ok(attemptService.listForPaper(paperId).stream()
+                .map(a -> SchoolAttemptDto.from(a, userRepository.findById(a.getStudentId()).orElse(null)))
+                .toList());
     }
 
     @PostMapping("/{id}/override")

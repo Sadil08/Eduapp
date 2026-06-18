@@ -1,6 +1,9 @@
 package com.eduapp.backend.controller;
 
 import com.eduapp.backend.dto.SchoolPaperDto;
+import com.eduapp.backend.dto.StudentQuestionDto;
+import com.eduapp.backend.model.SchoolPaper;
+import com.eduapp.backend.model.SchoolPaperStatus;
 import com.eduapp.backend.model.User;
 import com.eduapp.backend.repository.SchoolEnrolmentRepository;
 import com.eduapp.backend.repository.UserRepository;
@@ -48,5 +51,24 @@ public class StudentPaperViewController {
         }
         return ResponseEntity.ok(paperService.listAssignedForClass(classId).stream()
                 .map(SchoolPaperDto::from).toList());
+    }
+
+    /**
+     * Questions of an ASSIGNED paper, for attempting — WITHOUT the marking scheme. Requires an
+     * ACTIVE enrolment in the paper's class (BT-9.5).
+     */
+    @GetMapping("/{paperId}/questions")
+    public ResponseEntity<List<StudentQuestionDto>> questions(@AuthenticationPrincipal UserDetails principal,
+            @PathVariable Long paperId) {
+        User student = userRepository.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        SchoolPaper paper = paperService.getForTenant(paperId);
+        if (paper.getStatus() != SchoolPaperStatus.ASSIGNED || paper.getClassId() == null
+                || !enrolmentRepository.existsByClassIdAndStudentIdAndStatus(
+                        paper.getClassId(), student.getId(), com.eduapp.backend.model.SchoolEnrolmentStatus.ACTIVE)) {
+            throw new org.springframework.security.access.AccessDeniedException("This paper is not available to you");
+        }
+        return ResponseEntity.ok(paperService.listQuestions(paperId).stream()
+                .map(StudentQuestionDto::from).toList());
     }
 }

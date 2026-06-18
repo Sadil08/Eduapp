@@ -26,4 +26,7 @@ public interface SchoolEnrolmentRepository extends JpaRepository<SchoolEnrolment
     List<SchoolEnrolment> findByClassIdAndSchoolIdAndStatus(Long classId, Long schoolId, SchoolEnrolmentStatus status);
 
     boolean existsByClassIdAndStudentIdAndStatus(Long classId, Long studentId, SchoolEnrolmentStatus status);
+
+    /** A student's enrolments in a given status within their school (for the student dashboard). */
+    List<SchoolEnrolment> findByStudentIdAndSchoolIdAndStatus(Long studentId, Long schoolId, SchoolEnrolmentStatus status);
 }

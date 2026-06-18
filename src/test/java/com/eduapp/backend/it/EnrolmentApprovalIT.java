@@ -87,6 +87,13 @@ class EnrolmentApprovalIT extends AbstractIntegrationTest {
         ResponseEntity<List> ok = rest.exchange("/api/student/papers?classId=" + cls.getId(),
                 HttpMethod.GET, new HttpEntity<>(bearer(joined)), List.class);
         assertThat(ok.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // 6) The class now appears in the student's "my classes".
+        ResponseEntity<List> myClasses = rest.exchange("/api/student/classes",
+                HttpMethod.GET, new HttpEntity<>(bearer(joined)), List.class);
+        assertThat(myClasses.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<Map<String, Object>>) myClasses.getBody())
+                .anySatisfy(m -> assertThat(((Number) m.get("id")).longValue()).isEqualTo(cls.getId()));
     }
 
     @Test

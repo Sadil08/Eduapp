@@ -53,6 +53,21 @@ public class StudentPaperViewController {
                 .map(SchoolPaperDto::from).toList());
     }
 
+    /** Metadata of an ASSIGNED paper (exam window, time limit) for the attempt screen. */
+    @GetMapping("/{paperId}")
+    public ResponseEntity<SchoolPaperDto> paper(@AuthenticationPrincipal UserDetails principal,
+            @PathVariable Long paperId) {
+        User student = userRepository.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        SchoolPaper paper = paperService.getForTenant(paperId);
+        if (paper.getStatus() != SchoolPaperStatus.ASSIGNED || paper.getClassId() == null
+                || !enrolmentRepository.existsByClassIdAndStudentIdAndStatus(
+                        paper.getClassId(), student.getId(), com.eduapp.backend.model.SchoolEnrolmentStatus.ACTIVE)) {
+            throw new org.springframework.security.access.AccessDeniedException("This paper is not available to you");
+        }
+        return ResponseEntity.ok(SchoolPaperDto.from(paper));
+    }
+
     /**
      * Questions of an ASSIGNED paper, for attempting — WITHOUT the marking scheme. Requires an
      * ACTIVE enrolment in the paper's class (BT-9.5).

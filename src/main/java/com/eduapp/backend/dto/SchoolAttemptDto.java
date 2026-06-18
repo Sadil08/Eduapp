@@ -19,6 +19,7 @@ public class SchoolAttemptDto {
     private Integer effectiveMark;
     private LocalDateTime teacherReviewedAt;
     private Integer timeTakenMinutes;
+    private LocalDateTime startedAt;
 
     public static SchoolAttemptDto from(SchoolPaperAttempt a) {
         SchoolAttemptDto d = new SchoolAttemptDto();
@@ -26,6 +27,7 @@ public class SchoolAttemptDto {
         d.studentId = a.getStudentId();
         d.schoolPaperId = a.getSchoolPaperId();
         d.status = a.getStatus().name();
+        d.startedAt = a.getStartedAt();
         d.aiMark = a.getAiMark();
         d.teacherOverrideMark = a.getTeacherOverrideMark();
         d.teacherOverrideNote = a.getTeacherOverrideNote();
@@ -57,4 +59,5 @@ public class SchoolAttemptDto {
     public Integer getEffectiveMark() { return effectiveMark; }
     public LocalDateTime getTeacherReviewedAt() { return teacherReviewedAt; }
     public Integer getTimeTakenMinutes() { return timeTakenMinutes; }
+    public LocalDateTime getStartedAt() { return startedAt; }
 }

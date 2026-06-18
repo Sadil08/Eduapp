@@ -145,6 +145,25 @@ public class SchoolAttemptService {
         return attemptRepository.findBySchoolPaperIdAndSchoolId(paperId, requireTenant());
     }
 
+    /** Per-question answers + AI mark/feedback + marking scheme for a teacher to review one attempt. */
+    @Transactional(readOnly = true)
+    public List<com.eduapp.backend.dto.AttemptAnswerReviewDto> listAnswersForReview(Long attemptId) {
+        // Tenant guard: the attempt must belong to the caller's school.
+        attemptRepository.findByIdAndSchoolId(attemptId, requireTenant())
+                .orElseThrow(() -> new IllegalArgumentException("Attempt not found in this school"));
+        return answerRepository.findByAttemptId(attemptId).stream().map(ans -> {
+            Question q = questionRepository.findById(ans.getQuestionId()).orElse(null);
+            return new com.eduapp.backend.dto.AttemptAnswerReviewDto(
+                    ans.getQuestionId(),
+                    q != null ? q.getText() : null,
+                    q != null ? q.getMarks() : null,
+                    q != null ? q.getCorrectAnswerText() : null,
+                    ans.getAnswerText(),
+                    ans.getMarksAwarded(),
+                    ans.getAiFeedback());
+        }).toList();
+    }
+
     @Transactional
     public SchoolPaperAttempt teacherOverride(Long attemptId, Integer overrideMark, String note) {
         if (note == null || note.isBlank()) {

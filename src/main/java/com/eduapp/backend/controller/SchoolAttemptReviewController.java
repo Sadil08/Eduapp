@@ -36,6 +36,12 @@ public class SchoolAttemptReviewController {
                 .toList());
     }
 
+    /** Per-question answers + AI mark/feedback + marking scheme, for reviewing one attempt. */
+    @GetMapping("/{id}/answers")
+    public ResponseEntity<List<com.eduapp.backend.dto.AttemptAnswerReviewDto>> answers(@PathVariable Long id) {
+        return ResponseEntity.ok(attemptService.listAnswersForReview(id));
+    }
+
     @PostMapping("/{id}/override")
     public ResponseEntity<SchoolAttemptDto> override(@PathVariable Long id, @Valid @RequestBody OverrideMarkRequest req) {
         return ResponseEntity.ok(SchoolAttemptDto.from(

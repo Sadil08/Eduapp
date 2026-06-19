@@ -198,6 +198,7 @@ public class SchoolAttemptService {
                     q != null ? q.getMarks() : null,
                     q != null ? q.getCorrectAnswerText() : null,
                     ans.getAnswerText(),
+                    ans.getImageUrl(),
                     ans.getMarksAwarded(),
                     ans.getAiFeedback());
         }).toList();

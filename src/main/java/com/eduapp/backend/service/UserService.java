@@ -142,7 +142,10 @@ public class UserService implements UserDetailsService {
                 });
                 User user = new User();
                 user.setEmail(email);
-                user.setUsername(com.eduapp.backend.util.TextSanitizer.stripAngleBrackets(name));
+                // username is globally unique; two schools may have same-named admins/teachers,
+                // so de-duplicate the display name with a numeric suffix when needed.
+                user.setUsername(uniqueUsername(
+                                com.eduapp.backend.util.TextSanitizer.stripAngleBrackets(name)));
                 user.setRole(role);
                 user.setSchool(school);
                 user.setReferralCode(generateUniqueReferralCode());
@@ -154,6 +157,17 @@ public class UserService implements UserDetailsService {
                 logger.info("Provisioned {} account for {} (school={})", role, email,
                                 school != null ? school.getId() : "none");
                 return saved;
+        }
+
+        /** Returns the base username, or base + " (n)" until it's unique (username is unique). */
+        private String uniqueUsername(String base) {
+                String candidate = (base == null || base.isBlank()) ? "user" : base;
+                String unique = candidate;
+                int n = 1;
+                while (userRepository.existsByUsername(unique)) {
+                        unique = candidate + " (" + (++n) + ")";
+                }
+                return unique;
         }
 
         // --- Create admin manually (restricted) ---

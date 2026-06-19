@@ -50,4 +50,11 @@ public class AdminSchoolController {
     public ResponseEntity<SchoolDto> get(@PathVariable Long id) {
         return ResponseEntity.ok(SchoolDto.from(schoolService.get(id)));
     }
+
+    /** Resend the set-password OTP to the school's admin(s) (timed-out / fresh token). */
+    @PostMapping("/{id}/resend-admin-invite")
+    public ResponseEntity<java.util.Map<String, Object>> resendAdminInvite(@PathVariable Long id) {
+        java.util.List<String> emails = schoolService.resendAdminInvite(id);
+        return ResponseEntity.ok(java.util.Map.of("emails", emails, "count", emails.size()));
+    }
 }

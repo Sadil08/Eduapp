@@ -18,6 +18,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** BT-2: used by the first-admin bootstrap to run only on a cold system. */
     boolean existsByRole(com.eduapp.backend.model.Role role);
 
+    /** Members of a school with a given role (e.g. a school's SCHOOL_ADMINs). */
+    List<User> findBySchool_IdAndRole(Long schoolId, com.eduapp.backend.model.Role role);
+
+    /** username is globally unique — used to de-duplicate provisioned display names. */
+    boolean existsByUsername(String username);
+
     List<User> findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(String username, String email);
 
     /**

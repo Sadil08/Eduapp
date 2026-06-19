@@ -4,7 +4,9 @@ import com.eduapp.backend.dto.SchoolCreateRequest;
 import com.eduapp.backend.exception.BadRequestException;
 import com.eduapp.backend.model.Role;
 import com.eduapp.backend.model.School;
+import com.eduapp.backend.model.User;
 import com.eduapp.backend.repository.SchoolRepository;
+import com.eduapp.backend.repository.UserRepository;
 import com.eduapp.backend.security.RoleCreationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * BT-1: school onboarding. Only an ADMIN may create a School + its first SCHOOL_ADMIN (enforced
@@ -25,10 +29,13 @@ public class SchoolService {
 
     private final SchoolRepository schoolRepository;
     private final UserService userService;
+    private final UserRepository userRepository;
 
-    public SchoolService(SchoolRepository schoolRepository, UserService userService) {
+    public SchoolService(SchoolRepository schoolRepository, UserService userService,
+            UserRepository userRepository) {
         this.schoolRepository = schoolRepository;
         this.userService = userService;
+        this.userRepository = userRepository;
     }
 
     /** Creates the School and provisions its first SCHOOL_ADMIN. {@code creatorRole} is the caller's role. */
@@ -56,5 +63,20 @@ public class SchoolService {
     public School get(Long id) {
         return schoolRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("School not found"));
+    }
+
+    /**
+     * Resend the set-password OTP to the school's admin(s) — for when the original timed out or
+     * a fresh token is needed. Reuses the password-reset mechanism. Returns the emails notified.
+     */
+    @Transactional
+    public List<String> resendAdminInvite(Long schoolId) {
+        get(schoolId); // 404 if the school doesn't exist
+        List<User> admins = userRepository.findBySchool_IdAndRole(schoolId, Role.SCHOOL_ADMIN);
+        if (admins.isEmpty()) {
+            throw new BadRequestException("This school has no admin to resend an invite to");
+        }
+        admins.forEach(a -> userService.forgotPassword(a.getEmail()));
+        return admins.stream().map(User::getEmail).toList();
     }
 }

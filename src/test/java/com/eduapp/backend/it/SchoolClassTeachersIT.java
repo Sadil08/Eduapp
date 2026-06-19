@@ -92,4 +92,17 @@ class SchoolClassTeachersIT extends AbstractIntegrationTest {
                 HttpMethod.POST, new HttpEntity<>(bearer(teacherA)), String.class);
         assertThat(resp.getStatusCode().value()).isIn(401, 403);
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void admin_listsSchoolTeachers_forThePicker() {
+        User admin = member(Role.SCHOOL_ADMIN);
+        User teacher = member(Role.TEACHER);
+
+        ResponseEntity<List> resp = rest.exchange("/api/school/teachers", HttpMethod.GET,
+                new HttpEntity<>(bearer(admin)), List.class);
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<Map<String, Object>>) resp.getBody())
+                .anySatisfy(m -> assertThat(((Number) m.get("id")).longValue()).isEqualTo(teacher.getId()));
+    }
 }

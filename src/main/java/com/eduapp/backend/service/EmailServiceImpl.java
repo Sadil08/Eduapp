@@ -17,6 +17,9 @@ public class EmailServiceImpl implements EmailService {
     @Value("${spring.mail.username:}")
     private String fromEmail;
 
+    @Value("${FRONTEND_URL:http://localhost:3000}")
+    private String frontendUrl;
+
     // Check if mail sender is configured (simple check based on host availability
     // is hard,
     // but try-catch in send is better)
@@ -35,10 +38,16 @@ public class EmailServiceImpl implements EmailService {
                 SimpleMailMessage message = new SimpleMailMessage();
                 message.setFrom(fromEmail);
                 message.setTo(to);
-                message.setSubject("EduApp Password Reset Request");
+                String firstUrl = frontendUrl.split(",")[0].trim();
+                String activateLink = firstUrl + "/set-password?email="
+                        + java.net.URLEncoder.encode(to, java.nio.charset.StandardCharsets.UTF_8);
+                message.setSubject("EduApp — set your password");
                 message.setText("Hello,\n\n" +
-                        "You have requested to reset your password.\n" +
-                        "Your OTP is: " + otp + "\n\n" +
+                        "Use this one-time code to set your password:\n" +
+                        "OTP: " + otp + "\n\n" +
+                        "Set your password here: " + activateLink + "\n" +
+                        "(First-time school admins & teachers: this activates your account. " +
+                        "Then sign in normally with your email and new password.)\n\n" +
                         "This OTP is valid for 10 minutes.\n" +
                         "If you did not request this, please ignore this email.\n\n" +
                         "Regards,\nEduApp Team");

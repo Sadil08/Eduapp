@@ -33,6 +33,13 @@ public class SchoolStudentAnswer {
     @Column(name = "ai_feedback", columnDefinition = "TEXT")
     private String aiFeedback;
 
+    // Image-answer support (handwritten responses): the stored image + its AI-extracted text.
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    private String imageUrl;
+
+    @Column(name = "extracted_text", columnDefinition = "TEXT")
+    private String extractedText;
+
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt = LocalDateTime.now();
 
@@ -87,6 +94,22 @@ public class SchoolStudentAnswer {
 
     public void setAiFeedback(String aiFeedback) {
         this.aiFeedback = aiFeedback;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getExtractedText() {
+        return extractedText;
+    }
+
+    public void setExtractedText(String extractedText) {
+        this.extractedText = extractedText;
     }
 
     public LocalDateTime getSubmittedAt() {

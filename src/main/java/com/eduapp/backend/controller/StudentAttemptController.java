@@ -51,6 +51,19 @@ public class StudentAttemptController {
         return ResponseEntity.ok().build();
     }
 
+    /** Upload a handwritten answer image → stored + AI-extracted; returns the extracted text. */
+    @PostMapping("/{id}/answers/image")
+    public ResponseEntity<Map<String, Object>> answerImage(@AuthenticationPrincipal UserDetails principal,
+            @PathVariable Long id,
+            @RequestParam Long questionId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        var ans = attemptService.answerWithImage(currentUserId(principal), id, questionId, file);
+        return ResponseEntity.ok(Map.of(
+                "questionId", ans.getQuestionId(),
+                "imageUrl", ans.getImageUrl() != null ? ans.getImageUrl() : "",
+                "extractedText", ans.getExtractedText() != null ? ans.getExtractedText() : ""));
+    }
+
     @PostMapping("/{id}/submit")
     public ResponseEntity<SchoolAttemptDto> submit(@AuthenticationPrincipal UserDetails principal,
             @PathVariable Long id) {

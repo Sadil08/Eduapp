@@ -25,17 +25,23 @@ public class SchoolAttemptService {
     private final SchoolStudentAnswerRepository answerRepository;
     private final SchoolEnrolmentRepository enrolmentRepository;
     private final QuestionRepository questionRepository;
+    private final FileStorageService fileStorageService;
+    private final AIService aiService;
 
     public SchoolAttemptService(SchoolPaperRepository paperRepository,
             SchoolPaperAttemptRepository attemptRepository,
             SchoolStudentAnswerRepository answerRepository,
             SchoolEnrolmentRepository enrolmentRepository,
-            QuestionRepository questionRepository) {
+            QuestionRepository questionRepository,
+            FileStorageService fileStorageService,
+            AIService aiService) {
         this.paperRepository = paperRepository;
         this.attemptRepository = attemptRepository;
         this.answerRepository = answerRepository;
         this.enrolmentRepository = enrolmentRepository;
         this.questionRepository = questionRepository;
+        this.fileStorageService = fileStorageService;
+        this.aiService = aiService;
     }
 
     private Long requireTenant() {
@@ -98,6 +104,39 @@ public class SchoolAttemptService {
         SchoolStudentAnswer ans = answerRepository.findByAttemptIdAndQuestionId(attemptId, questionId)
                 .orElseGet(() -> new SchoolStudentAnswer(attemptId, questionId, null));
         ans.setAnswerText(answerText);
+        return answerRepository.save(ans);
+    }
+
+    /**
+     * Image-answer for a handwritten response: store the image, AI-extract its text, and use the
+     * extracted text as the answer (the student can still edit it before submitting). Returns the
+     * saved answer (incl. imageUrl + extractedText).
+     */
+    @Transactional
+    public SchoolStudentAnswer answerWithImage(Long studentId, Long attemptId, Long questionId,
+            org.springframework.web.multipart.MultipartFile file) {
+        SchoolPaperAttempt attempt = requireOwnAttempt(attemptId, studentId);
+        if (attempt.getStatus() != AttemptStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Attempt is no longer in progress");
+        }
+        Question q = questionRepository.findById(questionId)
+                .orElseThrow(() -> new IllegalArgumentException("Question not found"));
+        if (!attempt.getSchoolPaperId().equals(q.getSchoolPaperId())) {
+            throw new IllegalArgumentException("Question does not belong to this paper");
+        }
+        String imageUrl;
+        String extracted;
+        try {
+            imageUrl = fileStorageService.storeFile(file, "school-answers");
+            extracted = aiService.extractTextFromImage(file, null, null, "answer");
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not process the image: " + e.getMessage(), e);
+        }
+        SchoolStudentAnswer ans = answerRepository.findByAttemptIdAndQuestionId(attemptId, questionId)
+                .orElseGet(() -> new SchoolStudentAnswer(attemptId, questionId, null));
+        ans.setImageUrl(imageUrl);
+        ans.setExtractedText(extracted);
+        ans.setAnswerText(extracted); // marked text = extracted; student may overwrite before submit
         return answerRepository.save(ans);
     }
 

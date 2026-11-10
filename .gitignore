@@ -39,3 +39,9 @@ build/
 service-account-key.json
 # Service Account Key
 service-account-key.json
+
+# Runtime data: never commit (student uploads, logs, dumps)
+uploads/
+*.log
+dump.rdb
+test_output.txt

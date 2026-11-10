@@ -42,7 +42,7 @@ jobs:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       # Deterministic non-secret values for the test context (mirrors application-it.properties).
-      JWT_SECRET: ***REMOVED-SECRET***
+      JWT_SECRET: ci-only-dummy-secret-not-used-anywhere-0123456789
       FRONTEND_URL: http://localhost:3000
 
     steps:

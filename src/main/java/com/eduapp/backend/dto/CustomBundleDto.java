@@ -15,7 +15,7 @@ public class CustomBundleDto {
     private String description;
     private String status;
     private List<Long> paperIds;
-    private List<PaperDto> papers;
+    private List<PaperSummaryDto> papers;
     private BigDecimal totalPrice;
     private LocalDateTime createdAt;
     private LocalDateTime purchasedAt;
@@ -83,11 +83,11 @@ public class CustomBundleDto {
         this.paperIds = paperIds;
     }
 
-    public List<PaperDto> getPapers() {
+    public List<PaperSummaryDto> getPapers() {
         return papers;
     }
 
-    public void setPapers(List<PaperDto> papers) {
+    public void setPapers(List<PaperSummaryDto> papers) {
         this.papers = papers;
     }
 

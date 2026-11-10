@@ -13,10 +13,14 @@ import com.eduapp.backend.service.QuestionService;
 import com.eduapp.backend.service.AIService;
 import com.eduapp.backend.service.AIAnalysisService;
 import com.eduapp.backend.service.FileStorageService;
+import com.eduapp.backend.security.AttemptAccessGuard;
+import com.eduapp.backend.security.AuthenticatedUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,6 +33,10 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/student-answers")
+// SEC-IDOR (Sprint-0): restrict to consumer/admin roles; per-object ownership is enforced
+// per-endpoint via AttemptAccessGuard. The ADMIN-only list endpoint overrides this with its own
+// method-level @PreAuthorize.
+@PreAuthorize("hasAnyRole('STUDENT','SCHOOL_STUDENT','ADMIN')")
 public class StudentAnswerController {
 
     private static final Logger logger = LoggerFactory.getLogger(StudentAnswerController.class);
@@ -42,6 +50,7 @@ public class StudentAnswerController {
     private final com.eduapp.backend.service.ExtractionTrackingService extractionTrackingService;
     private final StudentPaperAttemptRepository attemptRepository;
     private final StudentAnswerRepository studentAnswerRepository;
+    private final AttemptAccessGuard accessGuard;
 
     public StudentAnswerController(
             StudentAnswerService studentAnswerService,
@@ -52,7 +61,8 @@ public class StudentAnswerController {
             com.eduapp.backend.service.ExtractionTrackingService extractionTrackingService,
             StudentPaperAttemptRepository attemptRepository,
             StudentAnswerRepository studentAnswerRepository,
-            AIAnalysisService aiAnalysisService) {
+            AIAnalysisService aiAnalysisService,
+            AttemptAccessGuard accessGuard) {
         this.studentAnswerService = studentAnswerService;
         this.studentAnswerMapper = studentAnswerMapper;
         this.aiService = aiService;
@@ -62,6 +72,7 @@ public class StudentAnswerController {
         this.attemptRepository = attemptRepository;
         this.studentAnswerRepository = studentAnswerRepository;
         this.aiAnalysisService = aiAnalysisService;
+        this.accessGuard = accessGuard;
     }
 
     @PostMapping("/extract-from-image")
@@ -70,24 +81,13 @@ public class StudentAnswerController {
             @RequestParam("attemptId") Long attemptId,
             @RequestParam("questionId") Long questionId,
             @RequestParam(value = "answerId", required = false) Long answerId,
-            @RequestParam(value = "subject", required = false) String subjectName) {
+            @RequestParam(value = "subject", required = false) String subjectName,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        // SEC-IDOR: this triggers a paid AI extraction — the caller must own the attempt.
+        // Asserted BEFORE the try so the 404 is not swallowed by the generic catch below.
+        accessGuard.assertOwnsAttempt(attemptId, principal);
         try {
             logger.info("Received extraction request for attempt: {}, question: {}", attemptId, questionId);
-
-            // CHECK EXTRACTION LIMIT FIRST
-            if (!extractionTrackingService.canExtract(attemptId, questionId)) {
-                int used = extractionTrackingService.getExtractionCount(attemptId, questionId);
-                int max = 2; // Default max extractions
-                logger.warn("Extraction limit exceeded for attempt {} question {}: {}/{}",
-                        attemptId, questionId, used, max);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of(
-                                "error", "Extraction limit reached",
-                                "message",
-                                String.format("You have used all %d extraction attempts for this question", max),
-                                "extractionsUsed", used,
-                                "extractionsMax", max));
-            }
 
             String lessonName = null;
 
@@ -109,29 +109,42 @@ public class StudentAnswerController {
                 }
             }
 
-            // Store the file
-            String imageUrl = fileStorageService.storeFile(file, "student-answers");
+            // NFR-RACE-1: atomically reserve a slot BEFORE the paid AI call (throws → 403 if at
+            // limit). This closes the check-then-act race that let concurrent requests exceed the
+            // cap and incur extra AI cost.
+            extractionTrackingService.reserveExtraction(attemptId, questionId);
 
-            // Extract text with subject, lesson context, and mark as handwritten
-            String extractedText = aiService.extractTextFromImage(file, subjectName, lessonName, "handwritten");
+            boolean extractionSucceeded = false;
+            try {
+                // Store the file
+                String imageUrl = fileStorageService.storeFile(file, "student-answers");
 
-            logger.info("Extraction successful for attempt {} question {} - extracted {} characters",
-                    attemptId, questionId, extractedText != null ? extractedText.length() : 0);
+                // Extract text with subject, lesson context, and mark as handwritten
+                String extractedText = aiService.extractTextFromImage(file, subjectName, lessonName, "handwritten");
+                extractionSucceeded = true;
 
-            // RECORD SUCCESSFUL EXTRACTION
-            extractionTrackingService.recordExtraction(attemptId, questionId);
-            int remaining = extractionTrackingService.getRemainingExtractions(attemptId, questionId);
-            int used = extractionTrackingService.getExtractionCount(attemptId, questionId);
+                logger.info("Extraction successful for attempt {} question {} - extracted {} characters",
+                        attemptId, questionId, extractedText != null ? extractedText.length() : 0);
 
-            return ResponseEntity.ok(Map.of(
-                    "extractedText", extractedText,
-                    // imageUrl = canonical stored value (persist this); signedImageUrl =
-                    // short-lived link for immediate preview now that the bucket is private.
-                    "imageUrl", imageUrl,
-                    "signedImageUrl", fileStorageService.generateSignedUrl(imageUrl, FileStorageService.SIGNED_URL_TTL),
-                    "extractionsRemaining", remaining,
-                    "extractionsUsed", used,
-                    "extractionsMax", 2));
+                int remaining = extractionTrackingService.getRemainingExtractions(attemptId, questionId);
+                int used = extractionTrackingService.getExtractionCount(attemptId, questionId);
+
+                return ResponseEntity.ok(Map.of(
+                        "extractedText", extractedText,
+                        // imageUrl = canonical stored value (persist this); signedImageUrl =
+                        // short-lived link for immediate preview now that the bucket is private.
+                        "imageUrl", imageUrl,
+                        "signedImageUrl", fileStorageService.generateSignedUrl(imageUrl, FileStorageService.SIGNED_URL_TTL),
+                        "extractionsRemaining", remaining,
+                        "extractionsUsed", used,
+                        "extractionsMax", 2));
+            } finally {
+                // Release the reserved slot if the store/extract failed — don't charge the student
+                // a quota slot for an AI/system error.
+                if (!extractionSucceeded) {
+                    extractionTrackingService.releaseExtraction(attemptId, questionId);
+                }
+            }
         } catch (com.eduapp.backend.exception.ExtractionLimitExceededException e) {
             logger.error("Extraction limit exceeded: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -165,8 +178,10 @@ public class StudentAnswerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<StudentAnswerDto> getStudentAnswerById(@PathVariable Long id) {
+    public ResponseEntity<StudentAnswerDto> getStudentAnswerById(@PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
         logger.info("Received request to get student answer with ID: {}", id);
+        accessGuard.assertOwnsAnswer(id, principal); // SEC-IDOR
         Optional<StudentAnswer> answer = studentAnswerService.findById(id);
         if (answer.isPresent()) {
             StudentAnswerDto dto = studentAnswerMapper.toDto(answer.get());
@@ -177,8 +192,12 @@ public class StudentAnswerController {
     }
 
     @PostMapping
-    public ResponseEntity<StudentAnswerDto> createStudentAnswer(@Valid @RequestBody StudentAnswerDto dto) {
+    public ResponseEntity<StudentAnswerDto> createStudentAnswer(@Valid @RequestBody StudentAnswerDto dto,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
         logger.info("Received request to create student answer");
+
+        // SEC-IDOR: an answer may only be written to an attempt the caller owns.
+        accessGuard.assertOwnsAttempt(dto.getAttemptId(), principal);
 
         // Validate image upload permission if imageUrl is provided
         if (dto.getImageUrl() != null && !dto.getImageUrl().isEmpty()) {
@@ -212,8 +231,10 @@ public class StudentAnswerController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStudentAnswer(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteStudentAnswer(@PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
         logger.info("Received request to delete student answer with ID: {}", id);
+        accessGuard.assertOwnsAnswer(id, principal); // SEC-IDOR
         if (studentAnswerService.existsById(id)) {
             studentAnswerService.deleteById(id);
             return ResponseEntity.noContent().build();
@@ -229,7 +250,10 @@ public class StudentAnswerController {
     @PostMapping("/attempts/{attemptId}/save-draft")
     public ResponseEntity<?> saveDraftAnswers(
             @PathVariable Long attemptId,
-            @Valid @RequestBody List<StudentAnswerDto> draftDtos) {
+            @Valid @RequestBody List<StudentAnswerDto> draftDtos,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        // SEC-IDOR: asserted before the try so the 404 isn't swallowed by the generic catch.
+        accessGuard.assertOwnsAttempt(attemptId, principal);
         try {
             logger.info("Saving {} draft answers for attempt {}", draftDtos.size(), attemptId);
             
@@ -255,7 +279,9 @@ public class StudentAnswerController {
      * Get draft answers for an attempt.
      */
     @GetMapping("/attempts/{attemptId}/draft-answers")
-    public ResponseEntity<List<StudentAnswerDto>> getDraftAnswers(@PathVariable Long attemptId) {
+    public ResponseEntity<List<StudentAnswerDto>> getDraftAnswers(@PathVariable Long attemptId,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        accessGuard.assertOwnsAttempt(attemptId, principal); // SEC-IDOR
         logger.info("Retrieving draft answers for attempt {}", attemptId);
         List<StudentAnswer> drafts = studentAnswerService.getDraftAnswers(attemptId);
         List<StudentAnswerDto> dtos = studentAnswerMapper.toDtoList(drafts);
@@ -267,7 +293,11 @@ public class StudentAnswerController {
      * Allows up to 3 submission attempts.
      */
     @PostMapping("/attempts/{attemptId}/retry-analysis")
-    public ResponseEntity<?> retryAnalysis(@PathVariable Long attemptId) {
+    public ResponseEntity<?> retryAnalysis(@PathVariable Long attemptId,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        // SEC-IDOR: re-triggers paid AI marking — assert ownership before the try so the 404
+        // isn't masked by the generic catch below.
+        accessGuard.assertOwnsAttempt(attemptId, principal);
         try {
             logger.info("Retry analysis requested for attempt {}", attemptId);
             
@@ -285,6 +315,14 @@ public class StudentAnswerController {
                 ));
             }
             
+            // Only a failed analysis may be retried. Re-running a successful one would let a
+            // student re-roll their marks (and spend AI budget) until they like the result.
+            if (attempt.getAnalysisError() == null || Boolean.TRUE.equals(attempt.getAnalysisCompleted())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "error", "Analysis has not failed; nothing to retry"
+                ));
+            }
+
             // Reset error state
             attempt.setAnalysisError(null);
             attempt.setAnalysisAttempted(false);

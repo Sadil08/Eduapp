@@ -6,6 +6,7 @@ import com.eduapp.backend.dto.LessonDto;
 import com.eduapp.backend.mapper.LessonMapper;
 import com.eduapp.backend.model.Lesson;
 import com.eduapp.backend.service.LessonService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -54,6 +55,7 @@ public class LessonController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<LessonDto> createLesson(@Valid @RequestBody LessonDto dto) {
         logger.info("Received request to create lesson: {}", dto.getName());
         Lesson lesson = lessonMapper.toEntity(dto);
@@ -63,6 +65,7 @@ public class LessonController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<LessonDto> updateLesson(@PathVariable Long id, @Valid @RequestBody LessonDto dto) {
         logger.info("Received request to update lesson with ID: {}", id);
         Optional<Lesson> existingLesson = lessonService.findById(id);
@@ -79,6 +82,7 @@ public class LessonController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteLesson(@PathVariable Long id) {
         logger.info("Received request to delete lesson with ID: {}", id);
         if (lessonService.existsById(id)) {

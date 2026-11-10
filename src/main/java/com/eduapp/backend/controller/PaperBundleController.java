@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 
 import com.eduapp.backend.dto.PaperBundleDto;
 import com.eduapp.backend.service.PaperBundleService;
+import com.eduapp.backend.exception.PaymentRequiredException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -123,6 +124,10 @@ public class PaperBundleController {
         try {
             paperBundleService.purchaseBundle(id, userId);
             return ResponseEntity.ok().build();
+        } catch (PaymentRequiredException e) {
+            return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
             logger.error("Error purchasing bundle", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();

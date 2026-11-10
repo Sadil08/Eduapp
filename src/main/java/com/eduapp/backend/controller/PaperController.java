@@ -3,6 +3,7 @@ package com.eduapp.backend.controller;
 import jakarta.validation.Valid;
 
 import com.eduapp.backend.dto.PaperDto;
+import com.eduapp.backend.dto.PaperSummaryDto;
 import com.eduapp.backend.dto.PaperAttemptDto;
 import com.eduapp.backend.dto.PaperSubmissionDto;
 import com.eduapp.backend.dto.StudentPaperAttemptDto;
@@ -79,11 +80,11 @@ public class PaperController {
      */
     @Deprecated
     @GetMapping("/available")
-    public ResponseEntity<List<PaperDto>> getAllAvailablePapers() {
+    public ResponseEntity<List<PaperSummaryDto>> getAllAvailablePapers() {
         logger.info("Received request to get available papers (capped at {})", AVAILABLE_CAP);
         var pageable = org.springframework.data.domain.PageRequest.of(0, AVAILABLE_CAP,
                 org.springframework.data.domain.Sort.by("name").ascending());
-        List<PaperDto> dtos = paperService.search("", pageable).map(paperMapper::toDto).getContent();
+        List<PaperSummaryDto> dtos = paperService.search("", pageable).map(paperMapper::toSummaryDto).getContent();
         return ResponseEntity.ok(dtos);
     }
 
@@ -93,7 +94,7 @@ public class PaperController {
      * picker. Returns a {@link org.springframework.data.domain.Page} of {@link PaperDto}.
      */
     @GetMapping("/search")
-    public ResponseEntity<org.springframework.data.domain.Page<PaperDto>> searchPapers(
+    public ResponseEntity<org.springframework.data.domain.Page<PaperSummaryDto>> searchPapers(
             @RequestParam(name = "q", defaultValue = "") String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -101,8 +102,8 @@ public class PaperController {
         var pageable = org.springframework.data.domain.PageRequest.of(
                 Math.max(page, 0), safeSize,
                 org.springframework.data.domain.Sort.by("name").ascending());
-        org.springframework.data.domain.Page<PaperDto> result =
-                paperService.search(query, pageable).map(paperMapper::toDto);
+        org.springframework.data.domain.Page<PaperSummaryDto> result =
+                paperService.search(query, pageable).map(paperMapper::toSummaryDto);
         return ResponseEntity.ok(result);
     }
 
@@ -111,11 +112,13 @@ public class PaperController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
-    public ResponseEntity<PaperDto> getPaperById(@PathVariable Long id) {
+    public ResponseEntity<PaperSummaryDto> getPaperById(@PathVariable Long id) {
         logger.info("Received request to get paper with ID: {}", id);
         Optional<Paper> paper = paperService.findById(id);
         if (paper.isPresent()) {
-            PaperDto dto = paperMapper.toDto(paper.get());
+            // Summary only: the full PaperDto carries every question, option and mark scheme, which
+            // must not reach a student who has not bought (and started) the paper.
+            PaperSummaryDto dto = paperMapper.toSummaryDto(paper.get());
             return ResponseEntity.ok(dto);
         } else {
             return ResponseEntity.notFound().build();
@@ -187,9 +190,8 @@ public class PaperController {
         
         try {
             StudentPaperAttempt savedAttempt = paperService.submitPaperAttempt(id, userId, bundleId, customBundleId, submission);
-            // Trigger AI Analysis here (async)
-            aiAnalysisService.analyzeAttempt(savedAttempt);
-
+            // AI analysis is already triggered by PaperService.submitPaperAttempt; calling it again
+            // here would mark (and bill) every submission twice.
             // Map to DTO and return
             StudentPaperAttemptDto dto = studentPaperAttemptMapper.toDto(savedAttempt);
             return ResponseEntity.ok(dto);

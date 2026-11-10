@@ -64,6 +64,12 @@ public class PaperService {
     private final com.eduapp.backend.service.ExtractionTrackingService extractionTrackingService;
     private final StudentAnswerService studentAnswerService;
 
+    // NFR-RACE (Hole 3): used to take a Postgres transaction-scoped advisory lock so concurrent
+    // "start attempt" requests for the same (student, paper, bundle) are serialized and cannot mint
+    // duplicate IN_PROGRESS attempts that bust the per-paper cap. Held until the tx commits.
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     /**
      * Constructor for dependency injection of repositories.
      * 
@@ -278,6 +284,11 @@ public class PaperService {
              if (!cb.getCreator().getId().equals(userId)) {
                  throw new SecurityException("Access denied to custom bundle");
              }
+
+             // A CREATED bundle is an unpaid draft; it must not be attemptable (and AI-markable).
+             if (cb.getStatus() == com.eduapp.backend.model.CustomBundleStatus.CREATED) {
+                 throw new SecurityException("Access denied: Custom bundle not purchased");
+             }
              
              int attemptsMade = studentPaperAttemptRepository.countByStudentIdAndPaperIdAndOriginCustomBundleId(userId, paperId, customBundleId);
              int maxAttempts = 2; // Fixed limit for custom bundles
@@ -362,10 +373,38 @@ public class PaperService {
         return getPaperAttempt(paperId, userId, bundleId, null, forceNew);
     }
 
+    /**
+     * Takes a Postgres transaction-scoped advisory lock keyed on (student, paper, bundle) so that
+     * concurrent attempt-start requests are serialized and cannot each create a fresh IN_PROGRESS
+     * attempt (which would exceed the per-paper cap). The lock is released automatically when the
+     * surrounding {@code @Transactional} method commits or rolls back. Scoped by DB, so it holds
+     * across multiple app instances — not just within one JVM.
+     */
+    private void acquireAttemptStartLock(Long paperId, Long userId, Long bundleId, Long customBundleId) {
+        long scope = customBundleId != null ? customBundleId : (bundleId != null ? bundleId : 0L);
+        long key = java.util.Objects.hash(userId, paperId, scope, customBundleId != null);
+        entityManager.createNativeQuery("SELECT pg_advisory_xact_lock(:k)")
+                .setParameter("k", key)
+                .getSingleResult();
+    }
+
     @Transactional
     public PaperAttemptDto getPaperAttempt(Long paperId, Long userId, Long bundleId, Long customBundleId, boolean forceNew) {
-        logger.info("Getting paper attempt for paper {} user {} bundle {} customBundle {} (forceNew={})", 
+        logger.info("Getting paper attempt for paper {} user {} bundle {} customBundle {} (forceNew={})",
                 paperId, userId, bundleId, customBundleId, forceNew);
+
+        // SEC (Hole 2): a standard bundle must be PURCHASED before its papers can be attempted or
+        // their content served. Previously only submit() enforced this, so the start path leaked
+        // paper content to non-purchasers. Custom-bundle ownership is checked in checkAttemptLimit.
+        if (customBundleId == null && bundleId != null
+                && !studentBundleAccessRepository.existsByStudentIdAndBundleId(userId, bundleId)) {
+            logger.warn("Denied attempt start: user {} has not purchased bundle {}", userId, bundleId);
+            throw new SecurityException("Access denied: Bundle not purchased");
+        }
+
+        // NFR-RACE (Hole 3): serialize concurrent starts for this (student, paper, bundle) so the
+        // check-then-create below can't be run by two threads at once and mint duplicate attempts.
+        acquireAttemptStartLock(paperId, userId, bundleId, customBundleId);
 
         // Check attempt limits (scoped by bundle or custom bundle)
         AttemptLimitInfo limitInfo = checkAttemptLimit(paperId, userId, bundleId, customBundleId);
@@ -395,6 +434,12 @@ public class PaperService {
             StudentPaperAttempt latestActive = activeAttempts.get(0);
             
             // If forceNew is requested, abandon existing attempt and create new one
+            // At the cap the active attempt is the last one the student is entitled to, so it must
+            // not be abandoned: abandoned rows still count, and a replacement would exceed the cap.
+            if (forceNew && limitInfo.remainingAttempts <= 0) {
+                logger.warn("forceNew ignored - cap reached for user {} paper {}; resuming attempt {}", userId, paperId, latestActive.getId());
+                forceNew = false;
+            }
             if (forceNew) {
                 logger.info("Force new attempt requested - abandoning attempt {} for user {} paper {} bundle {} customBundle {}", 
                     latestActive.getId(), userId, paperId, bundleId, customBundleId);
@@ -573,6 +618,9 @@ public class PaperService {
                     // MCQ
                     QuestionOption option = questionOptionRepository.findById(ansDto.getSelectedOptionId())
                             .orElseThrow(() -> new IllegalArgumentException("Option not found: " + ansDto.getSelectedOptionId()));
+                    if (option.getQuestion() == null || !option.getQuestion().getId().equals(question.getId())) {
+                        throw new IllegalArgumentException("Option " + option.getId() + " does not belong to question " + question.getId());
+                    }
                     answer.setSelectedOption(option);
                     answer.setAnswerText(option.getText());
                 } else {
@@ -633,6 +681,17 @@ public class PaperService {
 
         // Map to DTO
         StudentPaperAttemptDto dto = studentPaperAttemptMapper.toDto(attempt);
+
+        // Mark scheme data must not be readable until the attempt is submitted, otherwise a
+        // student can save drafts and read the answers back from the results endpoint.
+        if (attempt.getStatus() == com.eduapp.backend.model.AttemptStatus.IN_PROGRESS && dto.getAnswers() != null) {
+            dto.getAnswers().forEach(ans -> {
+                ans.setCorrectAnswerText(null);
+                ans.setCorrectOptionId(null);
+                ans.setCorrectOptionText(null);
+                ans.setCorrectAnswerImageUrl(null);
+            });
+        }
 
         // Debug logging for image display
         if (dto.getAnswers() != null) {

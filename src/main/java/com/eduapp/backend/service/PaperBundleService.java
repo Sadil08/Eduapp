@@ -1,6 +1,7 @@
 package com.eduapp.backend.service;
 
 import com.eduapp.backend.dto.PaperBundleDto;
+import com.eduapp.backend.exception.PaymentRequiredException;
 import com.eduapp.backend.dto.PaperBundleSummaryDto;
 import com.eduapp.backend.dto.PaperBundleDetailDto;
 import com.eduapp.backend.mapper.PaperBundleMapper;
@@ -140,6 +141,12 @@ public class PaperBundleService {
         // Check if bundle exists
         PaperBundle bundle = paperBundleRepository.findById(bundleId)
                 .orElseThrow(() -> new IllegalArgumentException("Paper bundle not found"));
+
+        // This endpoint grants access without a payment, so it is only valid for free bundles.
+        // Paid bundles must go through /api/purchase/checkout.
+        if (bundle.getPrice() != null && bundle.getPrice().signum() > 0) {
+            throw new PaymentRequiredException("Bundle " + bundleId + " is not free; use checkout");
+        }
 
         // Check if already purchased
         if (studentBundleAccessRepository.existsByStudentIdAndBundleId(userId, bundleId)) {

@@ -6,6 +6,7 @@ import com.eduapp.backend.dto.SubjectDto;
 import com.eduapp.backend.mapper.SubjectMapper;
 import com.eduapp.backend.model.Subject;
 import com.eduapp.backend.service.SubjectService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -77,6 +78,7 @@ public class SubjectController {
      * @return a ResponseEntity containing the created SubjectDto
      */
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SubjectDto> createSubject(@Valid @RequestBody SubjectDto dto) {
         logger.info("Received request to create subject: {}", dto.getName());
         Subject subject = subjectMapper.toEntity(dto);
@@ -93,6 +95,7 @@ public class SubjectController {
      * @return a ResponseEntity containing the updated SubjectDto if found, or 404 if not
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SubjectDto> updateSubject(@PathVariable Long id, @Valid @RequestBody SubjectDto dto) {
         logger.info("Received request to update subject with ID: {}", id);
         Optional<Subject> existingSubject = subjectService.findById(id);
@@ -116,6 +119,7 @@ public class SubjectController {
      * @return a ResponseEntity with 204 if deleted, or 404 if not found
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteSubject(@PathVariable Long id) {
         logger.info("Received request to delete subject with ID: {}", id);
         if (subjectService.existsById(id)) {

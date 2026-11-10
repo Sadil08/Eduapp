@@ -316,7 +316,7 @@ public class CustomBundleService {
         dto.setDescription(bundle.getDescription());
         dto.setStatus(bundle.getStatus().name());
         dto.setPaperIds(bundle.getPapers().stream().map(Paper::getId).collect(Collectors.toList()));
-        dto.setPapers(paperMapper.toDtoList(bundle.getPapers()));
+        dto.setPapers(paperMapper.toSummaryDtoList(new java.util.ArrayList<>(bundle.getPapers())));
         dto.setTotalPrice(bundle.getTotalPrice());
         dto.setCreatedAt(bundle.getCreatedAt());
         dto.setPurchasedAt(bundle.getPurchasedAt());

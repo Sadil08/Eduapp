@@ -5,11 +5,15 @@ import jakarta.validation.Valid;
 import com.eduapp.backend.dto.StudentPaperAttemptDto;
 import com.eduapp.backend.mapper.StudentPaperAttemptMapper;
 import com.eduapp.backend.model.StudentPaperAttempt;
+import com.eduapp.backend.security.AttemptAccessGuard;
+import com.eduapp.backend.security.AuthenticatedUser;
 import com.eduapp.backend.service.StudentPaperAttemptService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +24,9 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/student-paper-attempts")
+// SEC-IDOR (Sprint-0): restrict to consumer/admin roles; per-object ownership is enforced
+// per-endpoint via AttemptAccessGuard. Method-level @PreAuthorize on admin endpoints overrides this.
+@PreAuthorize("hasAnyRole('STUDENT','SCHOOL_STUDENT','ADMIN')")
 public class StudentPaperAttemptController {
 
     private static final Logger logger = LoggerFactory.getLogger(StudentPaperAttemptController.class);
@@ -27,13 +34,16 @@ public class StudentPaperAttemptController {
     private final StudentPaperAttemptService attemptService;
     private final StudentPaperAttemptMapper attemptMapper;
     private final com.eduapp.backend.security.JwtUtil jwtUtil;
+    private final AttemptAccessGuard accessGuard;
 
     public StudentPaperAttemptController(StudentPaperAttemptService attemptService,
             StudentPaperAttemptMapper attemptMapper,
-            com.eduapp.backend.security.JwtUtil jwtUtil) {
+            com.eduapp.backend.security.JwtUtil jwtUtil,
+            AttemptAccessGuard accessGuard) {
         this.attemptService = attemptService;
         this.attemptMapper = attemptMapper;
         this.jwtUtil = jwtUtil;
+        this.accessGuard = accessGuard;
     }
 
     // SCALE-4 + data-exposure fix: this dumped EVERY user's attempts to any authenticated
@@ -50,8 +60,10 @@ public class StudentPaperAttemptController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<StudentPaperAttemptDto> getAttemptById(@PathVariable Long id) {
+    public ResponseEntity<StudentPaperAttemptDto> getAttemptById(@PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
         logger.info("Received request to get student paper attempt with ID: {}", id);
+        accessGuard.assertOwnsAttempt(id, principal); // SEC-IDOR
         Optional<StudentPaperAttempt> attempt = attemptService.findById(id);
         if (attempt.isPresent()) {
             StudentPaperAttemptDto dto = attemptMapper.toDto(attempt.get());
@@ -61,7 +73,13 @@ public class StudentPaperAttemptController {
         }
     }
 
+    // SEC-ACCESS / SEC-IDOR (Sprint-0): this legacy create path bypasses PaperService — it applies
+    // NO purchase/access gate and NO attempt-cap, and the mapper does not bind the student from the
+    // token. The real consumer start flow is GET /api/papers/{id}/attempt (PaperService enforces
+    // access + cap + ownership). Restricting this endpoint to ADMIN removes the unguarded attack
+    // surface without affecting the student flow.
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StudentPaperAttemptDto> createAttempt(@Valid @RequestBody StudentPaperAttemptDto dto) {
         logger.info("Received request to create student paper attempt");
         StudentPaperAttempt attempt = attemptMapper.toEntity(dto);
@@ -70,9 +88,14 @@ public class StudentPaperAttemptController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedDto);
     }
 
+    // Admin-only: attempts are counted to enforce the per-paper cap, so a student deleting one
+    // would reset their quota. The frontend never calls this.
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAttempt(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteAttempt(@PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
         logger.info("Received request to delete student paper attempt with ID: {}", id);
+        accessGuard.assertOwnsAttempt(id, principal); // SEC-IDOR
         if (attemptService.existsById(id)) {
             attemptService.deleteById(id);
             return ResponseEntity.noContent().build();

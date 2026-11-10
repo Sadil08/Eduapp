@@ -2,7 +2,6 @@ package com.eduapp.backend.service;
 
 import com.eduapp.backend.dto.CustomBundleDto;
 import com.eduapp.backend.dto.PaperDto;
-import com.eduapp.backend.dto.PaymentResult;
 import com.eduapp.backend.mapper.PaperMapper;
 import com.eduapp.backend.model.*;
 import com.eduapp.backend.repository.*;
@@ -32,22 +31,17 @@ public class CustomBundleService {
     private final UserRepository userRepository;
     private final SystemConfigRepository systemConfigRepository;
 
-    // WALLET_DISABLED: WalletService replaced with PaymentService
-    // private final WalletService walletService;
-    private final PaymentService paymentService;
     private final PaperMapper paperMapper;
 
     public CustomBundleService(CustomBundleRepository customBundleRepository,
             PaperRepository paperRepository,
             UserRepository userRepository,
             SystemConfigRepository systemConfigRepository,
-            PaymentService paymentService,
             PaperMapper paperMapper) {
         this.customBundleRepository = customBundleRepository;
         this.paperRepository = paperRepository;
         this.userRepository = userRepository;
         this.systemConfigRepository = systemConfigRepository;
-        this.paymentService = paymentService;
         this.paperMapper = paperMapper;
     }
 
@@ -159,47 +153,6 @@ public class CustomBundleService {
         CustomBundle bundle = getEditableBundle(bundleId, userId);
         customBundleRepository.delete(bundle);
         logger.info("Deleted custom bundle {}", bundleId);
-    }
-
-    /**
-     * Purchase a custom bundle.
-     * Bundle becomes immediately usable after purchase.
-     *
-     * WALLET_DISABLED: Previously used walletService.debit().
-     * Now verifies payment via PayHere gateway.
-     */
-    public CustomBundleDto purchaseBundle(Long bundleId, Long userId, String paymentReference) {
-        CustomBundle bundle = getEditableBundle(bundleId, userId);
-
-        if (bundle.getPapers().isEmpty()) {
-            throw new IllegalStateException("Cannot purchase an empty bundle");
-        }
-
-        // Calculate total price
-        BigDecimal pricePerPaper = getPricePerPaper();
-        BigDecimal totalPrice = pricePerPaper.multiply(new BigDecimal(bundle.getPapers().size()));
-
-        // WALLET_DISABLED: Previously debited wallet
-        // User user = userRepository.findById(userId)
-        // .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        // walletService.debit(user, totalPrice, "Purchase of custom bundle: " +
-        // bundle.getName());
-
-        // Verify payment via PayHere gateway
-        PaymentResult paymentResult = paymentService.verifyPayment(paymentReference, totalPrice);
-        if (paymentResult.getStatus() != PaymentResult.PaymentStatus.SUCCESS) {
-            throw new RuntimeException("Payment verification failed: " + paymentResult.getMessage());
-        }
-
-        // Update bundle status
-        bundle.setTotalPrice(totalPrice);
-        bundle.setStatus(CustomBundleStatus.PURCHASED);
-        bundle.setPurchasedAt(LocalDateTime.now());
-
-        CustomBundle saved = customBundleRepository.save(bundle);
-        logger.info("User {} purchased custom bundle {} for ${}", userId, bundleId, totalPrice);
-
-        return toDto(saved);
     }
 
     /**

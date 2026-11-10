@@ -88,6 +88,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/logout-all").authenticated() // SEC-TOKEN-1 C4
                         .requestMatchers("/api/auth/**").permitAll() // open endpoints
                         .requestMatchers(HttpMethod.POST, "/api/invites/accept").permitAll() // token-gated teacher onboarding
+                        // PayHere server-to-server callback: no JWT, authenticated by its md5sig signature.
+                        .requestMatchers(HttpMethod.POST, "/api/payments/payhere/notify").permitAll()
                         .requestMatchers("/api/auth/forgot-password").permitAll()
                         .requestMatchers("/api/auth/reset-password").permitAll()
                         // WP-A0.3f: /api/files/** permitAll removed — media is now served via

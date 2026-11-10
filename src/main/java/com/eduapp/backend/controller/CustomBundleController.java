@@ -143,22 +143,6 @@ public class CustomBundleController {
     }
 
     /**
-     * Purchase the bundle.
-     * POST /api/custom-bundles/{id}/purchase
-     */
-    @PostMapping("/{id}/purchase")
-    public ResponseEntity<CustomBundleDto> purchaseBundle(
-            @PathVariable Long id,
-            @Valid @RequestBody com.eduapp.backend.dto.PaymentRequest paymentRequest,
-            @RequestHeader("Authorization") String authHeader) {
-
-        Long userId = extractUserId(authHeader);
-        CustomBundleDto purchased = customBundleService.purchaseBundle(id, userId,
-                paymentRequest.getPaymentReference());
-        return ResponseEntity.ok(purchased);
-    }
-
-    /**
      * Get current price per paper.
      * GET /api/custom-bundles/price-per-paper
      */

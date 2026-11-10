@@ -65,7 +65,8 @@ public class StudentPaperAttemptService {
         return attemptRepository.findAll(pageable);
     }
 
-    // N-SC2: removed the unbounded no-arg findAll() (no callers) — use the paginated variant above.
+    // N-SC2: removed the unbounded no-arg findAll() (no callers) — use the
+    // paginated variant above.
 
     /**
      * Retrieves a student paper attempt by its ID.
@@ -177,7 +178,7 @@ public class StudentPaperAttemptService {
      */
     public List<com.eduapp.backend.dto.StudentPaperAttemptSummaryDto> getAttemptSummaries(Long studentId,
             Long paperId, Long bundleId) {
-        logger.info("Fetching attempt summaries for student ID: {} and paper ID: {} (bundleId={})", 
+        logger.info("Fetching attempt summaries for student ID: {} and paper ID: {} (bundleId={})",
                 studentId, paperId, bundleId);
 
         // Fetch attempts - filter by bundle if provided

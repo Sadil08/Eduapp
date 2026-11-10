@@ -49,16 +49,50 @@ public class SchoolPaperController {
         return ResponseEntity.ok(SchoolPaperDto.from(paperService.getForTenant(id)));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<SchoolPaperDto> update(@PathVariable Long id,
+            @Valid @RequestBody UpdateSchoolPaperRequest req) {
+        return ResponseEntity.ok(SchoolPaperDto.from(
+                paperService.updatePaper(id, req.getName(), req.getDescription())));
+    }
+
     @GetMapping("/{id}/questions")
     public ResponseEntity<List<SchoolQuestionDto>> questions(@PathVariable Long id) {
-        return ResponseEntity.ok(paperService.listQuestions(id).stream().map(SchoolQuestionDto::from).toList());
+        return ResponseEntity.ok(paperService.listQuestionDtos(id));
     }
 
     @PostMapping("/{id}/questions")
     public ResponseEntity<SchoolQuestionDto> addQuestion(@PathVariable Long id,
             @Valid @RequestBody AddSchoolQuestionRequest req) {
-        return ResponseEntity.ok(SchoolQuestionDto.from(
-                paperService.addQuestion(id, req.getText(), req.getType(), req.getMarks(), req.getCorrectAnswerText())));
+        return ResponseEntity.ok(paperService.addQuestion(
+                id, req.getText(), req.getType(), req.getMarks(), req.getCorrectAnswerText(),
+                req.getImageUrl(), req.getModelAnswerImageUrl(), req.getOptions()));
+    }
+
+    @PutMapping("/{id}/questions/{questionId}")
+    public ResponseEntity<SchoolQuestionDto> updateQuestion(@PathVariable Long id, @PathVariable Long questionId,
+            @Valid @RequestBody AddSchoolQuestionRequest req) {
+        return ResponseEntity.ok(paperService.updateQuestion(
+                id, questionId, req.getText(), req.getType(), req.getMarks(), req.getCorrectAnswerText(),
+                req.getImageUrl(), req.getModelAnswerImageUrl(), req.getOptions()));
+    }
+
+    /**
+     * Upload a question or model-answer image → stored + AI-extracted (reuses the global
+     * pipeline). Returns {imageUrl, extractedText}; the client decides where to place the text.
+     * docType: "question" (default) or "answer".
+     */
+    @PostMapping(value = "/{id}/extract", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<java.util.Map<String, String>> extract(@PathVariable Long id,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "docType", required = false) String docType) {
+        return ResponseEntity.ok(paperService.extractImage(id, file, docType));
+    }
+
+    @DeleteMapping("/{id}/questions/{questionId}")
+    public ResponseEntity<Void> deleteQuestion(@PathVariable Long id, @PathVariable Long questionId) {
+        paperService.deleteQuestion(id, questionId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/approve")

@@ -52,6 +52,18 @@ public class GlobalExceptionHandler {
                 "error", "Validation failed", "code", 400, "fields", fields));
     }
 
+    // SEC-IDOR: honour an explicit ResponseStatusException (e.g. the 404 thrown by
+    // AttemptAccessGuard). ResponseStatusException is a RuntimeException, so without this more-
+    // specific handler the broad handler below would turn every such denial into a 400 — masking
+    // the intended status (and, for the IDOR guard, the deliberate 404 no-enumeration response).
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleResponseStatus(
+            org.springframework.web.server.ResponseStatusException ex) {
+        String reason = ex.getReason() != null ? ex.getReason() : "Error";
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(Map.of("error", reason, "code", ex.getStatusCode().value()));
+    }
+
     // N-S8: any OTHER RuntimeException is treated as unexpected — generic message to the
     // client, real detail (which may contain internal/third-party info) logged server-side.
     @ExceptionHandler(RuntimeException.class)

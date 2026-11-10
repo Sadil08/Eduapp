@@ -83,7 +83,6 @@ public class StudentPaperViewController {
                         paper.getClassId(), student.getId(), com.eduapp.backend.model.SchoolEnrolmentStatus.ACTIVE)) {
             throw new org.springframework.security.access.AccessDeniedException("This paper is not available to you");
         }
-        return ResponseEntity.ok(paperService.listQuestions(paperId).stream()
-                .map(StudentQuestionDto::from).toList());
+        return ResponseEntity.ok(paperService.listStudentQuestionDtos(paperId));
     }
 }

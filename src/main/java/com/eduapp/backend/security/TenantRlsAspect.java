@@ -40,8 +40,14 @@ public class TenantRlsAspect {
                     .setParameter("v", String.valueOf(schoolId))
                     .getSingleResult();
         } catch (Exception e) {
-            // Backstop only — never fail the request because the GUC couldn't be set.
-            logger.debug("Could not set app.current_school_id GUC for RLS: {}", e.getMessage());
+            // SEC-RLS-1 (B2): FAIL CLOSED for tenant-scoped requests. Previously this was swallowed,
+            // so if the GUC could not be set the RLS policy would degrade to permissive — the exact
+            // gap RLS exists to prevent. A tenant request that cannot establish its tenant boundary
+            // must abort, not proceed unprotected. (For null-tenant/global requests we returned
+            // early above, so this only ever fails a request that genuinely has a tenant.)
+            logger.error("SEC-RLS-1: failed to set app.current_school_id GUC for tenant {} — "
+                    + "aborting request to avoid running without the RLS boundary", schoolId, e);
+            throw new IllegalStateException("Could not establish tenant isolation context", e);
         }
     }
 }

@@ -27,6 +27,10 @@ public class SchoolStudentAnswer {
     @Column(name = "answer_text", columnDefinition = "TEXT")
     private String answerText;
 
+    // MCQ: the option the student selected (id of a QuestionOption). Null for essay/extended answers.
+    @Column(name = "selected_option_id")
+    private Long selectedOptionId;
+
     @Column(name = "marks_awarded")
     private Integer marksAwarded;
 
@@ -78,6 +82,14 @@ public class SchoolStudentAnswer {
 
     public void setAnswerText(String answerText) {
         this.answerText = answerText;
+    }
+
+    public Long getSelectedOptionId() {
+        return selectedOptionId;
+    }
+
+    public void setSelectedOptionId(Long selectedOptionId) {
+        this.selectedOptionId = selectedOptionId;
     }
 
     public Integer getMarksAwarded() {

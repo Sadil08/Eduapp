@@ -58,6 +58,20 @@ public class AuthController {
                 .orElseGet(() -> ResponseEntity.status(401).build());
     }
 
+    /**
+     * SEC-TOKEN-1 (C4): log out of all sessions/devices. Bumps the token version so every JWT
+     * previously issued to this user is rejected — the mitigation for a token suspected stolen
+     * (e.g. via XSS from localStorage) and a clean "sign out everywhere" UX.
+     */
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal AuthenticatedUser principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        userService.logoutAllSessions(principal.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req) {
         userService.forgotPassword(req.getEmail());

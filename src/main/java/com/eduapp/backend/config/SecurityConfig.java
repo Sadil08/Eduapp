@@ -66,6 +66,18 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
+                // SEC-TOKEN-1 (C3): defense-in-depth security headers on every API response. The
+                // API serves only JSON, so a strict CSP + frame denial cost nothing and shrink the
+                // XSS/clickjacking surface. (The frontend Next.js app sets its own CSP — see
+                // frontend/next.config.* — which is what actually protects the page where the token
+                // lives; these headers harden the API tier too.)
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny())
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"))
+                        .referrerPolicy(ref -> ref.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                        .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31_536_000)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // WP-A1.2: health is public for liveness/readiness probes; metrics &
@@ -73,6 +85,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/api/auth/me").authenticated() // FE-A1.1: server-validated identity
+                        .requestMatchers("/api/auth/logout-all").authenticated() // SEC-TOKEN-1 C4
                         .requestMatchers("/api/auth/**").permitAll() // open endpoints
                         .requestMatchers(HttpMethod.POST, "/api/invites/accept").permitAll() // token-gated teacher onboarding
                         .requestMatchers("/api/auth/forgot-password").permitAll()

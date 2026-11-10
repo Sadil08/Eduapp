@@ -12,8 +12,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * BT-9: teacher/admin review of class enrolments (pending join requests + direct enrol).
- * A TEACHER may only act on classes they teach; a SCHOOL_ADMIN on any class in the tenant
+ * BT-9: teacher/admin review of class enrolments (pending join requests +
+ * direct enrol).
+ * A TEACHER may only act on classes they teach; a SCHOOL_ADMIN on any class in
+ * the tenant
  * (enforced in {@link SchoolEnrolmentReviewService}).
  */
 @RestController
@@ -46,10 +48,17 @@ public class SchoolEnrolmentController {
         return ResponseEntity.ok(service.setStatus(classId, enrolmentId, SchoolEnrolmentStatus.REJECTED, caller));
     }
 
-    /** BT-9.4 / BT-4.3: teacher/admin directly enrols a student (immediately ACTIVE). */
-    @PostMapping("/students/{studentId}")
+    /**
+     * BT-9.4 / BT-4.3: teacher/admin directly enrols a student (immediately
+     * ACTIVE).
+     */
+    @PostMapping("/direct")
     public ResponseEntity<SchoolEnrolmentDto> directEnrol(@PathVariable Long classId,
-            @PathVariable Long studentId, @AuthenticationPrincipal AuthenticatedUser caller) {
-        return ResponseEntity.ok(service.directEnrol(classId, studentId, caller));
+            @RequestBody java.util.Map<String, String> payload, @AuthenticationPrincipal AuthenticatedUser caller) {
+        String email = payload.get("email");
+        if (email == null || email.isBlank()) {
+            throw new com.eduapp.backend.exception.BadRequestException("Email is required");
+        }
+        return ResponseEntity.ok(service.directEnrol(classId, email, caller));
     }
 }

@@ -38,6 +38,23 @@ public interface StudentPaperAttemptRepository extends JpaRepository<StudentPape
             Pageable pageable);
 
     /**
+     * NFR-DLQ-1: SUBMITTED attempts whose marking never completed and are now older than the retry
+     * window ({@code completedAt < ageCutoff}), with no analysis row, that have not already been
+     * marked terminal ({@code analysisError NOT LIKE terminalPrefix}). The sweeper flags these so
+     * they are not silently abandoned forever (records a terminal error + raises an ops alert).
+     */
+    @Query("SELECT a FROM StudentPaperAttempt a "
+            + "WHERE a.status = com.eduapp.backend.model.AttemptStatus.SUBMITTED "
+            + "AND a.analysisCompleted = false "
+            + "AND a.completedAt < :ageCutoff "
+            + "AND (a.analysisError IS NULL OR a.analysisError NOT LIKE :terminalPrefix) "
+            + "AND NOT EXISTS (SELECT o FROM OverallPaperAnalysis o WHERE o.attempt = a) "
+            + "ORDER BY a.completedAt ASC")
+    List<StudentPaperAttempt> findTerminallyFailed(@Param("ageCutoff") LocalDateTime ageCutoff,
+            @Param("terminalPrefix") String terminalPrefix,
+            Pageable pageable);
+
+    /**
      * Finds all attempts by a specific student.
      * Used for student dashboard and history.
      */

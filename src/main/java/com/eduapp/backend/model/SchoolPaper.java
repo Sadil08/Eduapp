@@ -1,6 +1,7 @@
 package com.eduapp.backend.model;
 
 import jakarta.persistence.*;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
@@ -43,11 +44,13 @@ public class SchoolPaper {
     @Column(name = "time_limit_minutes")
     private Integer timeLimitMinutes;
 
+    // Stored/compared as absolute UTC instants so the exam window is timezone-correct end to end
+    // (the client sends ISO-8601 with a 'Z', and we serialize back the same way).
     @Column(name = "exam_window_start")
-    private LocalDateTime examWindowStart;
+    private Instant examWindowStart;
 
     @Column(name = "exam_window_end")
-    private LocalDateTime examWindowEnd;
+    private Instant examWindowEnd;
 
     @Column(name = "results_released", nullable = false)
     private boolean resultsReleased = false;
@@ -70,7 +73,7 @@ public class SchoolPaper {
     }
 
     /** True only when a student is allowed to sit this paper right now. */
-    public boolean isOpenForAttempts(LocalDateTime now) {
+    public boolean isOpenForAttempts(Instant now) {
         if (status != SchoolPaperStatus.ASSIGNED) {
             return false;
         }
@@ -139,19 +142,19 @@ public class SchoolPaper {
         this.timeLimitMinutes = timeLimitMinutes;
     }
 
-    public LocalDateTime getExamWindowStart() {
+    public Instant getExamWindowStart() {
         return examWindowStart;
     }
 
-    public void setExamWindowStart(LocalDateTime examWindowStart) {
+    public void setExamWindowStart(Instant examWindowStart) {
         this.examWindowStart = examWindowStart;
     }
 
-    public LocalDateTime getExamWindowEnd() {
+    public Instant getExamWindowEnd() {
         return examWindowEnd;
     }
 
-    public void setExamWindowEnd(LocalDateTime examWindowEnd) {
+    public void setExamWindowEnd(Instant examWindowEnd) {
         this.examWindowEnd = examWindowEnd;
     }
 

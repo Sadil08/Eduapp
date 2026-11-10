@@ -1,6 +1,7 @@
 package com.eduapp.backend.model;
 
 import jakarta.persistence.*;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
@@ -35,11 +36,12 @@ public class SchoolPaperAttempt {
     @Column(nullable = false)
     private AttemptStatus status = AttemptStatus.IN_PROGRESS;
 
+    // Absolute UTC instants so the client can compute the time-limit deadline correctly.
     @Column(name = "started_at")
-    private LocalDateTime startedAt = LocalDateTime.now();
+    private Instant startedAt = Instant.now();
 
     @Column(name = "completed_at")
-    private LocalDateTime completedAt;
+    private Instant completedAt;
 
     @Column(name = "time_taken_minutes")
     private Integer timeTakenMinutes;
@@ -115,19 +117,19 @@ public class SchoolPaperAttempt {
         this.status = status;
     }
 
-    public LocalDateTime getStartedAt() {
+    public Instant getStartedAt() {
         return startedAt;
     }
 
-    public void setStartedAt(LocalDateTime startedAt) {
+    public void setStartedAt(Instant startedAt) {
         this.startedAt = startedAt;
     }
 
-    public LocalDateTime getCompletedAt() {
+    public Instant getCompletedAt() {
         return completedAt;
     }
 
-    public void setCompletedAt(LocalDateTime completedAt) {
+    public void setCompletedAt(Instant completedAt) {
         this.completedAt = completedAt;
     }
 

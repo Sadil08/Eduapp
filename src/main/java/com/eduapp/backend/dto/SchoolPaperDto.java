@@ -2,7 +2,7 @@ package com.eduapp.backend.dto;
 
 import com.eduapp.backend.model.SchoolPaper;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class SchoolPaperDto {
     private Long id;
@@ -13,8 +13,8 @@ public class SchoolPaperDto {
     private String type;
     private String status;
     private Integer timeLimitMinutes;
-    private LocalDateTime examWindowStart;
-    private LocalDateTime examWindowEnd;
+    private Instant examWindowStart;
+    private Instant examWindowEnd;
     private boolean resultsReleased;
 
     public static SchoolPaperDto from(SchoolPaper p) {
@@ -41,7 +41,7 @@ public class SchoolPaperDto {
     public String getType() { return type; }
     public String getStatus() { return status; }
     public Integer getTimeLimitMinutes() { return timeLimitMinutes; }
-    public LocalDateTime getExamWindowStart() { return examWindowStart; }
-    public LocalDateTime getExamWindowEnd() { return examWindowEnd; }
+    public Instant getExamWindowStart() { return examWindowStart; }
+    public Instant getExamWindowEnd() { return examWindowEnd; }
     public boolean isResultsReleased() { return resultsReleased; }
 }

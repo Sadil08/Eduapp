@@ -2,6 +2,7 @@ package com.eduapp.backend.repository;
 
 import com.eduapp.backend.model.QuestionExtractionTracking;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -30,6 +31,29 @@ public interface QuestionExtractionTrackingRepository extends JpaRepository<Ques
     Optional<QuestionExtractionTracking> findByAttemptIdAndQuestionId(
             @Param("attemptId") Long attemptId,
             @Param("questionId") Long questionId);
+
+    /**
+     * NFR-RACE-1: atomically reserve one extraction slot. A single conditional UPDATE removes the
+     * check-then-act race — concurrent callers can never push the count past the cap.
+     *
+     * @return 1 if a slot was reserved, 0 if the limit was already reached.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE QuestionExtractionTracking q "
+            + "SET q.extractionCount = q.extractionCount + 1, q.lastExtractionTime = CURRENT_TIMESTAMP "
+            + "WHERE q.id = :id AND q.extractionCount < q.maxExtractions")
+    int tryIncrementCount(@Param("id") Long id);
+
+    /**
+     * NFR-RACE-1: release a previously reserved slot (e.g. the AI extraction call failed) so a
+     * student is not charged a quota slot for a system/AI outage. Floored at 0.
+     *
+     * @return 1 if decremented, 0 otherwise.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE QuestionExtractionTracking q SET q.extractionCount = q.extractionCount - 1 "
+            + "WHERE q.id = :id AND q.extractionCount > 0")
+    int decrementCount(@Param("id") Long id);
 
     /**
      * Find all tracking records for a specific attempt

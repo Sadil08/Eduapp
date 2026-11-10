@@ -57,6 +57,15 @@ public class LeaderboardController {
             if (!attempt.getStudent().getId().equals(userId)) {
                 return ResponseEntity.status(403).build();
             }
+            // SEC-AUTHZ-LB hardening: only a successfully-marked attempt may be published to the
+            // leaderboard — otherwise an unmarked/in-progress attempt would appear with a 0/fallback
+            // score. (Ownership is already enforced above.)
+            boolean marked = Boolean.TRUE.equals(attempt.getAnalysisCompleted())
+                    || analysisRepository.findByAttemptId(attempt.getId()).isPresent();
+            if (!marked) {
+                logger.warn("Rejecting leaderboard opt-in for unmarked attempt {}", attemptId);
+                return ResponseEntity.badRequest().build();
+            }
             attempt.setOptedIn(true);
             attemptRepository.save(attempt);
             return ResponseEntity.ok().build();

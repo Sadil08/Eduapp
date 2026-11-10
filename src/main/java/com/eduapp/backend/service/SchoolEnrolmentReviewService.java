@@ -17,8 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * BT-9: enrolment approval. A teacher of the class (or a SCHOOL_ADMIN) reviews pending join
- * requests and accepts/rejects them, and may directly enrol a student (immediately ACTIVE).
+ * BT-9: enrolment approval. A teacher of the class (or a SCHOOL_ADMIN) reviews
+ * pending join
+ * requests and accepts/rejects them, and may directly enrol a student
+ * (immediately ACTIVE).
  * All operations are tenant-scoped via {@link TenantContext}.
  */
 @Service
@@ -27,12 +29,15 @@ public class SchoolEnrolmentReviewService {
     private final SchoolEnrolmentRepository enrolmentRepository;
     private final SchoolClassService classService;
     private final UserRepository userRepository;
+    private final com.eduapp.backend.repository.SchoolRepository schoolRepository;
 
     public SchoolEnrolmentReviewService(SchoolEnrolmentRepository enrolmentRepository,
-            SchoolClassService classService, UserRepository userRepository) {
+            SchoolClassService classService, UserRepository userRepository,
+            com.eduapp.backend.repository.SchoolRepository schoolRepository) {
         this.enrolmentRepository = enrolmentRepository;
         this.classService = classService;
         this.userRepository = userRepository;
+        this.schoolRepository = schoolRepository;
     }
 
     private Long requireTenant() {
@@ -43,7 +48,10 @@ public class SchoolEnrolmentReviewService {
         return schoolId;
     }
 
-    /** SCHOOL_ADMIN manages any class in the tenant; a TEACHER only classes they teach (BT-4.2). */
+    /**
+     * SCHOOL_ADMIN manages any class in the tenant; a TEACHER only classes they
+     * teach (BT-4.2).
+     */
     private void assertCanManage(Long classId, AuthenticatedUser caller) {
         if (caller.getRole() == Role.SCHOOL_ADMIN) {
             return;
@@ -82,20 +90,50 @@ public class SchoolEnrolmentReviewService {
         assertCanManage(classId, caller);
         SchoolEnrolment e = loadInTenant(classId, enrolmentId);
         e.setStatus(status);
+
+        if (status == SchoolEnrolmentStatus.ACTIVE) {
+            User student = userRepository.findById(e.getStudentId()).orElse(null);
+            if (student != null && student.getSchoolId() == null) {
+                com.eduapp.backend.model.School school = schoolRepository.findById(e.getSchoolId()).orElse(null);
+                if (school != null) {
+                    student.setSchool(school);
+                    if (student.getRole() == Role.STUDENT) {
+                        student.setRole(Role.SCHOOL_STUDENT);
+                    }
+                    userRepository.save(student);
+                }
+            }
+        }
+
         enrolmentRepository.save(e);
         return SchoolEnrolmentDto.from(e, userRepository.findById(e.getStudentId()).orElse(null));
     }
 
-    /** BT-9.4 / BT-4.3: teacher/admin directly enrols a student — immediately ACTIVE (no approval). */
+    /**
+     * BT-9.4 / BT-4.3: teacher/admin directly enrols a student — immediately ACTIVE
+     * (no approval).
+     */
     @Transactional
-    public SchoolEnrolmentDto directEnrol(Long classId, Long studentId, AuthenticatedUser caller) {
+    public SchoolEnrolmentDto directEnrol(Long classId, String email, AuthenticatedUser caller) {
         assertCanManage(classId, caller);
         Long schoolId = requireTenant();
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new BadRequestException("Student not found"));
-        if (student.getSchoolId() == null || !student.getSchoolId().equals(schoolId)) {
+        User student = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("Student with email not found"));
+
+        if (student.getSchoolId() == null) {
+            com.eduapp.backend.model.School school = schoolRepository.findById(schoolId)
+                    .orElseThrow(() -> new IllegalStateException("School no longer exists"));
+            student.setSchool(school);
+            if (student.getRole() == Role.STUDENT) {
+                student.setRole(Role.SCHOOL_STUDENT);
+            }
+            userRepository.save(student);
+        } else if (!student.getSchoolId().equals(schoolId)) {
             throw new BadRequestException("Student is not a member of this school");
         }
+
+        Long studentId = student.getId();
+
         SchoolEnrolment e = enrolmentRepository.findByClassIdAndStudentId(classId, studentId)
                 .orElseGet(() -> new SchoolEnrolment(schoolId, classId, studentId));
         e.setStatus(SchoolEnrolmentStatus.ACTIVE);

@@ -47,7 +47,8 @@ public class StudentAttemptController {
     @PostMapping("/{id}/answers")
     public ResponseEntity<Void> answer(@AuthenticationPrincipal UserDetails principal,
             @PathVariable Long id, @Valid @RequestBody SubmitAnswerRequest req) {
-        attemptService.answer(currentUserId(principal), id, req.getQuestionId(), req.getAnswerText());
+        attemptService.answer(currentUserId(principal), id, req.getQuestionId(),
+                req.getAnswerText(), req.getSelectedOptionId());
         return ResponseEntity.ok().build();
     }
 
@@ -73,8 +74,6 @@ public class StudentAttemptController {
     @GetMapping("/{id}/result")
     public ResponseEntity<StudentAttemptResultDto> result(@AuthenticationPrincipal UserDetails principal,
             @PathVariable Long id) {
-        SchoolPaperAttempt attempt = attemptService.getOwnAttempt(currentUserId(principal), id);
-        boolean released = attemptService.areResultsReleased(attempt.getSchoolPaperId());
-        return ResponseEntity.ok(StudentAttemptResultDto.of(attempt, released));
+        return ResponseEntity.ok(attemptService.buildResult(currentUserId(principal), id));
     }
 }

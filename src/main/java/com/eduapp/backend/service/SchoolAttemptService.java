@@ -1,5 +1,8 @@
 package com.eduapp.backend.service;
 
+import com.eduapp.backend.dto.StudentAnswerResultDto;
+import com.eduapp.backend.dto.StudentAttemptResultDto;
+import com.eduapp.backend.dto.StudentResultOptionDto;
 import com.eduapp.backend.model.*;
 import com.eduapp.backend.repository.*;
 import com.eduapp.backend.security.TenantContext;
@@ -7,8 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * School exam sitting + marking + teacher override (WP-7). Marking reuses the platform
@@ -25,6 +32,7 @@ public class SchoolAttemptService {
     private final SchoolStudentAnswerRepository answerRepository;
     private final SchoolEnrolmentRepository enrolmentRepository;
     private final QuestionRepository questionRepository;
+    private final com.eduapp.backend.repository.QuestionOptionRepository optionRepository;
     private final FileStorageService fileStorageService;
     private final AIService aiService;
 
@@ -33,6 +41,7 @@ public class SchoolAttemptService {
             SchoolStudentAnswerRepository answerRepository,
             SchoolEnrolmentRepository enrolmentRepository,
             QuestionRepository questionRepository,
+            com.eduapp.backend.repository.QuestionOptionRepository optionRepository,
             FileStorageService fileStorageService,
             AIService aiService) {
         this.paperRepository = paperRepository;
@@ -40,6 +49,7 @@ public class SchoolAttemptService {
         this.answerRepository = answerRepository;
         this.enrolmentRepository = enrolmentRepository;
         this.questionRepository = questionRepository;
+        this.optionRepository = optionRepository;
         this.fileStorageService = fileStorageService;
         this.aiService = aiService;
     }
@@ -67,7 +77,7 @@ public class SchoolAttemptService {
         SchoolPaper paper = paperRepository.findByIdAndSchoolId(paperId, schoolId)
                 .orElseThrow(() -> new IllegalArgumentException("Paper not found"));
 
-        if (!paper.isOpenForAttempts(LocalDateTime.now())) {
+        if (!paper.isOpenForAttempts(java.time.Instant.now())) {
             // Covers: not ASSIGNED, before the window opens, or after it closes.
             throw new IllegalStateException("This paper is not open for attempts right now");
         }
@@ -91,7 +101,8 @@ public class SchoolAttemptService {
     }
 
     @Transactional
-    public SchoolStudentAnswer answer(Long studentId, Long attemptId, Long questionId, String answerText) {
+    public SchoolStudentAnswer answer(Long studentId, Long attemptId, Long questionId,
+            String answerText, Long selectedOptionId) {
         SchoolPaperAttempt attempt = requireOwnAttempt(attemptId, studentId);
         if (attempt.getStatus() != AttemptStatus.IN_PROGRESS) {
             throw new IllegalStateException("Attempt is no longer in progress");
@@ -103,7 +114,22 @@ public class SchoolAttemptService {
         }
         SchoolStudentAnswer ans = answerRepository.findByAttemptIdAndQuestionId(attemptId, questionId)
                 .orElseGet(() -> new SchoolStudentAnswer(attemptId, questionId, null));
-        ans.setAnswerText(answerText);
+
+        if (q.getType() == QuestionType.MCQ && selectedOptionId != null) {
+            // Option-based MCQ. IDOR guard: the selected option must belong to THIS question.
+            QuestionOption opt = optionRepository.findById(selectedOptionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Option not found"));
+            if (opt.getQuestion() == null || !opt.getQuestion().getId().equals(questionId)) {
+                throw new IllegalArgumentException("Option does not belong to this question");
+            }
+            ans.setSelectedOptionId(opt.getId());
+            // Store a readable label so the teacher review screen shows the chosen option.
+            ans.setAnswerText(opt.getKeyLabel() != null ? opt.getKeyLabel() + ". " + opt.getText() : opt.getText());
+        } else {
+            // Essay, legacy text-MCQ (no options), or an MCQ with no selection yet.
+            ans.setAnswerText(answerText);
+            ans.setSelectedOptionId(null);
+        }
         return answerRepository.save(ans);
     }
 
@@ -156,9 +182,10 @@ public class SchoolAttemptService {
                 aiTotal += awarded;
             }
         }
+        Instant now = Instant.now();
         attempt.setAiMark(aiTotal);
-        attempt.setCompletedAt(LocalDateTime.now());
-        attempt.setTimeTakenMinutes((int) Duration.between(attempt.getStartedAt(), LocalDateTime.now()).toMinutes());
+        attempt.setCompletedAt(now);
+        attempt.setTimeTakenMinutes((int) Duration.between(attempt.getStartedAt(), now).toMinutes());
         attempt.setStatus(AttemptStatus.SUBMITTED);
         return attemptRepository.save(attempt);
     }
@@ -170,6 +197,14 @@ public class SchoolAttemptService {
         }
         if (q.getType() == QuestionType.MCQ) {
             int max = q.getMarks() != null ? q.getMarks() : 1;
+            List<QuestionOption> opts = optionRepository.findByQuestionIdOrderByOrderIndexAsc(q.getId());
+            if (!opts.isEmpty()) {
+                // Mark by option identity: full marks iff the selected option is the correct one.
+                Long correctId = opts.stream().filter(o -> Boolean.TRUE.equals(o.getIsCorrect()))
+                        .map(QuestionOption::getId).findFirst().orElse(null);
+                return correctId != null && correctId.equals(ans.getSelectedOptionId()) ? max : 0;
+            }
+            // Legacy text-MCQ (no options authored): fall back to a case-insensitive text compare.
             boolean correct = q.getCorrectAnswerText() != null && ans.getAnswerText() != null
                     && q.getCorrectAnswerText().trim().equalsIgnoreCase(ans.getAnswerText().trim());
             return correct ? max : 0;
@@ -230,5 +265,57 @@ public class SchoolAttemptService {
         return paperRepository.findByIdAndSchoolId(schoolPaperId, requireTenant())
                 .map(SchoolPaper::isResultsReleased)
                 .orElse(false);
+    }
+
+    /**
+     * The student's own result with a per-question breakdown. Total marks are always returned;
+     * the breakdown (and anything that reveals the marking scheme — correct options, model answers,
+     * feedback) is included ONLY once the teacher has released results.
+     */
+    @Transactional(readOnly = true)
+    public StudentAttemptResultDto buildResult(Long studentId, Long attemptId) {
+        SchoolPaperAttempt attempt = requireOwnAttempt(attemptId, studentId);
+        boolean released = areResultsReleased(attempt.getSchoolPaperId());
+        StudentAttemptResultDto dto = StudentAttemptResultDto.of(attempt, released);
+
+        List<Question> questions = questionRepository.findBySchoolPaperId(attempt.getSchoolPaperId());
+        dto.setTotalMarks(questions.stream().mapToInt(q -> q.getMarks() != null ? q.getMarks() : 0).sum());
+
+        if (!released) {
+            return dto; // withhold the breakdown (and marking scheme) until release
+        }
+
+        Map<Long, SchoolStudentAnswer> ansByQ = answerRepository.findByAttemptId(attemptId).stream()
+                .collect(Collectors.toMap(SchoolStudentAnswer::getQuestionId, a -> a, (a, b) -> a));
+        List<Long> mcqIds = questions.stream()
+                .filter(q -> q.getType() == QuestionType.MCQ).map(Question::getId).toList();
+        Map<Long, List<QuestionOption>> optsByQ = mcqIds.isEmpty() ? Map.of()
+                : optionRepository.findByQuestionIdInOrderByOrderIndexAsc(mcqIds).stream()
+                        .collect(Collectors.groupingBy(o -> o.getQuestion().getId()));
+
+        List<StudentAnswerResultDto> rows = new ArrayList<>();
+        for (Question q : questions) {
+            SchoolStudentAnswer a = ansByQ.get(q.getId());
+            StudentAnswerResultDto r = new StudentAnswerResultDto();
+            r.setQuestionId(q.getId());
+            r.setQuestionText(q.getText());
+            r.setType(q.getType() != null ? q.getType().name() : null);
+            r.setMaxMarks(q.getMarks());
+            r.setMarksAwarded(a != null ? a.getMarksAwarded() : null);
+            r.setAnswerText(a != null ? a.getAnswerText() : null);
+            r.setImageUrl(a != null ? a.getImageUrl() : null);
+            r.setAiFeedback(a != null ? a.getAiFeedback() : null);
+            r.setCorrectAnswerText(q.getCorrectAnswerText());
+            r.setModelAnswerImageUrl(q.getModelAnswerImageUrl());
+            Long selectedOptionId = a != null ? a.getSelectedOptionId() : null;
+            r.setSelectedOptionId(selectedOptionId);
+            if (q.getType() == QuestionType.MCQ) {
+                r.setOptions(optsByQ.getOrDefault(q.getId(), List.of()).stream()
+                        .map(o -> StudentResultOptionDto.from(o, selectedOptionId)).toList());
+            }
+            rows.add(r);
+        }
+        dto.setAnswers(rows);
+        return dto;
     }
 }

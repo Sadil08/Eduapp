@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Service for managing extraction tracking and enforcing limits.
@@ -52,32 +53,42 @@ public class ExtractionTrackingService {
     }
 
     /**
-     * Record an extraction attempt
-     * Throws exception if limit exceeded
-     * 
-     * @param attemptId  Student paper attempt ID
-     * @param questionId Question ID
-     * @throws ExtractionLimitExceededException if limit reached
+     * NFR-RACE-1: atomically reserve one extraction slot BEFORE the (paid) AI call. Replaces the
+     * old check-then-act {@code recordExtraction}, which let concurrent requests both pass the
+     * {@code canExtract} check and exceed the cap (extra AI cost). On limit, throws and no slot is
+     * consumed. If the subsequent AI call fails, the caller MUST call
+     * {@link #releaseExtraction} so the student isn't penalised for an outage.
+     *
+     * @throws ExtractionLimitExceededException if the per-question limit is already reached
      */
     @Transactional
-    public void recordExtraction(Long attemptId, Long questionId) {
+    public void reserveExtraction(Long attemptId, Long questionId) {
         QuestionExtractionTracking tracking = getOrCreateTracking(attemptId, questionId);
-
-        if (!tracking.canExtract()) {
+        int reserved = trackingRepository.tryIncrementCount(tracking.getId());
+        if (reserved == 0) {
+            int used = tracking.getExtractionCount();
+            int max = tracking.getMaxExtractions();
             logger.warn("Extraction limit exceeded for attempt {} question {}: {}/{}",
-                    attemptId, questionId, tracking.getExtractionCount(), tracking.getMaxExtractions());
+                    attemptId, questionId, used, max);
             throw new ExtractionLimitExceededException(
-                    String.format("Extraction limit reached for this question (%d/%d used)",
-                            tracking.getExtractionCount(), tracking.getMaxExtractions()),
-                    tracking.getExtractionCount(),
-                    tracking.getMaxExtractions());
+                    String.format("Extraction limit reached for this question (%d/%d used)", used, max),
+                    used, max);
         }
+        logger.info("Reserved extraction slot (atomic) for attempt {} question {}", attemptId, questionId);
+    }
 
-        tracking.incrementCount();
-        trackingRepository.save(tracking);
-
-        logger.info("Recorded extraction for attempt {} question {}: {}/{}",
-                attemptId, questionId, tracking.getExtractionCount(), tracking.getMaxExtractions());
+    /**
+     * NFR-RACE-1: release a slot reserved by {@link #reserveExtraction} when the AI extraction call
+     * fails, so a transient AI/system error does not burn the student's quota.
+     */
+    @Transactional
+    public void releaseExtraction(Long attemptId, Long questionId) {
+        trackingRepository.findByAttemptIdAndQuestionId(attemptId, questionId).ifPresent(t -> {
+            if (trackingRepository.decrementCount(t.getId()) > 0) {
+                logger.info("Released extraction reservation for attempt {} question {} (AI call failed)",
+                        attemptId, questionId);
+            }
+        });
     }
 
     /**
@@ -155,19 +166,26 @@ public class ExtractionTrackingService {
      * @return Tracking record
      */
     private QuestionExtractionTracking getOrCreateTracking(Long attemptId, Long questionId) {
-        return trackingRepository.findByAttemptIdAndQuestionId(attemptId, questionId)
-                .orElseGet(() -> {
-                    logger.warn("Tracking not found for attempt {} question {}, creating lazily",
-                            attemptId, questionId);
-
-                    StudentPaperAttempt attempt = attemptRepository.findById(attemptId)
-                            .orElseThrow(() -> new RuntimeException("Attempt not found: " + attemptId));
-                    Question question = questionRepository.findById(questionId)
-                            .orElseThrow(() -> new RuntimeException("Question not found: " + questionId));
-
-                    QuestionExtractionTracking tracking = new QuestionExtractionTracking(attempt, question);
-                    return trackingRepository.save(tracking);
-                });
+        Optional<QuestionExtractionTracking> existing =
+                trackingRepository.findByAttemptIdAndQuestionId(attemptId, questionId);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+        logger.warn("Tracking not found for attempt {} question {}, creating lazily", attemptId, questionId);
+        StudentPaperAttempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Attempt not found: " + attemptId));
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new RuntimeException("Question not found: " + questionId));
+        try {
+            return trackingRepository.saveAndFlush(new QuestionExtractionTracking(attempt, question));
+        } catch (org.springframework.dao.DataIntegrityViolationException race) {
+            // NFR-RACE-1: a concurrent request created the row first (unique constraint on
+            // attempt+question). Re-fetch the winner rather than creating a duplicate.
+            logger.debug("Concurrent tracking creation for attempt {} question {}; re-fetching",
+                    attemptId, questionId);
+            return trackingRepository.findByAttemptIdAndQuestionId(attemptId, questionId)
+                    .orElseThrow(() -> race);
+        }
     }
 
     /**

@@ -3,6 +3,7 @@ package com.eduapp.backend.dto;
 import com.eduapp.backend.model.SchoolPaperAttempt;
 import com.eduapp.backend.model.User;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 /** Teacher-facing view of an attempt (shows AI mark, override and the effective mark). */
@@ -19,7 +20,7 @@ public class SchoolAttemptDto {
     private Integer effectiveMark;
     private LocalDateTime teacherReviewedAt;
     private Integer timeTakenMinutes;
-    private LocalDateTime startedAt;
+    private Instant startedAt;
 
     public static SchoolAttemptDto from(SchoolPaperAttempt a) {
         SchoolAttemptDto d = new SchoolAttemptDto();
@@ -59,5 +60,5 @@ public class SchoolAttemptDto {
     public Integer getEffectiveMark() { return effectiveMark; }
     public LocalDateTime getTeacherReviewedAt() { return teacherReviewedAt; }
     public Integer getTimeTakenMinutes() { return timeTakenMinutes; }
-    public LocalDateTime getStartedAt() { return startedAt; }
+    public Instant getStartedAt() { return startedAt; }
 }

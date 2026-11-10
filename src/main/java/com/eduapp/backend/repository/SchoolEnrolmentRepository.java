@@ -20,6 +20,9 @@ public interface SchoolEnrolmentRepository extends JpaRepository<SchoolEnrolment
 
     Optional<SchoolEnrolment> findByClassIdAndStudentId(Long classId, Long studentId);
 
+    /** Owner-scoped: a student's own enrolments across any school (e.g. PENDING before a school bind). */
+    List<SchoolEnrolment> findByStudentId(Long studentId);
+
     boolean existsByClassIdAndStudentId(Long classId, Long studentId);
 
     // BT-9: approval-aware queries.

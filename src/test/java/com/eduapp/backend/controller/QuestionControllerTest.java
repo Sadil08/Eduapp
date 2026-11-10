@@ -88,7 +88,7 @@ public class QuestionControllerTest {
         when(questionMapper.toDto(question)).thenReturn(dto);
 
         mockMvc.perform(get("/api/questions/1")
-                .with(user("user").roles("STUDENT")))
+                .with(user("user").roles("ADMIN")))
                 .andExpect(status().isOk());
     }
 
@@ -97,7 +97,7 @@ public class QuestionControllerTest {
         when(questionService.findById(1L)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/questions/1")
-                .with(user("user").roles("STUDENT")))
+                .with(user("user").roles("ADMIN")))
                 .andExpect(status().isNotFound());
     }
 
@@ -114,7 +114,7 @@ public class QuestionControllerTest {
         mockMvc.perform(post("/api/questions")
                 .contentType("application/json")
                 .content("{}")
-                .with(user("user").roles("STUDENT"))
+                .with(user("user").roles("ADMIN"))
                 .with(csrf()))
                 .andExpect(status().isCreated());
     }
@@ -132,7 +132,7 @@ public class QuestionControllerTest {
         mockMvc.perform(put("/api/questions/1")
                 .contentType("application/json")
                 .content("{}")
-                .with(user("user").roles("STUDENT"))
+                .with(user("user").roles("ADMIN"))
                 .with(csrf()))
                 .andExpect(status().isOk());
     }
@@ -144,7 +144,7 @@ public class QuestionControllerTest {
         mockMvc.perform(put("/api/questions/1")
                 .contentType("application/json")
                 .content("{}")
-                .with(user("user").roles("STUDENT"))
+                .with(user("user").roles("ADMIN"))
                 .with(csrf()))
                 .andExpect(status().isNotFound());
     }
@@ -154,7 +154,7 @@ public class QuestionControllerTest {
         when(questionService.existsById(1L)).thenReturn(true);
 
         mockMvc.perform(delete("/api/questions/1")
-                .with(user("user").roles("STUDENT"))
+                .with(user("user").roles("ADMIN"))
                 .with(csrf()))
                 .andExpect(status().isNoContent());
     }
@@ -164,7 +164,7 @@ public class QuestionControllerTest {
         when(questionService.existsById(1L)).thenReturn(false);
 
         mockMvc.perform(delete("/api/questions/1")
-                .with(user("user").roles("STUDENT"))
+                .with(user("user").roles("ADMIN"))
                 .with(csrf()))
                 .andExpect(status().isNotFound());
     }

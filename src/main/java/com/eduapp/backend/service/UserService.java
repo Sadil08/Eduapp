@@ -368,6 +368,20 @@ public class UserService implements UserDetailsService {
                 return String.valueOf(otp);
         }
 
+        /**
+         * SEC-TOKEN-1 (C4): "log out everywhere" — bump the user's token version so every JWT
+         * issued before now is rejected by {@code JwtAuthenticationFilter}. Used for user-initiated
+         * global logout and incident response (e.g. a token suspected stolen from localStorage).
+         */
+        @org.springframework.transaction.annotation.Transactional
+        public void logoutAllSessions(Long userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new BadRequestException("User not found"));
+                user.incrementTokenVersion();
+                userRepository.save(user);
+                logger.info("Logged out all sessions for user {} (token version bumped)", userId);
+        }
+
         private String generateUniqueReferralCode() {
                 String code;
                 do {

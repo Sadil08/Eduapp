@@ -73,6 +73,11 @@ public class StudentAnswerControllerTest {
     @MockBean
     private com.eduapp.backend.repository.StudentAnswerRepository studentAnswerRepository;
 
+    // SEC-IDOR (Sprint-0): mocked guard — its void assert methods are no-ops here, so these
+    // wiring tests stay green; the guard's real ownership logic is covered by AttemptAccessGuardTest.
+    @MockBean
+    private com.eduapp.backend.security.AttemptAccessGuard attemptAccessGuard;
+
     @MockBean
     private software.amazon.awssdk.services.s3.S3Client s3Client;
 

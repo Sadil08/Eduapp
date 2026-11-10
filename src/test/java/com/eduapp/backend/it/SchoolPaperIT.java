@@ -71,8 +71,8 @@ class SchoolPaperIT extends AbstractIntegrationTest {
         // Assign to class with an exam window
         Map<String, Object> assignBody = Map.of(
                 "classId", cls.getId().intValue(),
-                "examWindowStart", LocalDateTime.now().minusMinutes(5).toString(),
-                "examWindowEnd", LocalDateTime.now().plusHours(2).toString(),
+                "examWindowStart", java.time.Instant.now().minusSeconds(300).toString(),
+                "examWindowEnd", java.time.Instant.now().plusSeconds(7200).toString(),
                 "timeLimitMinutes", 60);
         ResponseEntity<Map> assigned = rest.exchange("/api/school/papers/" + paperId + "/assign", HttpMethod.POST,
                 new HttpEntity<>(assignBody, auth(teacher)), Map.class);

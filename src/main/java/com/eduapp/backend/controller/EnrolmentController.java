@@ -12,6 +12,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * Student self-enrolment by class code (WP-5). Any authenticated user may join; joining
  * binds them to the class's school and upgrades STUDENT -> SCHOOL_STUDENT.
@@ -36,5 +38,16 @@ public class EnrolmentController {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return ResponseEntity.ok(SchoolEnrolmentDto.from(
                 enrolmentService.joinByClassCode(user.getId(), req.getClassCode())));
+    }
+
+    /**
+     * The caller's own enrolments (incl. PENDING) with class names — drives the student
+     * dashboard. Reachable by plain STUDENTs not yet bound to a school.
+     */
+    @GetMapping("/mine")
+    public ResponseEntity<List<SchoolEnrolmentDto>> mine(@AuthenticationPrincipal UserDetails principal) {
+        User user = userRepository.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        return ResponseEntity.ok(enrolmentService.myEnrolments(user.getId()));
     }
 }

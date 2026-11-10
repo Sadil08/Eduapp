@@ -55,8 +55,8 @@ class SchoolAttemptIT extends AbstractIntegrationTest {
         SchoolPaper paper = new SchoolPaper(school.getId(), "MCQ Paper", null, PaperType.MCQ, teacher.getId());
         paper.setClassId(cls.getId());
         paper.setStatus(SchoolPaperStatus.ASSIGNED);
-        paper.setExamWindowStart(windowStart);
-        paper.setExamWindowEnd(windowEnd);
+        paper.setExamWindowStart(windowStart.atZone(java.time.ZoneId.systemDefault()).toInstant());
+        paper.setExamWindowEnd(windowEnd.atZone(java.time.ZoneId.systemDefault()).toInstant());
         paper = paperRepository.save(paper);
 
         Question q = new Question();

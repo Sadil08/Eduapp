@@ -28,6 +28,12 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/questions")
+// SEC (Hole 1): every endpoint here is an admin authoring/ingestion action — creating/editing/
+// deleting questions and the paid-AI extraction/import routes (extract-from-image, extract-batch,
+// import-from-pdf). Reads return the full question incl. correctAnswerText, so students must never
+// reach them (they attempt papers via the marking-scheme-free /api/papers and /api/student-* APIs).
+// Previously these had no @PreAuthorize and fell through to anyRequest().authenticated().
+@PreAuthorize("hasRole('ADMIN')")
 public class QuestionController {
 
     private static final Logger logger = LoggerFactory.getLogger(QuestionController.class);

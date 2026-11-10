@@ -33,6 +33,13 @@ public class MarkingSweeper {
     private static final int MAX_RETRIES = 5;
     private static final int BATCH = 20;
 
+    // NFR-DLQ-1: attempts older than MAX_AGE with no analysis are terminally failed (no more
+    // retries). We stamp this sentinel + raise an ops alert so they aren't silently abandoned.
+    static final String TERMINAL_ERROR_PREFIX = "[TERMINAL]";
+    static final String TERMINAL_ERROR_MESSAGE =
+            TERMINAL_ERROR_PREFIX + " Automated marking could not be completed after multiple attempts. "
+                    + "Our team has been notified and will follow up.";
+
     // SCALE-2: a fixed key for the Postgres advisory lock that serialises the sweep across
     // horizontally-scaled instances (so only one runs at a time — no duplicate AI spend).
     private static final long SWEEP_LOCK_KEY = 4_270_010_001L;
@@ -87,6 +94,32 @@ public class MarkingSweeper {
             // Cross-bean call → @Async proxy applies → dispatched to the AI executor.
             aiAnalysisService.analyzeAttempt(attempt);
         }
+
+        // NFR-DLQ-1: anything past MAX_AGE with still no analysis is terminally failed — stop the
+        // silent-abandon, record a terminal state and raise an ops alert (no more retries).
+        markTerminalFailures(now);
+
         return stuck.size();
+    }
+
+    /**
+     * NFR-DLQ-1: flag attempts that exceeded the retry window so they are not silently abandoned.
+     * Idempotent via the {@code [TERMINAL]} sentinel (already-flagged attempts are excluded by the
+     * query). Logs at ERROR so monitoring can alert + a human can replay them.
+     */
+    private void markTerminalFailures(LocalDateTime now) {
+        List<StudentPaperAttempt> terminal = attemptRepository.findTerminallyFailed(
+                now.minus(MAX_AGE), TERMINAL_ERROR_PREFIX + "%", PageRequest.of(0, BATCH));
+        for (StudentPaperAttempt attempt : terminal) {
+            attempt.setAnalysisError(TERMINAL_ERROR_MESSAGE);
+            attempt.setAnalysisAttempted(true);
+            attempt.setAnalysisCompleted(false);
+            attemptRepository.save(attempt);
+            logger.error("MarkingSweeper: attempt {} TERMINALLY FAILED marking (older than {}h, no analysis) "
+                    + "— needs ops attention / manual replay", attempt.getId(), MAX_AGE.toHours());
+        }
+        if (!terminal.isEmpty()) {
+            logger.error("MarkingSweeper: {} attempt(s) marked TERMINAL this run", terminal.size());
+        }
     }
 }

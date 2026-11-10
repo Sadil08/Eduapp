@@ -17,6 +17,12 @@ public interface StudentAnswerRepository extends JpaRepository<StudentAnswer, Lo
     java.util.Optional<StudentAnswer> findByAttemptIdAndQuestionId(Long attemptId, Long questionId);
 
     /**
+     * SEC-IDOR: ownership-scoped lookup — find an answer by id only if it belongs to an attempt
+     * owned by the given student. Used by {@code AttemptAccessGuard} to enforce object-level authz.
+     */
+    java.util.Optional<StudentAnswer> findByIdAndAttempt_Student_Id(Long id, Long studentId);
+
+    /**
      * Find all draft answers for a specific attempt
      */
     List<StudentAnswer> findByAttemptIdAndIsDraft(Long attemptId, Boolean isDraft);
